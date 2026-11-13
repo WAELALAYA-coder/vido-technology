@@ -31,6 +31,13 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
+      - name: Check JavaScript syntax
+        run: |
+          node --check backend/server.js
+          node --check questions-v37.js
+          node --check lessons-v37.js
+          node --check scripts/audit.mjs
+
       - name: Run application audit
         run: npm test
 
