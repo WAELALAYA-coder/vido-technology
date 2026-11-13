@@ -41,6 +41,9 @@ jobs:
       - name: Run application audit
         run: npm test
 
+      - name: Smoke-test public learning assets and private paths
+        run: node scripts/smoke-assets.mjs
+
       - name: Check production dependency advisories
         run: npm audit --omit=dev --audit-level=high
 
