@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 
 const html=fs.readFileSync('index.html','utf8');
-const ids=[...html.matchAll(/\bid=["']([^"']+)["']/g)].map(m=>m[1]);
+for(const [index,match] of [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)].entries()){
 assert.equal(new Set(ids).size,ids.length,'duplicate HTML ids');
 
 // Parse every inline script with Node's JavaScript parser before shipping the HTML.
 let inlineScriptCount=0;
-for(const [index,match] of [...html.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script>/gi)].entries()){
-  if(/\\bsrc\\s*=/.test(match[1]))continue;
+for(const [index,match] of [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)].entries()){
+  if(/\bsrc\s*=/.test(match[1]))continue;
   const code=match[2].trim();
   if(!code)continue;
   new vm.Script(code,{filename:`index.html:inline-script-${index+1}`});
@@ -51,7 +51,7 @@ for(const q of questions){
   assert(q.skill&&q.topic,`missing skill or topic ${q.id}`);
   assert(q.target&&q.en&&q.ar,`missing DE/EN/AR question text ${q.id}`);
 }
-const skillsMatch=html.match(/const skills=\\[([\\s\\S]*?)\\];\\s*const glossary=/);
+const skillsMatch=html.match(/const skills=\[([\s\S]*?)\];\s*const glossary=/);
 assert(skillsMatch,'skill catalogue not found');
 const skillList=Function('return ['+skillsMatch[1]+']')();
 assert.equal(skillList.length,40,'skill catalogue must contain 40 skills');
@@ -66,7 +66,7 @@ const lessons=readArrayFile('lessons-v37.js','VIDO_LESSONS');
 assert.equal(lessons.length,10,'expected 10 new lessons');
 for(const lesson of lessons){
   assert(lesson.id&&lesson.topic&&lesson.sources?.length,`missing lesson metadata: ${lesson.id}`);
-  assert(lesson.sources.every(source=>/^https:\\/\\//.test(source.url)&&source.label),`invalid lesson source URL: ${lesson.id}`);
+  assert(lesson.sources.every(source=>/^https:\/\//.test(source.url)&&source.label),\`invalid lesson source URL: \${lesson.id}\`);
   assert.equal(questions.filter(q=>q.topic===lesson.topic).length,10,`lesson ${lesson.id} must map to 10 questions`);
   for(const locale of ['de','en','ar']){
     const v=lesson[locale];
