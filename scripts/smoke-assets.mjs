@@ -29,8 +29,8 @@ try{
   assert.equal(home.status,200,'home page must be served');
   assert.equal(questions.status,200,'question data must be publicly served');
   assert.equal(lessons.status,200,'lesson data must be publicly served');
-  assert.match(questions.headers.get('content-type')||'',/application\\/javascript/i);
-  assert.match(lessons.headers.get('content-type')||'',/application\\/javascript/i);
+  assert.match(questions.headers.get('content-type')||'',/application\/javascript/i);
+  assert.match(lessons.headers.get('content-type')||'',/application\/javascript/i);
   assert.match(questions.headers.get('cache-control')||'',/no-cache/i);
   assert.match(lessons.headers.get('cache-control')||'',/no-cache/i);
   assert((await home.text()).includes('questions-v37.js'),'home page must load question data');
