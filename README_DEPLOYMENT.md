@@ -2,9 +2,10 @@
 
 ## Current application build
 
-The latest application feature build is **VIDO Technology V35** (13 November 2026).
+The current learning build is **VIDO Technology V37** (13 November 2026). It extends the V35 application foundation with an expanded learning library; the backend authentication and database model are unchanged.
 
 - Frontend: `index.html`, `manifest.webmanifest`, and `service-worker.js` (PWA).
+- Learning data: `questions-v37.js` (100 new questions) and `lessons-v37.js` (10 structured lessons in German, English and Arabic).
 - Backend: Node.js 22 and Express 5.
 - Database: PostgreSQL 16.
 - Local runtime: Docker Compose.
@@ -42,7 +43,7 @@ Install the locked Node dependencies and run the local checks:
     npm test
     npm audit --omit=dev --audit-level=high
 
-The content audit checks the 300-question bank and verifies that HTML element IDs are unique. It also checks required learning features and language-selector elements. The audit does not replace real browser testing on desktop and mobile devices.
+The content audit checks 400 questions across 40 skills, ten lesson modules in German/English/Arabic, the mapping of each lesson to ten related questions, source records, PWA asset wiring and unique HTML element IDs. It also checks the existing learning foundation. Automated checks do not replace real browser testing on desktop and mobile devices.
 
 ## Continuous integration
 
@@ -63,6 +64,8 @@ The repository includes:
 - `.dockerignore`: excludes local environment files, Git data, `node_modules`, dumps, backups, and temporary development scripts from the image.
 - `compose.production.yml`: Caddy is the only public service. The app has no published host port. PostgreSQL is on a private internal Docker network.
 - `Caddyfile.production`: reverse proxy, automatic HTTPS, and security headers.
+
+The Express app serves the two learning-data files through explicit public frontend routes (`/questions-v37.js` and `/lessons-v37.js`). Backend source, SQL, environment files and Compose configuration remain outside the public route list.
 - `.env.production.example`: environment template only; it contains placeholders, not usable credentials.
 
 The Node, PostgreSQL, and Caddy images are pinned by digest in the production configuration.
