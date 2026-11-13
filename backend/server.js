@@ -7,7 +7,11 @@ import crypto from 'node:crypto';
 const { Pool } = pg;
 const app = express();
 app.use(express.json({limit:'1mb'}));
-app.use(express.static('.'));
+const PUBLIC_ROOT = process.cwd();
+app.get('/', (_req,res)=>res.sendFile('index.html',{root:PUBLIC_ROOT}));
+app.get('/index.html', (_req,res)=>res.sendFile('index.html',{root:PUBLIC_ROOT}));
+app.get('/manifest.webmanifest', (_req,res)=>res.sendFile('manifest.webmanifest',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/manifest+json'}}));
+app.get('/service-worker.js', (_req,res)=>res.sendFile('service-worker.js',{root:PUBLIC_ROOT,headers:{'Service-Worker-Allowed':'/'}}));
 const pool = process.env.DATABASE_URL ? new Pool({connectionString:process.env.DATABASE_URL, ssl:false}) : null;
 const JWT_SECRET = process.env.JWT_SECRET || '';
 if (process.env.NODE_ENV === 'production' && JWT_SECRET.length < 32) { throw new Error('JWT_SECRET must be at least 32 characters in production'); }
