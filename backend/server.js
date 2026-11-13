@@ -3,10 +3,13 @@ import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
+import { isIP } from 'node:net';
 
 const { Pool } = pg;
 const app = express();
-app.set('trust proxy', false);
+const TRUSTED_PROXY_IP = String(process.env.TRUSTED_PROXY_IP || '').trim();
+if (TRUSTED_PROXY_IP && isIP(TRUSTED_PROXY_IP) !== 4) throw new Error('TRUSTED_PROXY_IP must be one exact IPv4 address');
+app.set('trust proxy', TRUSTED_PROXY_IP || false);
 app.disable('x-powered-by');
 app.use((_req,res,next)=>{ res.setHeader('X-Content-Type-Options','nosniff'); res.setHeader('X-Frame-Options','DENY'); res.setHeader('Referrer-Policy','strict-origin-when-cross-origin'); res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()'); res.setHeader('Cross-Origin-Resource-Policy','same-origin'); next(); });
 app.use('/api',(_req,res,next)=>{ res.setHeader('Cache-Control','no-store, max-age=0'); res.setHeader('Pragma','no-cache'); next(); });
@@ -25,6 +28,17 @@ const AI_MODEL = process.env.AI_MODEL || 'gpt-4o-mini';
 const ADMIN_USERNAME = String(process.env.ADMIN_USERNAME || 'Admin').trim();
 const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || '');
 const REGISTRATION_ENABLED = String(process.env.REGISTRATION_ENABLED || 'false').toLowerCase() === 'true';
+const REQUIRE_STRONG_CREDENTIALS = process.env.VIDO_REQUIRE_STRONG_CREDENTIALS === 'true';
+if (REQUIRE_STRONG_CREDENTIALS) {
+  const OWNER_PASSWORD = String(process.env.OWNER_PASSWORD || '');
+  const DB_URL = String(process.env.DATABASE_URL || '');
+  if (JWT_SECRET.length < 48 || /^REPLACE_/i.test(JWT_SECRET)) throw new Error('Production JWT_SECRET must be a unique random secret of at least 48 characters');
+  if (OWNER_PASSWORD.length < 12 || /^REPLACE_/i.test(OWNER_PASSWORD)) throw new Error('Production OWNER_PASSWORD must be replaced and contain at least 12 characters');
+  if (ADMIN_PASSWORD.length < 12 || /^REPLACE_/i.test(ADMIN_PASSWORD)) throw new Error('Production ADMIN_PASSWORD must be replaced and contain at least 12 characters');
+  if (OWNER_PASSWORD === ADMIN_PASSWORD) throw new Error('Production owner and quick-admin passwords must be different');
+  if (!DB_URL || DB_URL.includes('REPLACE_WITH')) throw new Error('Production DATABASE_URL still contains a placeholder');
+  if (REGISTRATION_ENABLED) throw new Error('Public registration is disabled in the initial private production profile');
+}
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 10;
 const IP_LOGIN_MAX_ATTEMPTS = 30;
@@ -40,26 +54,34 @@ function rateLimitKeys(req,identity){
 }
 async function loginAllowed(req,identity){
   if(!pool) return false;
+  let client;
   try{
     const {ipKey,identityKey}=rateLimitKeys(req,identity);
+    client=await pool.connect();
+    await client.query('BEGIN');
+    for(const key of [ipKey,identityKey].sort()){
+      await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[key]);
+    }
     const sql="SELECT bucket_key,attempts FROM auth_rate_limits WHERE bucket_key=ANY($1::text[]) AND window_started_at>NOW()-($2::double precision*INTERVAL '1 millisecond')";
-    const r=await pool.query(sql,[[ipKey,identityKey],LOGIN_WINDOW_MS]);
+    const r=await client.query(sql,[[ipKey,identityKey],LOGIN_WINDOW_MS]);
     const counts=new Map(r.rows.map(row=>[row.bucket_key,Number(row.attempts)]));
+    const allowed=(counts.get(ipKey)||0)<IP_LOGIN_MAX_ATTEMPTS && (counts.get(identityKey)||0)<LOGIN_MAX_ATTEMPTS;
+    if(allowed){
+      const upsert="INSERT INTO auth_rate_limits(bucket_key,window_started_at,attempts) SELECT key,NOW(),1 FROM unnest($1::text[]) AS t(key) ON CONFLICT(bucket_key) DO UPDATE SET attempts=CASE WHEN auth_rate_limits.window_started_at < NOW()-($2::double precision*INTERVAL '1 millisecond') THEN 1 ELSE auth_rate_limits.attempts+1 END, window_started_at=CASE WHEN auth_rate_limits.window_started_at < NOW()-($2::double precision*INTERVAL '1 millisecond') THEN NOW() ELSE auth_rate_limits.window_started_at END";
+      await client.query(upsert,[[ipKey,identityKey],LOGIN_WINDOW_MS]);
+    }
+    await client.query('COMMIT');
     const now=Date.now();
     if(now-lastRateLimitCleanup>10*60*1000){
       lastRateLimitCleanup=now;
-      await pool.query("DELETE FROM auth_rate_limits WHERE window_started_at < NOW()-INTERVAL '1 day'");
+      pool.query("DELETE FROM auth_rate_limits WHERE window_started_at < NOW()-INTERVAL '1 day'").catch(()=>{});
     }
-    return (counts.get(ipKey)||0)<IP_LOGIN_MAX_ATTEMPTS && (counts.get(identityKey)||0)<LOGIN_MAX_ATTEMPTS;
-  }catch(e){ console.error('Authentication rate-limit check failed'); return false; }
-}
-async function noteLoginFailure(req,identity){
-  if(!pool) return;
-  try{
-    const {ipKey,identityKey}=rateLimitKeys(req,identity);
-    const sql="INSERT INTO auth_rate_limits(bucket_key,window_started_at,attempts) SELECT key,NOW(),1 FROM unnest($1::text[]) AS t(key) ON CONFLICT(bucket_key) DO UPDATE SET attempts=CASE WHEN auth_rate_limits.window_started_at < NOW()-($2::double precision*INTERVAL '1 millisecond') THEN 1 ELSE auth_rate_limits.attempts+1 END, window_started_at=CASE WHEN auth_rate_limits.window_started_at < NOW()-($2::double precision*INTERVAL '1 millisecond') THEN NOW() ELSE auth_rate_limits.window_started_at END";
-    await pool.query(sql,[[ipKey,identityKey],LOGIN_WINDOW_MS]);
-  }catch(e){ console.error('Authentication failure counter update failed'); }
+    return allowed;
+  }catch(e){
+    if(client) await client.query('ROLLBACK').catch(()=>{});
+    console.error('Authentication rate-limit transaction failed');
+    return false;
+  }finally{client?.release();}
 }
 async function clearLoginFailures(req,identity){
   if(!pool) return;
@@ -68,7 +90,6 @@ async function clearLoginFailures(req,identity){
     await pool.query('DELETE FROM auth_rate_limits WHERE bucket_key=$1',[identityKey]);
   }catch(e){ console.error('Authentication failure counter cleanup failed'); }
 }
-
 function token(user){ return jwt.sign({sub:user.id,email:user.email,role:user.role||'user',ver:Number(user.token_version||0)},JWT_SECRET,{expiresIn:'7d'}); }
 
 function ua(req){ return req.headers['user-agent']||null; }
@@ -100,7 +121,7 @@ app.post('/api/auth/register', async (req,res)=>{
   if(!/^\S+@\S+\.\S+$/.test(email)||password.length<12) return res.status(400).json({error:'email and password (12+ chars) required'});
   if(!(await loginAllowed(req,email))){ await logSecurity({email,eventType:'registration_rate_limited',req}); return res.status(429).json({error:'too_many_registration_attempts'}); }
   try { const hash=await bcrypt.hash(password,12); const r=await pool.query('INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id,email,role,status,token_version',[email,hash]); await clearLoginFailures(req,email); await logSecurity({userId:r.rows[0].id,email:r.rows[0].email,eventType:'register',req}); await logActivity({userId:r.rows[0].id,eventType:'register',route:'/account',req}); res.status(201).json({token:token(r.rows[0]),user:r.rows[0]}); }
-  catch(e){ if(e.code==='23505'){await noteLoginFailure(req,email); return res.status(409).json({error:'email already registered'});} res.status(500).json({error:'registration failed'}); }
+  catch(e){ if(e.code==='23505'){ return res.status(409).json({error:'email already registered'});} res.status(500).json({error:'registration failed'}); }
 });
 app.get('/api/auth/me', auth, async (req,res)=>{
   if(!requireDb(res)) return;
@@ -115,7 +136,7 @@ app.post('/api/auth/quick-admin', async (req,res)=>{
   const password=String(req.body?.password||'');
   if(!(await loginAllowed(req,username))){ await logSecurity({email:username||ADMIN_USERNAME,eventType:'quick_admin_login_rate_limited',req}); return res.status(429).json({error:'too_many_login_attempts'}); }
   if(!ADMIN_PASSWORD || username!==ADMIN_USERNAME || password!==ADMIN_PASSWORD){
-    await noteLoginFailure(req,username);
+
     await logSecurity({email:username||ADMIN_USERNAME,eventType:'quick_admin_login_failed',req});
     return res.status(401).json({error:'invalid admin credentials'});
   }
@@ -136,7 +157,7 @@ app.post('/api/auth/login', async (req,res)=>{
   const cleanEmail=String(email||'').toLowerCase().trim();
   if(!(await loginAllowed(req,cleanEmail))){ await logSecurity({email:cleanEmail,eventType:'login_rate_limited',req}); return res.status(429).json({error:'too_many_login_attempts'}); }
   const r=await pool.query('SELECT id,email,password_hash,role,status,token_version FROM users WHERE email=$1',[cleanEmail]);
-  if(!r.rowCount||!(await bcrypt.compare(String(password||''),r.rows[0].password_hash))) { await noteLoginFailure(req,cleanEmail); await logSecurity({email:cleanEmail,eventType:'login_failed',req}); return res.status(401).json({error:'invalid credentials'}); }
+  if(!r.rowCount||!(await bcrypt.compare(String(password||''),r.rows[0].password_hash))) {  await logSecurity({email:cleanEmail,eventType:'login_failed',req}); return res.status(401).json({error:'invalid credentials'}); }
   if(r.rows[0].status!=='active'){ await logSecurity({userId:r.rows[0].id,email:cleanEmail,eventType:'login_blocked',req}); return res.status(403).json({error:'account_suspended'}); }
   await clearLoginFailures(req,cleanEmail);
   await pool.query('UPDATE users SET last_login_at=NOW(),last_ip=$2,last_user_agent=$3 WHERE id=$1',[r.rows[0].id,clientIp(req),ua(req)]); await logSecurity({userId:r.rows[0].id,email:cleanEmail,eventType:'login_success',req}); await logActivity({userId:r.rows[0].id,eventType:'login',route:'/account',req});
@@ -149,8 +170,8 @@ app.get('/api/admin/overview',auth,adminUser,async(req,res)=>{if(!requireDb(res)
 app.get('/api/admin/users',auth,adminUser,async(req,res)=>{if(!requireDb(res))return; const r=await pool.query("SELECT id,email,role,status,created_at,last_login_at,last_ip::text last_ip,last_user_agent FROM users ORDER BY created_at DESC LIMIT 500");res.json(r.rows);});
 app.get('/api/admin/activity',auth,adminUser,async(req,res)=>{if(!requireDb(res))return; const r=await pool.query("SELECT a.id,a.event_type,a.route,a.ip::text ip,a.user_agent,a.country,a.city,a.created_at,u.email FROM activity_log a LEFT JOIN users u ON u.id=a.user_id ORDER BY a.created_at DESC LIMIT 300");res.json(r.rows);});
 app.get('/api/admin/security',auth,adminUser,async(req,res)=>{if(!requireDb(res))return; const r=await pool.query("SELECT s.id,s.email,s.event_type,s.ip::text ip,s.user_agent,s.created_at,u.email user_email FROM security_log s LEFT JOIN users u ON u.id=s.user_id ORDER BY s.created_at DESC LIMIT 300");res.json(r.rows);});
-app.post('/api/admin/users/:id/status',auth,adminUser,ownerOnly,async(req,res)=>{if(!requireDb(res))return; const status=req.body?.status; if(!['active','suspended'].includes(status))return res.status(400).json({error:'invalid_status'}); await pool.query('UPDATE users SET status=$2,token_version=token_version+1 WHERE id=$1',[req.params.id,status]); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'change_user_status','user',req.params.id,{status}]);res.json({ok:true});});
-app.post('/api/admin/users/:id/role',auth,adminUser,ownerOnly,async(req,res)=>{if(!requireDb(res))return; const role=req.body?.role; const roles=['owner','super_admin','content_manager','video_manager','lab_manager','analyst','user']; if(!roles.includes(role))return res.status(400).json({error:'invalid_role'}); await pool.query('UPDATE users SET role=$2,token_version=token_version+1 WHERE id=$1',[req.params.id,role]); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'change_user_role','user',req.params.id,{role}]);res.json({ok:true});});
+app.post('/api/admin/users/:id/status',auth,adminUser,ownerOnly,async(req,res)=>{if(!requireDb(res))return; const status=req.body?.status; if(!['active','suspended'].includes(status))return res.status(400).json({error:'invalid_status'}); if(req.params.id===req.user.sub && status!=='active')return res.status(400).json({error:'cannot_suspend_current_owner'}); await pool.query('UPDATE users SET status=$2,token_version=token_version+1 WHERE id=$1',[req.params.id,status]); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'change_user_status','user',req.params.id,{status}]);res.json({ok:true});});
+app.post('/api/admin/users/:id/role',auth,adminUser,ownerOnly,async(req,res)=>{if(!requireDb(res))return; const role=req.body?.role; const roles=['owner','super_admin','content_manager','video_manager','lab_manager','analyst','user']; if(!roles.includes(role))return res.status(400).json({error:'invalid_role'}); if(req.params.id===req.user.sub && role!=='owner')return res.status(400).json({error:'cannot_remove_current_owner_role'}); await pool.query('UPDATE users SET role=$2,token_version=token_version+1 WHERE id=$1',[req.params.id,role]); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'change_user_role','user',req.params.id,{role}]);res.json({ok:true});});
 
 app.get('/api/admin/audit',auth,adminUser,async(req,res)=>{ if(!requireDb(res))return; const r=await pool.query("SELECT a.id,a.action,a.target_type,a.target_id,a.metadata,a.created_at,u.email actor_email FROM audit_log a LEFT JOIN users u ON u.id=a.actor_user_id ORDER BY a.created_at DESC LIMIT 300"); res.json(r.rows); });
 app.get('/api/admin/system',auth,adminUser,async(req,res)=>{ if(!requireDb(res))return; const r=await pool.query("SELECT role,COUNT(*)::int count FROM users GROUP BY role ORDER BY role"); res.json({node:process.version,environment:process.env.NODE_ENV||'development',database:true,ai:!!(AI_URL&&AI_KEY),roles:r.rows}); });

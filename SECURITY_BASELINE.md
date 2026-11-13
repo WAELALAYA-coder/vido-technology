@@ -1,59 +1,81 @@
 # VIDO Technology — Security Baseline
 
-**Review date:** 13 November 2026
-**Build:** VIDO Changeable Build V33
-**Current deployment:** Local Windows 11 host, Docker Compose
-**Public release status:** Not deployed; public registration is disabled.
+Review date: 13 November 2026
+Build: VIDO Changeable Build V33
+Current deployment: Local Windows 11 host with Docker Compose
+Public release status: Not deployed. Public self-registration is disabled.
 
 ## Implemented controls
 
-- The Express server serves only the public frontend files: `/`, `/index.html`, `/manifest.webmanifest`, and `/service-worker.js`. Backend source, SQL schema, package files, Compose configuration, Git metadata, and `.env` are not served.
-- Docker publishes the application and PostgreSQL ports on `127.0.0.1`, not on all network interfaces.
-- Public self-registration is disabled by default through `REGISTRATION_ENABLED=false`. The backend returns HTTP 403 even if a client manually calls the registration API. New accounts can be created by the owner through the authenticated administration API.
-- Failed login controls use PostgreSQL rather than process memory. The rate-limit table stores SHA-256 bucket identifiers rather than raw email/IP values. Limits are 10 failures per IP-and-identity pair and 30 failures per IP within 15 minutes. Old rows are cleaned automatically.
-- The application does not trust arbitrary `X-Forwarded-For` values. Express proxy trust is explicitly disabled for the current direct localhost deployment.
-- Authenticated API requests check the JWT, account status, and a database-backed token version. Password resets, role changes, and status changes increment the version to invalidate older tokens.
-- Owner bootstrap creates the owner only when the account does not already exist. It no longer overwrites an existing owner password at every application restart.
-- New account passwords, administrative account creation, and password resets require at least 12 characters. Password hashes use bcrypt with cost 12.
-- Security response headers include `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, a restrictive Referrer Policy, and a Permissions Policy. The Express identification header is disabled. API responses are marked `no-store`.
-- The app and database passed health checks after the changes. The 300-question content audit passed.
-- `npm audit` reports zero known vulnerabilities in the checked dependency tree, both on the host and inside the app container.
+- Express serves only the public frontend routes: /, /index.html, /manifest.webmanifest, and /service-worker.js. Backend source, SQL schema, package files, Compose configuration, Git metadata, and environment files are not served.
+- The local Docker deployment publishes the app and PostgreSQL ports on 127.0.0.1 only.
+- Public self-registration is disabled by default. The API returns HTTP 403 while disabled. New accounts can be created by the owner through the authenticated administration API.
+- Failed-login counters are stored in PostgreSQL. The table contains SHA-256 bucket identifiers rather than raw email addresses or IP values.
+- Rate-limit checks and counter reservations run in a single PostgreSQL transaction protected by transaction-scoped advisory locks. Concurrent attempts cannot race through the same limit.
+- Limits allow up to 10 failed attempts for one IP-and-identity pair and 30 total login attempts per IP within 15 minutes. A successful login clears the identity counter. IP counters also count successful attempts.
+- Old rate-limit rows are deleted automatically.
+- Arbitrary client-supplied X-Forwarded-For values are not trusted. Proxy trust is disabled locally. The production template configures trust for one exact IPv4 address assigned to Caddy; invalid or non-IPv4 values stop the server from starting.
+- Authenticated API requests validate the JWT, account status, and a database-backed token version. Password resets, role changes, and status changes increment the version and invalidate earlier tokens.
+- Owner bootstrap creates the owner only if the account does not already exist. It no longer overwrites an existing owner password on every restart.
+- The owner cannot suspend their own account or remove their own owner role through the administration API. The API also prevents deleting the currently authenticated owner.
+- New account creation and password resets require at least 12 characters. Password hashes use bcrypt with cost 12.
+- Security headers include X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, and Cross-Origin-Resource-Policy. The Express identification header is disabled. API responses are marked no-store.
+- The production Dockerfile uses npm ci --omit=dev, runs as the non-root node user, and has a read-only runtime filesystem in the production Compose configuration.
+- Node, PostgreSQL, and Caddy production images are pinned by digest in the production templates.
+- npm audit reports zero known vulnerabilities in the checked dependency tree.
 
 ## Verification performed
 
 - Backend and database health: passed.
 - Registration API while disabled: HTTP 403.
-- Static frontend and PWA files: HTTP 200.
-- Backend/SQL/configuration/secret paths: HTTP 404.
-- Identity rate limit: 10 failed attempts followed by HTTP 429.
-- IP rate limit: 30 failed attempts across different identities and forged `X-Forwarded-For` values, followed by HTTP 429.
-- Persistent rate limit: a lockout remained effective after restarting the app container.
-- Session validation: current active token accepted; expired token, wrong token version, changed token version, and suspended account rejected.
-- Owner password hash fingerprint and user count were unchanged by the schema migration.
-- Temporary test rate-limit rows and temporary test users were not retained.
+- Static frontend and PWA routes: HTTP 200.
+- Backend, SQL, package, Compose, environment, and Git paths: HTTP 404.
+- Concurrent identity test: 20 simultaneous invalid logins produced exactly 10 HTTP 401 responses and 10 HTTP 429 responses.
+- IP test: 30 invalid requests using different identities and changed X-Forwarded-For values were followed by HTTP 429 on request 31.
+- Persistent lockout: a rate-limit lock remained effective after restarting the app container.
+- Session validation: valid active token accepted; expired token, wrong token version, changed token version, and suspended account rejected.
+- Owner password hash fingerprint and user count were unchanged by the database migration.
+- Temporary test rate-limit rows and temporary test identities were removed after testing.
+- Production Compose configuration passed docker compose config --quiet using the example environment file.
+- Caddyfile passed caddy validate and was formatted.
+- Production app image built successfully from the pinned Node base image. It runs as UID 1000 and contains no .env, .env.production, .git, backup directory, or temporary test scripts.
+- The content audit passed: 300 questions and 210 unique IDs.
+- Host and container dependency audits reported zero known vulnerabilities.
 
 ## Current environment and limitations
 
-This is a hardened **local deployment**, not a public production service.
+This is a hardened local deployment, not a public production service.
 
-1. **HTTPS/TLS is not configured.** Localhost is currently served over HTTP. A public release needs a domain, TLS reverse proxy, HSTS at the HTTPS edge, and secure certificate renewal.
-2. **Reverse proxy trust is deliberately off.** Before placing the app behind a proxy, configure trust only for the exact trusted proxy/network. Do not enable unrestricted proxy trust.
-3. **Content Security Policy is not enabled.** The current frontend contains inline scripts and styles. A robust CSP requires moving scripts/styles to managed assets or adding nonces/hashes and testing the full UI first.
-4. **Browser tokens remain bearer tokens.** The app keeps its session token in browser session storage; its optional “keep me signed in” feature uses local storage. A future public release should consider an HttpOnly, Secure, SameSite cookie session design and CSRF controls.
-5. **No MFA, email verification, or self-service password reset workflow is configured.** Public registration remains disabled until these product flows are designed.
-6. **Database backups are local.** The scheduled backup task and private GitHub source synchronization do not create an off-site copy of the PostgreSQL dump. Public production requires encrypted off-site backups and periodic restore drills.
-7. **AI tutor is disabled.** No AI API key or provider configuration was enabled.
-8. **Database transport is plain inside the current private Docker network.** An externally hosted database must use its provider's TLS connection settings and private networking where available.
-9. **Container image tags are not digest-pinned.** Pin reviewed image digests for a reproducible public production deployment.
+1. HTTPS/TLS is not active locally. The production Caddy configuration is prepared for automatic HTTPS, but no public domain or server has been connected.
+2. Proxy trust is disabled locally. The production template trusts only the exact Caddy IPv4 address 172.29.250.2.
+3. Content Security Policy is not enabled because the current frontend includes inline scripts and styles. A strong CSP requires refactoring these assets and testing the full UI.
+4. Browser tokens are bearer tokens stored in browser session storage; the optional keep-me-signed-in feature uses local storage. A future public release should consider HttpOnly, Secure, SameSite cookie sessions and CSRF protections.
+5. MFA, email verification, and self-service password recovery are not configured. Registration remains closed.
+6. Backups currently reside on the Windows device. The scheduled task and private GitHub source synchronization do not provide off-site PostgreSQL backups. Production needs encrypted off-site backups and regular restore drills.
+7. The AI tutor is disabled because no provider key or endpoint is configured.
+8. The local database connection is plain inside the private Docker network. An externally hosted database must use provider TLS and private networking.
+9. Production image digests are pinned in the prepared Dockerfile and Compose template. Update them through controlled security reviews.
+
+## Prepared production files
+
+- Dockerfile: production Node runtime, non-root user, health check.
+- .dockerignore: excludes secrets, Git metadata, backups, and temporary development scripts.
+- compose.production.yml: Caddy is the only public service; app and database are not published as host ports; PostgreSQL is on an internal network.
+- Caddyfile.production: reverse proxy, automatic HTTPS, security headers.
+- .env.production.example: placeholders only, no working secrets.
+
+The production configuration was validated and the app image was built. The production stack has not been started on the local PC because it would open ports 80 and 443 and requires a real domain, public host, DNS, and production secrets.
 
 ## Release gate before going public
 
 - Select an EU-based hosting provider and configure a domain.
-- Configure HTTPS, secure reverse-proxy IP handling, and production security headers.
-- Move secrets into the hosting provider's secret manager; never commit `.env`.
-- Confirm owner/admin credentials in a password manager and rotate any secret that has been reused elsewhere.
-- Configure encrypted off-site PostgreSQL backups and test recovery from that location.
-- Decide whether registration stays invite-only or is opened with email verification, abuse protection, and account recovery.
-- Test the application on the production hostname, including login, session revocation, PWA installation, mobile layout, administration, and database recovery.
+- Point DNS to the hosting server and enable inbound TCP 80/443; UDP 443 is optional for HTTP/3.
+- Create the real .env.production file on the hosting server using a password manager. Never commit it.
+- Keep registration disabled for the initial private launch.
+- Configure provider-encrypted storage, encrypted off-site PostgreSQL backups, and tested recovery.
+- Review CSP and browser token storage before opening registration.
+- Configure monitoring for application health, database availability, disk space, certificates, and backup failures.
 
-**Important:** GitHub Pages can host only a static frontend. It cannot run this VIDO Express API or PostgreSQL service. It is not the production hosting target for the complete application.
+Important: GitHub Pages can host only a static frontend. It cannot run this Express API and PostgreSQL database, so it is not a complete VIDO hosting target.
+
+- The production-only credential gate requires a unique JWT secret of at least 48 characters, owner and quick-admin passwords of at least 12 characters, different owner/admin passwords, a real database URL, and disabled public registration. It rejects the example placeholders before the public service can start. The local development Compose profile does not enable this gate.

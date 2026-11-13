@@ -1,0 +1,106 @@
+services:
+  postgres:
+    image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vido
+      POSTGRES_USER: vido_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.production}
+    volumes:
+      - vido_prod_pgdata:/var/lib/postgresql/data
+      - ./backend/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vido_user -d vido"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vido-technology-app:production
+    restart: unless-stopped
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      VIDO_REQUIRE_STRONG_CREDENTIALS: "true"
+      PORT: 3000
+      DATABASE_URL: postgresql://vido_user:${POSTGRES_PASSWORD}@postgres:5432/vido
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.production}
+      OWNER_EMAIL: ${OWNER_EMAIL:?Set OWNER_EMAIL in .env.production}
+      OWNER_PASSWORD: ${OWNER_PASSWORD:?Set OWNER_PASSWORD in .env.production}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-Admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env.production}
+      REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-false}
+      TRUSTED_PROXY_IP: ${TRUSTED_PROXY_IP:?Set TRUSTED_PROXY_IP to 172.29.250.2}
+      AI_API_URL: ${AI_API_URL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-}
+    expose:
+      - "3000"
+    networks:
+      edge:
+        ipv4_address: 172.29.250.3
+      data: {}
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  caddy:
+    image: caddy:2-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      VIDO_DOMAIN: ${VIDO_DOMAIN:?Set VIDO_DOMAIN in .env.production}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile.production:/etc/caddy/Caddyfile:ro
+      - vido_caddy_data:/data
+      - vido_caddy_config:/config
+    networks:
+      edge:
+        ipv4_address: 172.29.250.2
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: 172.29.250.0/24
+  data:
+    internal: true
+
+volumes:
+  vido_prod_pgdata:
+  vido_caddy_data:
+  vido_caddy_config:
