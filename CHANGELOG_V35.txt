@@ -1,0 +1,18 @@
+VIDO Technology V35
+Date: 13 November 2026
+
+Authentication and mobile UI
+- Fixed the password confirmation field appearing on the normal sign-in screen.
+- The confirmation input and its wrapper now start hidden and are synchronized explicitly when entering or leaving registration mode.
+- Logging out resets the confirmation input and hides its wrapper before returning to sign-in.
+- Updated the service-worker registration query and cache name so mobile browsers can install the V35 frontend instead of reusing the V34 cache.
+
+Maintenance and documentation
+- Updated SECURITY_BASELINE.md to identify the current V35 build and the actual home-LAN port/firewall configuration.
+- Kept the app's home-LAN access rule separate from the GitHub repository; local Compose networking settings are not part of this release.
+
+Known operational prerequisites
+- Public registration remains disabled by design.
+- VIDO Tutor remains unavailable until a valid provider URL and API key are configured in the running container.
+- The local phone-access URL uses HTTP and is intended only for a trusted private Wi-Fi network.
+- The Cisco simulator remains an educational model, not a full Cisco IOS or physical packet emulator.

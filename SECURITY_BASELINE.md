@@ -1,14 +1,14 @@
 # VIDO Technology — Security Baseline
 
 Review date: 13 November 2026
-Build: VIDO Changeable Build V33
+Build: VIDO Technology V35 (V34 feature set + authentication/mobile hotfix)
 Current deployment: Local Windows 11 host with Docker Compose
 Public release status: Not deployed. Public self-registration is disabled.
 
 ## Implemented controls
 
 - Express serves only the public frontend routes: /, /index.html, /manifest.webmanifest, and /service-worker.js. Backend source, SQL schema, package files, Compose configuration, Git metadata, and environment files are not served.
-- The local Docker deployment publishes the app and PostgreSQL ports on 127.0.0.1 only.
+- The local Docker deployment publishes the app on TCP 3000 for trusted home-LAN access. Windows Firewall has an inbound allow rule for TCP 3000 restricted to RemoteAddress LocalSubnet. PostgreSQL remains bound to 127.0.0.1:5432. The app transport is plain HTTP; use this LAN access only on a trusted private network.
 - Public self-registration is disabled by default. The API returns HTTP 403 while disabled. New accounts can be created by the owner through the authenticated administration API.
 - Failed-login counters are stored in PostgreSQL. The table contains SHA-256 bucket identifiers rather than raw email addresses or IP values.
 - Rate-limit checks and counter reservations run in a single PostgreSQL transaction protected by transaction-scoped advisory locks. Concurrent attempts cannot race through the same limit.
@@ -39,7 +39,7 @@ Public release status: Not deployed. Public self-registration is disabled.
 - Production Compose configuration passed docker compose config --quiet using the example environment file.
 - Caddyfile passed caddy validate and was formatted.
 - Production app image built successfully from the pinned Node base image. It runs as UID 1000 and contains no .env, .env.production, .git, backup directory, or temporary test scripts.
-- The content audit passed: 300 questions and 210 unique IDs.
+- The content audit passed: 300 questions. The current HTML audit also verifies that all element IDs are unique.
 - Host and container dependency audits reported zero known vulnerabilities.
 
 ## Current environment and limitations
@@ -52,7 +52,7 @@ This is a hardened local deployment, not a public production service.
 4. Browser tokens are bearer tokens stored in browser session storage; the optional keep-me-signed-in feature uses local storage. A future public release should consider HttpOnly, Secure, SameSite cookie sessions and CSRF protections.
 5. MFA, email verification, and self-service password recovery are not configured. Registration remains closed.
 6. Backups currently reside on the Windows device. The scheduled task and private GitHub source synchronization do not provide off-site PostgreSQL backups. Production needs encrypted off-site backups and regular restore drills.
-7. The AI tutor is disabled because no provider key or endpoint is configured.
+7. The AI tutor is disabled in the running container because the runtime has no provider URL or API key configured.
 8. The local database connection is plain inside the private Docker network. An externally hosted database must use provider TLS and private networking.
 9. Production image digests are pinned in the prepared Dockerfile and Compose template. Update them through controlled security reviews.
 
