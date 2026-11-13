@@ -7,6 +7,9 @@ import crypto from 'node:crypto';
 const { Pool } = pg;
 const app = express();
 app.set('trust proxy', false);
+app.disable('x-powered-by');
+app.use((_req,res,next)=>{ res.setHeader('X-Content-Type-Options','nosniff'); res.setHeader('X-Frame-Options','DENY'); res.setHeader('Referrer-Policy','strict-origin-when-cross-origin'); res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()'); res.setHeader('Cross-Origin-Resource-Policy','same-origin'); next(); });
+app.use('/api',(_req,res,next)=>{ res.setHeader('Cache-Control','no-store, max-age=0'); res.setHeader('Pragma','no-cache'); next(); });
 app.use(express.json({limit:'1mb'}));
 const PUBLIC_ROOT = process.cwd();
 app.get('/', (_req,res)=>res.sendFile('index.html',{root:PUBLIC_ROOT}));
@@ -25,69 +28,79 @@ const REGISTRATION_ENABLED = String(process.env.REGISTRATION_ENABLED || 'false')
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 10;
 const IP_LOGIN_MAX_ATTEMPTS = 30;
-const MAX_TRACKED_LOGIN_BUCKETS = 20000;
-const loginAttempts = new Map();
-
+let lastRateLimitCleanup = 0;
 function clientIp(req){ return String(req.ip || req.socket?.remoteAddress || 'unknown'); }
-function normalizeLoginIdentity(value){ return String(value ?? '').trim().toLowerCase().slice(0,254) || 'unknown'; }
-function loginKey(req,identity){ return 'identity:' + clientIp(req) + '|' + normalizeLoginIdentity(identity); }
-function ipLoginKey(req){ return 'ip:' + clientIp(req); }
-function getLoginBucket(key,now=Date.now()){
-  const hit=loginAttempts.get(key);
-  if(hit && now-hit.started>=LOGIN_WINDOW_MS){ loginAttempts.delete(key); return null; }
-  return hit || null;
-}
-function pruneExpiredLoginBuckets(now=Date.now()){
-  for(const [key,hit] of loginAttempts){ if(now-hit.started>=LOGIN_WINDOW_MS) loginAttempts.delete(key); }
-}
-function loginAllowed(req,identity){
-  const now=Date.now();
-  const keys=[ipLoginKey(req),loginKey(req,identity)];
-  const ipHit=getLoginBucket(keys[0],now);
-  const identityHit=getLoginBucket(keys[1],now);
-  if(ipHit && ipHit.count>=IP_LOGIN_MAX_ATTEMPTS) return false;
-  if(identityHit && identityHit.count>=LOGIN_MAX_ATTEMPTS) return false;
-  const missing=keys.filter(key=>!loginAttempts.has(key)).length;
-  if(missing && loginAttempts.size+missing>MAX_TRACKED_LOGIN_BUCKETS){
-    pruneExpiredLoginBuckets(now);
-    if(loginAttempts.size+missing>MAX_TRACKED_LOGIN_BUCKETS) return false;
-  }
-  return true;
-}
-function noteLoginFailure(req,identity){
-  const now=Date.now();
-  const keys=[ipLoginKey(req),loginKey(req,identity)];
-  if(loginAttempts.size+keys.filter(key=>!loginAttempts.has(key)).length>MAX_TRACKED_LOGIN_BUCKETS) pruneExpiredLoginBuckets(now);
-  for(const key of keys){
-    let hit=getLoginBucket(key,now);
-    if(!hit){
-      if(loginAttempts.size>=MAX_TRACKED_LOGIN_BUCKETS) return;
-      hit={started:now,count:0};
-      loginAttempts.set(key,hit);
-    }
-    hit.count++;
-  }
-}
-function clearLoginFailures(req,identity){ loginAttempts.delete(loginKey(req,identity)); }
 
-function token(user){ return jwt.sign({sub:user.id,email:user.email,role:user.role||'user'},JWT_SECRET,{expiresIn:'7d'}); }
+function normalizeLoginIdentity(value){ return String(value ?? '').trim().toLowerCase().slice(0,254) || 'unknown'; }
+function rateLimitKeys(req,identity){
+  const ip=clientIp(req);
+  const ipHash=crypto.createHash('sha256').update(ip).digest('hex');
+  const identityHash=crypto.createHash('sha256').update(ip+'|'+normalizeLoginIdentity(identity)).digest('hex');
+  return {ipKey:'ip:'+ipHash,identityKey:'identity:'+identityHash};
+}
+async function loginAllowed(req,identity){
+  if(!pool) return false;
+  try{
+    const {ipKey,identityKey}=rateLimitKeys(req,identity);
+    const sql="SELECT bucket_key,attempts FROM auth_rate_limits WHERE bucket_key=ANY($1::text[]) AND window_started_at>NOW()-($2::double precision*INTERVAL '1 millisecond')";
+    const r=await pool.query(sql,[[ipKey,identityKey],LOGIN_WINDOW_MS]);
+    const counts=new Map(r.rows.map(row=>[row.bucket_key,Number(row.attempts)]));
+    const now=Date.now();
+    if(now-lastRateLimitCleanup>10*60*1000){
+      lastRateLimitCleanup=now;
+      await pool.query("DELETE FROM auth_rate_limits WHERE window_started_at < NOW()-INTERVAL '1 day'");
+    }
+    return (counts.get(ipKey)||0)<IP_LOGIN_MAX_ATTEMPTS && (counts.get(identityKey)||0)<LOGIN_MAX_ATTEMPTS;
+  }catch(e){ console.error('Authentication rate-limit check failed'); return false; }
+}
+async function noteLoginFailure(req,identity){
+  if(!pool) return;
+  try{
+    const {ipKey,identityKey}=rateLimitKeys(req,identity);
+    const sql="INSERT INTO auth_rate_limits(bucket_key,window_started_at,attempts) SELECT key,NOW(),1 FROM unnest($1::text[]) AS t(key) ON CONFLICT(bucket_key) DO UPDATE SET attempts=CASE WHEN auth_rate_limits.window_started_at < NOW()-($2::double precision*INTERVAL '1 millisecond') THEN 1 ELSE auth_rate_limits.attempts+1 END, window_started_at=CASE WHEN auth_rate_limits.window_started_at < NOW()-($2::double precision*INTERVAL '1 millisecond') THEN NOW() ELSE auth_rate_limits.window_started_at END";
+    await pool.query(sql,[[ipKey,identityKey],LOGIN_WINDOW_MS]);
+  }catch(e){ console.error('Authentication failure counter update failed'); }
+}
+async function clearLoginFailures(req,identity){
+  if(!pool) return;
+  try{
+    const {identityKey}=rateLimitKeys(req,identity);
+    await pool.query('DELETE FROM auth_rate_limits WHERE bucket_key=$1',[identityKey]);
+  }catch(e){ console.error('Authentication failure counter cleanup failed'); }
+}
+
+function token(user){ return jwt.sign({sub:user.id,email:user.email,role:user.role||'user',ver:Number(user.token_version||0)},JWT_SECRET,{expiresIn:'7d'}); }
 
 function ua(req){ return req.headers['user-agent']||null; }
 async function logSecurity({userId=null,email=null,eventType,req,metadata={}}){ if(!pool)return; await pool.query('INSERT INTO security_log(user_id,email,event_type,ip,user_agent,metadata) VALUES($1,$2,$3,$4,$5,$6)',[userId,email,eventType,clientIp(req),ua(req),metadata]); }
 async function logActivity({userId,eventType,route=null,req,metadata={}}){ if(!pool)return; await pool.query('INSERT INTO activity_log(user_id,event_type,route,ip,user_agent,metadata) VALUES($1,$2,$3,$4,$5,$6)',[userId,eventType,route,clientIp(req),ua(req),metadata]); }
 async function adminUser(req,res,next){ if(!pool)return requireDb(res); try { const r=await pool.query('SELECT id,email,role,status FROM users WHERE id=$1',[req.user.sub]); if(!r.rowCount||r.rows[0].status!=='active'||!['owner','super_admin','analyst','content_manager','video_manager','lab_manager'].includes(r.rows[0].role)) return res.status(403).json({error:'admin_forbidden'}); req.admin=r.rows[0]; next(); } catch { res.status(500).json({error:'admin_check_failed'}); } }
 async function ownerOnly(req,res,next){ if(!req.admin||req.admin.role!=='owner') return res.status(403).json({error:'owner_only'}); next(); }
-function auth(req,res,next){ try { const h=req.headers.authorization||''; if(!h.startsWith('Bearer ')) throw new Error(); req.user=jwt.verify(h.slice(7),JWT_SECRET); next(); } catch { res.status(401).json({error:'unauthorized'}); } }
+async function auth(req,res,next){
+  const h=req.headers.authorization||'';
+  if(!h.startsWith('Bearer ')) return res.status(401).json({error:'unauthorized'});
+  let payload;
+  try{ payload=jwt.verify(h.slice(7),JWT_SECRET); }
+  catch{ return res.status(401).json({error:'unauthorized'}); }
+  if(!requireDb(res)) return;
+  try{
+    const r=await pool.query('SELECT status,token_version FROM users WHERE id=$1',[payload.sub]);
+    if(!r.rowCount || r.rows[0].status!=='active' || Number(payload.ver??0)!==Number(r.rows[0].token_version??0))
+      return res.status(401).json({error:'unauthorized'});
+    req.user=payload;
+    next();
+  }catch(e){ return res.status(503).json({error:'auth_check_unavailable'}); }
+}
 function requireDb(res){ if(!pool){res.status(503).json({error:'DATABASE_URL is not configured'}); return false;} return true; }
 
 app.get('/api/health', async (_req,res)=>{ let db=false; if(pool){ try{ await pool.query('SELECT 1'); db=true; }catch{} } res.status(db?200:503).json({ok:db,backend:true,database:db,ai:!!(AI_URL&&AI_KEY)}); });
 app.post('/api/auth/register', async (req,res)=>{
   if(!REGISTRATION_ENABLED) return res.status(403).json({error:'registration_disabled'});
   if(!requireDb(res)) return; const email=String(req.body?.email||'').toLowerCase().trim(); const password=String(req.body?.password||'');
-  if(!/^\S+@\S+\.\S+$/.test(email)||password.length<8) return res.status(400).json({error:'email and password (8+ chars) required'});
-  if(!loginAllowed(req,email)){ await logSecurity({email,eventType:'registration_rate_limited',req}); return res.status(429).json({error:'too_many_registration_attempts'}); }
-  try { const hash=await bcrypt.hash(password,12); const r=await pool.query('INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id,email,role,status',[email,hash]); clearLoginFailures(req,email); await logSecurity({userId:r.rows[0].id,email:r.rows[0].email,eventType:'register',req}); await logActivity({userId:r.rows[0].id,eventType:'register',route:'/account',req}); res.status(201).json({token:token(r.rows[0]),user:r.rows[0]}); }
-  catch(e){ if(e.code==='23505'){noteLoginFailure(req,email); return res.status(409).json({error:'email already registered'});} res.status(500).json({error:'registration failed'}); }
+  if(!/^\S+@\S+\.\S+$/.test(email)||password.length<12) return res.status(400).json({error:'email and password (12+ chars) required'});
+  if(!(await loginAllowed(req,email))){ await logSecurity({email,eventType:'registration_rate_limited',req}); return res.status(429).json({error:'too_many_registration_attempts'}); }
+  try { const hash=await bcrypt.hash(password,12); const r=await pool.query('INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id,email,role,status,token_version',[email,hash]); await clearLoginFailures(req,email); await logSecurity({userId:r.rows[0].id,email:r.rows[0].email,eventType:'register',req}); await logActivity({userId:r.rows[0].id,eventType:'register',route:'/account',req}); res.status(201).json({token:token(r.rows[0]),user:r.rows[0]}); }
+  catch(e){ if(e.code==='23505'){await noteLoginFailure(req,email); return res.status(409).json({error:'email already registered'});} res.status(500).json({error:'registration failed'}); }
 });
 app.get('/api/auth/me', auth, async (req,res)=>{
   if(!requireDb(res)) return;
@@ -100,19 +113,19 @@ app.post('/api/auth/quick-admin', async (req,res)=>{
   if(!requireDb(res)) return;
   const username=String(req.body?.username||'').trim();
   const password=String(req.body?.password||'');
-  if(!loginAllowed(req,username)){ await logSecurity({email:username||ADMIN_USERNAME,eventType:'quick_admin_login_rate_limited',req}); return res.status(429).json({error:'too_many_login_attempts'}); }
+  if(!(await loginAllowed(req,username))){ await logSecurity({email:username||ADMIN_USERNAME,eventType:'quick_admin_login_rate_limited',req}); return res.status(429).json({error:'too_many_login_attempts'}); }
   if(!ADMIN_PASSWORD || username!==ADMIN_USERNAME || password!==ADMIN_PASSWORD){
-    noteLoginFailure(req,username);
+    await noteLoginFailure(req,username);
     await logSecurity({email:username||ADMIN_USERNAME,eventType:'quick_admin_login_failed',req});
     return res.status(401).json({error:'invalid admin credentials'});
   }
   const email=process.env.OWNER_EMAIL ? String(process.env.OWNER_EMAIL).toLowerCase().trim() : 'admin@vido.local';
-  const r=await pool.query('SELECT id,email,role,status FROM users WHERE email=$1',[email]);
+  const r=await pool.query('SELECT id,email,role,status,token_version FROM users WHERE email=$1',[email]);
   if(!r.rowCount) return res.status(503).json({error:'owner account is not initialized'});
   const user=r.rows[0];
   if(user.status!=='active') return res.status(403).json({error:'account_suspended'});
   await pool.query('UPDATE users SET last_login_at=NOW(),last_ip=$2,last_user_agent=$3 WHERE id=$1',[user.id,clientIp(req),ua(req)]);
-  clearLoginFailures(req,username);
+  await clearLoginFailures(req,username);
   await logSecurity({userId:user.id,email:user.email,eventType:'quick_admin_login_success',req});
   await logActivity({userId:user.id,eventType:'quick_admin_login',route:'/login',req});
   res.json({token:token({...user,role:'owner'}),user:{...user,role:'owner'}});
@@ -121,11 +134,11 @@ app.post('/api/auth/quick-admin', async (req,res)=>{
 app.post('/api/auth/login', async (req,res)=>{
   if(!requireDb(res)) return; const {email,password}=req.body||{};
   const cleanEmail=String(email||'').toLowerCase().trim();
-  if(!loginAllowed(req,cleanEmail)){ await logSecurity({email:cleanEmail,eventType:'login_rate_limited',req}); return res.status(429).json({error:'too_many_login_attempts'}); }
-  const r=await pool.query('SELECT id,email,password_hash,role,status FROM users WHERE email=$1',[cleanEmail]);
-  if(!r.rowCount||!(await bcrypt.compare(String(password||''),r.rows[0].password_hash))) { noteLoginFailure(req,cleanEmail); await logSecurity({email:cleanEmail,eventType:'login_failed',req}); return res.status(401).json({error:'invalid credentials'}); }
+  if(!(await loginAllowed(req,cleanEmail))){ await logSecurity({email:cleanEmail,eventType:'login_rate_limited',req}); return res.status(429).json({error:'too_many_login_attempts'}); }
+  const r=await pool.query('SELECT id,email,password_hash,role,status,token_version FROM users WHERE email=$1',[cleanEmail]);
+  if(!r.rowCount||!(await bcrypt.compare(String(password||''),r.rows[0].password_hash))) { await noteLoginFailure(req,cleanEmail); await logSecurity({email:cleanEmail,eventType:'login_failed',req}); return res.status(401).json({error:'invalid credentials'}); }
   if(r.rows[0].status!=='active'){ await logSecurity({userId:r.rows[0].id,email:cleanEmail,eventType:'login_blocked',req}); return res.status(403).json({error:'account_suspended'}); }
-  clearLoginFailures(req,cleanEmail);
+  await clearLoginFailures(req,cleanEmail);
   await pool.query('UPDATE users SET last_login_at=NOW(),last_ip=$2,last_user_agent=$3 WHERE id=$1',[r.rows[0].id,clientIp(req),ua(req)]); await logSecurity({userId:r.rows[0].id,email:cleanEmail,eventType:'login_success',req}); await logActivity({userId:r.rows[0].id,eventType:'login',route:'/account',req});
   res.json({token:token(r.rows[0]),user:{id:r.rows[0].id,email:r.rows[0].email,role:r.rows[0].role,status:r.rows[0].status}});
 });
@@ -136,13 +149,13 @@ app.get('/api/admin/overview',auth,adminUser,async(req,res)=>{if(!requireDb(res)
 app.get('/api/admin/users',auth,adminUser,async(req,res)=>{if(!requireDb(res))return; const r=await pool.query("SELECT id,email,role,status,created_at,last_login_at,last_ip::text last_ip,last_user_agent FROM users ORDER BY created_at DESC LIMIT 500");res.json(r.rows);});
 app.get('/api/admin/activity',auth,adminUser,async(req,res)=>{if(!requireDb(res))return; const r=await pool.query("SELECT a.id,a.event_type,a.route,a.ip::text ip,a.user_agent,a.country,a.city,a.created_at,u.email FROM activity_log a LEFT JOIN users u ON u.id=a.user_id ORDER BY a.created_at DESC LIMIT 300");res.json(r.rows);});
 app.get('/api/admin/security',auth,adminUser,async(req,res)=>{if(!requireDb(res))return; const r=await pool.query("SELECT s.id,s.email,s.event_type,s.ip::text ip,s.user_agent,s.created_at,u.email user_email FROM security_log s LEFT JOIN users u ON u.id=s.user_id ORDER BY s.created_at DESC LIMIT 300");res.json(r.rows);});
-app.post('/api/admin/users/:id/status',auth,adminUser,ownerOnly,async(req,res)=>{if(!requireDb(res))return; const status=req.body?.status; if(!['active','suspended'].includes(status))return res.status(400).json({error:'invalid_status'}); await pool.query('UPDATE users SET status=$2 WHERE id=$1',[req.params.id,status]); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'change_user_status','user',req.params.id,{status}]);res.json({ok:true});});
-app.post('/api/admin/users/:id/role',auth,adminUser,ownerOnly,async(req,res)=>{if(!requireDb(res))return; const role=req.body?.role; const roles=['owner','super_admin','content_manager','video_manager','lab_manager','analyst','user']; if(!roles.includes(role))return res.status(400).json({error:'invalid_role'}); await pool.query('UPDATE users SET role=$2 WHERE id=$1',[req.params.id,role]); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'change_user_role','user',req.params.id,{role}]);res.json({ok:true});});
+app.post('/api/admin/users/:id/status',auth,adminUser,ownerOnly,async(req,res)=>{if(!requireDb(res))return; const status=req.body?.status; if(!['active','suspended'].includes(status))return res.status(400).json({error:'invalid_status'}); await pool.query('UPDATE users SET status=$2,token_version=token_version+1 WHERE id=$1',[req.params.id,status]); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'change_user_status','user',req.params.id,{status}]);res.json({ok:true});});
+app.post('/api/admin/users/:id/role',auth,adminUser,ownerOnly,async(req,res)=>{if(!requireDb(res))return; const role=req.body?.role; const roles=['owner','super_admin','content_manager','video_manager','lab_manager','analyst','user']; if(!roles.includes(role))return res.status(400).json({error:'invalid_role'}); await pool.query('UPDATE users SET role=$2,token_version=token_version+1 WHERE id=$1',[req.params.id,role]); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'change_user_role','user',req.params.id,{role}]);res.json({ok:true});});
 
 app.get('/api/admin/audit',auth,adminUser,async(req,res)=>{ if(!requireDb(res))return; const r=await pool.query("SELECT a.id,a.action,a.target_type,a.target_id,a.metadata,a.created_at,u.email actor_email FROM audit_log a LEFT JOIN users u ON u.id=a.actor_user_id ORDER BY a.created_at DESC LIMIT 300"); res.json(r.rows); });
 app.get('/api/admin/system',auth,adminUser,async(req,res)=>{ if(!requireDb(res))return; const r=await pool.query("SELECT role,COUNT(*)::int count FROM users GROUP BY role ORDER BY role"); res.json({node:process.version,environment:process.env.NODE_ENV||'development',database:true,ai:!!(AI_URL&&AI_KEY),roles:r.rows}); });
-app.post('/api/admin/users',auth,adminUser,ownerOnly,async(req,res)=>{ if(!requireDb(res))return; const email=String(req.body?.email||'').toLowerCase().trim(); const password=String(req.body?.password||''); const role=String(req.body?.role||'user'); const roles=['owner','super_admin','content_manager','video_manager','lab_manager','analyst','user']; if(!email||!/^\S+@\S+\.\S+$/.test(email)||password.length<8||!roles.includes(role)) return res.status(400).json({error:'email,password(8+),and valid role required'}); try{ const hash=await bcrypt.hash(password,12); const r=await pool.query("INSERT INTO users(email,password_hash,role,status) VALUES($1,$2,$3,'active') RETURNING id,email,role,status,created_at",[email,hash,role]); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'create_user','user',r.rows[0].id,{email,role}]); res.status(201).json(r.rows[0]); }catch(e){res.status(409).json({error:e.code==='23505'?'email already registered':'user creation failed'});} });
-app.post('/api/admin/users/:id/password',auth,adminUser,ownerOnly,async(req,res)=>{ if(!requireDb(res))return; const password=String(req.body?.password||''); if(password.length<8)return res.status(400).json({error:'password must be 8+ characters'}); const hash=await bcrypt.hash(password,12); const r=await pool.query('UPDATE users SET password_hash=$2 WHERE id=$1 RETURNING email',[req.params.id,hash]); if(!r.rowCount)return res.status(404).json({error:'user_not_found'}); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'reset_user_password','user',req.params.id,{}]); res.json({ok:true,email:r.rows[0].email}); });
+app.post('/api/admin/users',auth,adminUser,ownerOnly,async(req,res)=>{ if(!requireDb(res))return; const email=String(req.body?.email||'').toLowerCase().trim(); const password=String(req.body?.password||''); const role=String(req.body?.role||'user'); const roles=['owner','super_admin','content_manager','video_manager','lab_manager','analyst','user']; if(!email||!/^\S+@\S+\.\S+$/.test(email)||password.length<12||!roles.includes(role)) return res.status(400).json({error:'email,password(12+),and valid role required'}); try{ const hash=await bcrypt.hash(password,12); const r=await pool.query("INSERT INTO users(email,password_hash,role,status) VALUES($1,$2,$3,'active') RETURNING id,email,role,status,created_at",[email,hash,role]); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'create_user','user',r.rows[0].id,{email,role}]); res.status(201).json(r.rows[0]); }catch(e){res.status(409).json({error:e.code==='23505'?'email already registered':'user creation failed'});} });
+app.post('/api/admin/users/:id/password',auth,adminUser,ownerOnly,async(req,res)=>{ if(!requireDb(res))return; const password=String(req.body?.password||''); if(password.length<12)return res.status(400).json({error:'password must be 12+ characters'}); const hash=await bcrypt.hash(password,12); const r=await pool.query('UPDATE users SET password_hash=$2,token_version=token_version+1 WHERE id=$1 RETURNING email',[req.params.id,hash]); if(!r.rowCount)return res.status(404).json({error:'user_not_found'}); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'reset_user_password','user',req.params.id,{}]); res.json({ok:true,email:r.rows[0].email}); });
 app.delete('/api/admin/users/:id',auth,adminUser,ownerOnly,async(req,res)=>{ if(!requireDb(res))return; if(req.params.id===req.user.sub)return res.status(400).json({error:'cannot_delete_current_owner'}); const r=await pool.query('DELETE FROM users WHERE id=$1 RETURNING email',[req.params.id]); if(!r.rowCount)return res.status(404).json({error:'user_not_found'}); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'delete_user','user',req.params.id,{email:r.rows[0].email}]); res.json({ok:true}); });
 
 app.get('/api/state',auth,async(req,res)=>{if(!requireDb(res))return; const r=await pool.query('SELECT state FROM app_state WHERE user_id=$1',[req.user.sub]);res.json(r.rowCount?r.rows[0].state:null);});
@@ -157,6 +170,22 @@ app.post('/api/tutor',auth,async(req,res)=>{
   catch(e){res.status(502).json({error:'AI request failed'});}
 });
 
-async function bootstrapOwner(){ if(!pool||!process.env.OWNER_EMAIL||!process.env.OWNER_PASSWORD)return; const email=process.env.OWNER_EMAIL.toLowerCase().trim(); const hash=await bcrypt.hash(process.env.OWNER_PASSWORD,12); await pool.query(`INSERT INTO users(email,password_hash,role,status) VALUES($1,$2,'owner','active') ON CONFLICT(email) DO UPDATE SET password_hash=EXCLUDED.password_hash,role='owner',status='active'`,[email,hash]); }
+async function bootstrapOwner(){ if(!pool||!process.env.OWNER_EMAIL||!process.env.OWNER_PASSWORD)return; const email=process.env.OWNER_EMAIL.toLowerCase().trim(); const hash=await bcrypt.hash(process.env.OWNER_PASSWORD,12); await pool.query(`INSERT INTO users(email,password_hash,role,status) VALUES($1,$2,'owner','active') ON CONFLICT(email) DO NOTHING`,[email,hash]); }
 const port=Number(process.env.PORT||3000);
-app.listen(port,async()=>{try{await bootstrapOwner();console.log(`VIDO backend listening on http://localhost:${port}`)}catch(e){console.error('Owner bootstrap failed',e.message)}});
+async function startServer(){
+  try{
+    if(pool){
+      await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0");
+      await pool.query("CREATE TABLE IF NOT EXISTS auth_rate_limits (bucket_key TEXT PRIMARY KEY,window_started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0))");
+      await pool.query('CREATE INDEX IF NOT EXISTS idx_auth_rate_limits_window ON auth_rate_limits(window_started_at)');
+      await bootstrapOwner();
+      const cleanup=setInterval(()=>{ pool.query("DELETE FROM auth_rate_limits WHERE window_started_at < NOW()-INTERVAL '1 day'").catch(()=>{}); },60*60*1000);
+      cleanup.unref();
+    }
+    app.listen(port,()=>console.log('VIDO backend listening on http://localhost:'+port));
+  }catch(e){
+    console.error('VIDO startup failed:',e.message);
+    process.exit(1);
+  }
+}
+startServer();
