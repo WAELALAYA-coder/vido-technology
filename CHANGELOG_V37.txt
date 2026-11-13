@@ -1,0 +1,29 @@
+VIDO Technology V37 — Learning Library Expansion
+Date: 13 November 2026
+Base: V35 application foundation + V36 maintenance/CI branch
+
+Learning content
+- Increased the question bank from 300 to 400 questions.
+- Added 100 original questions with IDs 0301–0400.
+- Added ten new skills/topics with ten questions each:
+  Windows Server & Active Directory, Linux Administration, PowerShell & Bash,
+  Virtualization & Hyper-V, Docker & Containers, IT Security, Backup & Recovery,
+  SQL & Databases, Cloud & Hybrid, and IT Service & Operations.
+- Added ten structured learning modules, each available in German, English and Arabic.
+- Each module includes four lesson sections, a practical example with commands or SQL, three review prompts, IHK-oriented context, four glossary terms and links to documentation.
+- Added an in-platform lesson library inside the topic-learning view. Learners can open lessons and jump directly to that topic's questions.
+
+Runtime integration
+- Loaded the new question and lesson data as two separate frontend assets.
+- Added exact Express routes for /questions-v37.js and /lessons-v37.js with JavaScript content types and no-cache headers. No broad static directory serving was introduced.
+- Updated the PWA cache version and precached the new data assets.
+
+Quality and documentation
+- Expanded scripts/audit.mjs to verify question IDs/counts, 40 skills, ten questions per skill, ten multilingual lessons, lesson/question mapping, lesson structure, source records and frontend wiring.
+- Added LEARNING_SOURCES.md with curriculum references and source-to-lesson mapping.
+- Updated README_DEPLOYMENT.md and SECURITY_BASELINE.md for V37 content and routes.
+
+Scope and limitations
+- No database schema/data, authentication, authorization, payment, secrets or production deployment configuration was changed.
+- Questions are original study questions, not official IHK exam questions.
+- Browser-based end-to-end testing on physical desktop/mobile devices and local Windows Docker verification were not available during this GitHub-only change.
