@@ -1,0 +1,15 @@
+﻿.env
+.env.*
+!.env.example
+node_modules/
+*.dump
+*.sql.backup
+VIDO_Backups/
+.next/
+out/
+coverage/
+/auth_excerpt.txt
+/check*.js
+/script*.js
+/index_head.txt
+/tkeys.json
