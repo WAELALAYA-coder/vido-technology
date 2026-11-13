@@ -1,25 +1,34 @@
 # VIDO Technology — Deployment Guide
 
-## Current V33 runtime
+## Current application build
 
-VIDO V33 is a full-stack application:
+The latest application feature build is **VIDO Technology V35** (13 November 2026).
 
-- Frontend: index.html, manifest.webmanifest, service-worker.js (PWA).
+- Frontend: `index.html`, `manifest.webmanifest`, and `service-worker.js` (PWA).
 - Backend: Node.js 22 and Express 5.
 - Database: PostgreSQL 16.
 - Local runtime: Docker Compose.
+- Public self-registration: disabled by default.
+- AI Tutor: optional; it requires a provider URL and API key in the server environment.
 
-The local deployment binds the application and PostgreSQL to 127.0.0.1. Public self-registration is disabled. The security controls are documented in SECURITY_BASELINE.md.
+GitHub is the private source-code repository. GitHub Pages can serve static files only; it cannot run the VIDO Express API or PostgreSQL database. A Pages-only deployment would therefore not provide login, administration, or cloud synchronization.
 
-## Important hosting distinction
+## Local development and verification
 
-GitHub is the private source-code repository. GitHub Pages can serve static files only; it cannot run the VIDO Express API or PostgreSQL database. A Pages-only deployment would not provide login, administration, or cloud synchronization.
+The committed `docker-compose.yml` maps the application to `127.0.0.1:3000` and PostgreSQL to `127.0.0.1:5432`. This is the repository default. The Windows development machine may use a separate, local-only LAN adjustment for phone access; keep such machine-specific networking changes out of Git. When LAN access is enabled, restrict inbound TCP 3000 to the trusted local subnet with Windows Firewall. Do not expose PostgreSQL to the LAN or the public internet.
 
-The complete application needs a server/container host and a PostgreSQL service.
+Keep real environment values in the local `.env` file only. Use `.env.example` as a template. It contains placeholders, not working credentials.
 
-## Local start and verification
+Important variables:
 
-From the project root, run:
+- `POSTGRES_PASSWORD`
+- `JWT_SECRET` (long, randomly generated secret)
+- `OWNER_EMAIL` and `OWNER_PASSWORD` (the owner is created only if the account does not already exist)
+- `ADMIN_USERNAME` and `ADMIN_PASSWORD` (server-side quick-admin login)
+- `REGISTRATION_ENABLED=false`
+- Optional AI variables: `AI_API_URL`, `AI_API_KEY`, `AI_MODEL`
+
+Start the local services:
 
     docker compose --env-file .env up -d
 
@@ -27,39 +36,36 @@ Check the API:
 
     Invoke-RestMethod http://127.0.0.1:3000/api/health
 
-Run the content and dependency audits:
+Install the locked Node dependencies and run the local checks:
 
+    npm ci
     npm test
-    npm audit
+    npm audit --omit=dev --audit-level=high
 
-Expected content-audit result: 300 questions and 210 unique IDs.
+The content audit checks the 300-question bank and verifies that HTML element IDs are unique. It also checks required learning features and language-selector elements. The audit does not replace real browser testing on desktop and mobile devices.
 
-## Local environment
+## Continuous integration
 
-Keep real values in the local .env file only. Use .env.example as a template. It contains placeholders, not working credentials.
+GitHub Actions validates pushes to `main` and pull requests targeting `main`. The workflow:
 
-Important variables:
+1. Installs the exact dependency versions from `package-lock.json` with `npm ci`.
+2. Runs `npm test`.
+3. Checks production dependency advisories at high severity and above.
+4. Builds the production Docker image.
 
-- POSTGRES_PASSWORD
-- JWT_SECRET (long, randomly generated secret)
-- OWNER_EMAIL and OWNER_PASSWORD (the owner is created only if the account does not already exist)
-- ADMIN_USERNAME and ADMIN_PASSWORD (server-side quick-admin login)
-- REGISTRATION_ENABLED=false
-- Optional AI variables: AI_API_URL, AI_API_KEY, AI_MODEL
-
-Never commit .env, database dumps, or backup folders.
+The workflow result is the source of truth for whether those CI checks passed. Local checks and documentation must not be described as a successful CI run unless GitHub reports a successful run.
 
 ## Prepared production container deployment
 
 The repository includes:
 
-- Dockerfile: production Node image, npm ci --omit=dev, non-root node user, health check.
-- .dockerignore: excludes local environment files, Git data, node_modules, dumps, backups, and temporary scripts from the image.
-- compose.production.yml: Caddy is the only public service. The app has no published host port. PostgreSQL is on a private internal Docker network.
-- Caddyfile.production: reverse proxy with automatic HTTPS and security headers.
-- .env.production.example: environment template only; it contains placeholders, not usable credentials.
+- `Dockerfile`: production Node image, `npm ci --omit=dev`, non-root `node` user, and health check.
+- `.dockerignore`: excludes local environment files, Git data, `node_modules`, dumps, backups, and temporary development scripts from the image.
+- `compose.production.yml`: Caddy is the only public service. The app has no published host port. PostgreSQL is on a private internal Docker network.
+- `Caddyfile.production`: reverse proxy, automatic HTTPS, and security headers.
+- `.env.production.example`: environment template only; it contains placeholders, not usable credentials.
 
-The Node, PostgreSQL, and Caddy images are pinned by digest.
+The Node, PostgreSQL, and Caddy images are pinned by digest in the production configuration.
 
 ### Prepare the production host
 
@@ -70,9 +76,9 @@ The Node, PostgreSQL, and Caddy images are pinned by digest.
 
        cp .env.production.example .env.production
 
-5. Replace every placeholder using a password manager. Generate POSTGRES_PASSWORD and JWT_SECRET as unique URL-safe random values. The database password is embedded in a PostgreSQL connection URL, so use only letters, digits, underscore, and hyphen.
-6. Keep REGISTRATION_ENABLED=false for the private launch.
-7. The template fixes Caddy at 172.29.250.2 and the app at 172.29.250.3. TRUSTED_PROXY_IP must match Caddy's exact address: 172.29.250.2. If the subnet conflicts with the hosting network, change the Compose subnet and both static IPs consistently.
+5. Replace every placeholder using a password manager. Generate `POSTGRES_PASSWORD` and `JWT_SECRET` as unique URL-safe random values. The database password is embedded in a PostgreSQL connection URL, so use only letters, digits, underscore, and hyphen.
+6. Keep `REGISTRATION_ENABLED=false` for the private launch.
+7. The template fixes Caddy at `172.29.250.2` and the app at `172.29.250.3`. `TRUSTED_PROXY_IP` must match Caddy's exact address: `172.29.250.2`. If the subnet conflicts with the hosting network, change the Compose subnet and both static IPs consistently.
 8. Validate the configuration and start the service:
 
        docker compose --env-file .env.production -f compose.production.yml config --quiet
@@ -82,22 +88,21 @@ Caddy will request and renew the TLS certificate after the domain resolves to th
 
 ## Production template validation status
 
-- Production Compose configuration passed docker compose config --quiet.
-- Caddyfile passed caddy validate.
-- The production app image built successfully from the pinned Node image.
-- The image runs as the non-root node user (UID 1000).
-- The image excludes .env, .env.production, .git, backup folders, and temporary scripts.
+The production Compose configuration, Caddyfile, and production image were validated/built during the documented local preparation. These are configuration and image-build checks only; they do not mean that a public production stack is running.
 
-These are local build/configuration checks only. The production stack has intentionally not been started on the local PC because it publishes ports 80/443 and requires a real domain, DNS, a public host, and production secrets.
+The production stack has intentionally not been started on the local PC because it publishes ports 80/443 and requires a real domain, DNS, a public host, and production secrets.
 
 ## Production operations still required
 
-- Enable encrypted storage and automated off-site database backups in the hosting provider. The Windows scheduled task in local development does not back up a remote production database.
+- Enable encrypted storage and automated off-site database backups with the hosting provider.
 - Test a restore from the provider's off-site backup before launch.
 - Configure monitoring and alerts for disk space, container health, certificate renewal, database availability, and backup failures.
 - Keep SSH and provider firewall rules restricted. Do not publish the database port.
-- Refresh pinned image digests through a controlled review process as security updates are released.
+- Refresh pinned image digests through a controlled security review process.
+- Review Content Security Policy and browser token storage before opening registration. The current frontend uses inline scripts/styles, and its bearer-token storage is documented in `SECURITY_BASELINE.md`.
 
-Do not start the production Compose file on the current local PC as a public launch. It publishes ports 80/443 and uses a separate production database volume. It is prepared for the future hosting server; the current local app remains on its existing Compose file and volumes.
+Do not start the production Compose file on the current local PC as a public launch. It publishes ports 80/443 and uses a separate production database volume. It is prepared for a future hosting server; the current local app remains on its existing Compose profile and volumes.
 
-The production Compose profile enables a startup credential gate. It will refuse to start if the JWT secret is shorter than 48 characters or still a placeholder, if the owner/admin passwords are shorter than 12 characters or still placeholders, if those two passwords are identical, if DATABASE_URL still contains a placeholder, or if public registration is enabled. The local development Compose profile does not enable this production-only gate.
+The production Compose profile enables a startup credential gate. It refuses to start if the JWT secret is shorter than 48 characters or still a placeholder, if the owner/admin passwords are shorter than 12 characters or still placeholders, if those two passwords are identical, if the database URL still contains a placeholder, or if public registration is enabled.
+
+For the current security posture and known limitations, see `SECURITY_BASELINE.md`.
