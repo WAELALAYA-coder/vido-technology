@@ -28,6 +28,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-false}
       DATABASE_URL: postgresql://vido_user:${POSTGRES_PASSWORD}@postgres:5432/vido
       JWT_SECRET: ${JWT_SECRET}
       OWNER_EMAIL: ${OWNER_EMAIL}

@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 
 const { Pool } = pg;
 const app = express();
+app.set('trust proxy', false);
 app.use(express.json({limit:'1mb'}));
 const PUBLIC_ROOT = process.cwd();
 app.get('/', (_req,res)=>res.sendFile('index.html',{root:PUBLIC_ROOT}));
@@ -20,16 +21,57 @@ const AI_KEY = process.env.AI_API_KEY || '';
 const AI_MODEL = process.env.AI_MODEL || 'gpt-4o-mini';
 const ADMIN_USERNAME = String(process.env.ADMIN_USERNAME || 'Admin').trim();
 const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || '');
-const loginAttempts = new Map();
+const REGISTRATION_ENABLED = String(process.env.REGISTRATION_ENABLED || 'false').toLowerCase() === 'true';
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 10;
-function loginKey(req,email){ return `${clientIp(req)||'unknown'}|${email}`; }
-function loginAllowed(req,email){ const now=Date.now(), key=loginKey(req,email); const hit=loginAttempts.get(key); if(!hit || now-hit.started>LOGIN_WINDOW_MS){ loginAttempts.set(key,{started:now,count:0}); return true; } return hit.count < LOGIN_MAX_ATTEMPTS; }
-function noteLoginFailure(req,email){ const now=Date.now(), key=loginKey(req,email); const hit=loginAttempts.get(key); if(!hit || now-hit.started>LOGIN_WINDOW_MS){ loginAttempts.set(key,{started:now,count:1}); } else { hit.count++; } }
-function clearLoginFailures(req,email){ loginAttempts.delete(loginKey(req,email)); }
+const IP_LOGIN_MAX_ATTEMPTS = 30;
+const MAX_TRACKED_LOGIN_BUCKETS = 20000;
+const loginAttempts = new Map();
+
+function clientIp(req){ return String(req.ip || req.socket?.remoteAddress || 'unknown'); }
+function normalizeLoginIdentity(value){ return String(value ?? '').trim().toLowerCase().slice(0,254) || 'unknown'; }
+function loginKey(req,identity){ return 'identity:' + clientIp(req) + '|' + normalizeLoginIdentity(identity); }
+function ipLoginKey(req){ return 'ip:' + clientIp(req); }
+function getLoginBucket(key,now=Date.now()){
+  const hit=loginAttempts.get(key);
+  if(hit && now-hit.started>=LOGIN_WINDOW_MS){ loginAttempts.delete(key); return null; }
+  return hit || null;
+}
+function pruneExpiredLoginBuckets(now=Date.now()){
+  for(const [key,hit] of loginAttempts){ if(now-hit.started>=LOGIN_WINDOW_MS) loginAttempts.delete(key); }
+}
+function loginAllowed(req,identity){
+  const now=Date.now();
+  const keys=[ipLoginKey(req),loginKey(req,identity)];
+  const ipHit=getLoginBucket(keys[0],now);
+  const identityHit=getLoginBucket(keys[1],now);
+  if(ipHit && ipHit.count>=IP_LOGIN_MAX_ATTEMPTS) return false;
+  if(identityHit && identityHit.count>=LOGIN_MAX_ATTEMPTS) return false;
+  const missing=keys.filter(key=>!loginAttempts.has(key)).length;
+  if(missing && loginAttempts.size+missing>MAX_TRACKED_LOGIN_BUCKETS){
+    pruneExpiredLoginBuckets(now);
+    if(loginAttempts.size+missing>MAX_TRACKED_LOGIN_BUCKETS) return false;
+  }
+  return true;
+}
+function noteLoginFailure(req,identity){
+  const now=Date.now();
+  const keys=[ipLoginKey(req),loginKey(req,identity)];
+  if(loginAttempts.size+keys.filter(key=>!loginAttempts.has(key)).length>MAX_TRACKED_LOGIN_BUCKETS) pruneExpiredLoginBuckets(now);
+  for(const key of keys){
+    let hit=getLoginBucket(key,now);
+    if(!hit){
+      if(loginAttempts.size>=MAX_TRACKED_LOGIN_BUCKETS) return;
+      hit={started:now,count:0};
+      loginAttempts.set(key,hit);
+    }
+    hit.count++;
+  }
+}
+function clearLoginFailures(req,identity){ loginAttempts.delete(loginKey(req,identity)); }
 
 function token(user){ return jwt.sign({sub:user.id,email:user.email,role:user.role||'user'},JWT_SECRET,{expiresIn:'7d'}); }
-function clientIp(req){ return (req.headers['x-forwarded-for']||req.socket.remoteAddress||'').toString().split(',')[0].trim() || null; }
+
 function ua(req){ return req.headers['user-agent']||null; }
 async function logSecurity({userId=null,email=null,eventType,req,metadata={}}){ if(!pool)return; await pool.query('INSERT INTO security_log(user_id,email,event_type,ip,user_agent,metadata) VALUES($1,$2,$3,$4,$5,$6)',[userId,email,eventType,clientIp(req),ua(req),metadata]); }
 async function logActivity({userId,eventType,route=null,req,metadata={}}){ if(!pool)return; await pool.query('INSERT INTO activity_log(user_id,event_type,route,ip,user_agent,metadata) VALUES($1,$2,$3,$4,$5,$6)',[userId,eventType,route,clientIp(req),ua(req),metadata]); }
@@ -40,9 +82,10 @@ function requireDb(res){ if(!pool){res.status(503).json({error:'DATABASE_URL is 
 
 app.get('/api/health', async (_req,res)=>{ let db=false; if(pool){ try{ await pool.query('SELECT 1'); db=true; }catch{} } res.status(db?200:503).json({ok:db,backend:true,database:db,ai:!!(AI_URL&&AI_KEY)}); });
 app.post('/api/auth/register', async (req,res)=>{
+  if(!REGISTRATION_ENABLED) return res.status(403).json({error:'registration_disabled'});
   if(!requireDb(res)) return; const email=String(req.body?.email||'').toLowerCase().trim(); const password=String(req.body?.password||'');
   if(!/^\S+@\S+\.\S+$/.test(email)||password.length<8) return res.status(400).json({error:'email and password (8+ chars) required'});
-  if(!loginAllowed(req,email)) return res.status(429).json({error:'too_many_registration_attempts'});
+  if(!loginAllowed(req,email)){ await logSecurity({email,eventType:'registration_rate_limited',req}); return res.status(429).json({error:'too_many_registration_attempts'}); }
   try { const hash=await bcrypt.hash(password,12); const r=await pool.query('INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id,email,role,status',[email,hash]); clearLoginFailures(req,email); await logSecurity({userId:r.rows[0].id,email:r.rows[0].email,eventType:'register',req}); await logActivity({userId:r.rows[0].id,eventType:'register',route:'/account',req}); res.status(201).json({token:token(r.rows[0]),user:r.rows[0]}); }
   catch(e){ if(e.code==='23505'){noteLoginFailure(req,email); return res.status(409).json({error:'email already registered'});} res.status(500).json({error:'registration failed'}); }
 });
