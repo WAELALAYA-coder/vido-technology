@@ -66,7 +66,7 @@ const lessons=readArrayFile('lessons-v37.js','VIDO_LESSONS');
 assert.equal(lessons.length,10,'expected 10 new lessons');
 for(const lesson of lessons){
   assert(lesson.id&&lesson.topic&&lesson.sources?.length,`missing lesson metadata: ${lesson.id}`);
-  assert(lesson.sources.every(source=>/^https:\/\//.test(source.url)&&source.label),\`invalid lesson source URL: \${lesson.id}\`);
+  assert(lesson.sources.every(source=>/^https:\/\//.test(source.url)&&source.label),'invalid lesson source URL: '+lesson.id);
   assert.equal(questions.filter(q=>q.topic===lesson.topic).length,10,`lesson ${lesson.id} must map to 10 questions`);
   for(const locale of ['de','en','ar']){
     const v=lesson[locale];
