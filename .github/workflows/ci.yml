@@ -37,6 +37,7 @@ jobs:
           node --check questions-v37.js
           node --check lessons-v37.js
           node --check scripts/audit.mjs
+          node --check scripts/smoke-assets.mjs
 
       - name: Run application audit
         run: npm test
