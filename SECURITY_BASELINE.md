@@ -1,13 +1,13 @@
 # VIDO Technology — Security Baseline
 
 Review date: 13 November 2026
-Build: VIDO Technology V35 (V34 feature set + authentication/mobile hotfix)
+Build: VIDO Technology V37 (V35 application foundation + 100 questions and 10 multilingual lessons)
 Current deployment: Local Windows 11 host with Docker Compose
 Public release status: Not deployed. Public self-registration is disabled.
 
 ## Implemented controls
 
-- Express serves only the public frontend routes: /, /index.html, /manifest.webmanifest, and /service-worker.js. Backend source, SQL schema, package files, Compose configuration, Git metadata, and environment files are not served.
+- Express serves the public frontend routes: /, /index.html, /manifest.webmanifest, /service-worker.js, /questions-v37.js, and /lessons-v37.js. The two new JavaScript routes expose only learning content and use explicit JavaScript content types with no-cache headers. Backend source, SQL schema, package files, Compose configuration, Git metadata, and environment files are not served.
 - The local Docker deployment publishes the app on TCP 3000 for trusted home-LAN access. Windows Firewall has an inbound allow rule for TCP 3000 restricted to RemoteAddress LocalSubnet. PostgreSQL remains bound to 127.0.0.1:5432. The app transport is plain HTTP; use this LAN access only on a trusted private network.
 - Public self-registration is disabled by default. The API returns HTTP 403 while disabled. New accounts can be created by the owner through the authenticated administration API.
 - Failed-login counters are stored in PostgreSQL. The table contains SHA-256 bucket identifiers rather than raw email addresses or IP values.
@@ -39,8 +39,15 @@ Public release status: Not deployed. Public self-registration is disabled.
 - Production Compose configuration passed docker compose config --quiet using the example environment file.
 - Caddyfile passed caddy validate and was formatted.
 - Production app image built successfully from the pinned Node base image. It runs as UID 1000 and contains no .env, .env.production, .git, backup directory, or temporary test scripts.
-- The content audit passed: 300 questions. The current HTML audit also verifies that all element IDs are unique.
+- The automated content audit checks 400 questions across 40 skills, ten structured lessons in German/English/Arabic, ten question mappings per lesson, source metadata, PWA asset loading and unique HTML IDs.
 - Host and container dependency audits reported zero known vulnerabilities.
+
+## Learning content expansion (V37)
+
+- The front end loads the additional question and lesson datasets as two dedicated read-only JavaScript assets.
+- Express exposes only those two exact asset paths; it does not enable a broad static directory listing or expose server-side source/configuration files.
+- Lesson content is original instructional material with links to official or specialist documentation. User-specific learning progress remains in the existing local/browser and optional authenticated sync mechanisms.
+- This content update does not modify authentication, authorization, payment, database schema, or existing user records.
 
 ## Current environment and limitations
 
