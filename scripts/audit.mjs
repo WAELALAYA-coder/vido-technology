@@ -1,16 +1,74 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
-const input=process.argv[2]||'index.html';
-const html=fs.readFileSync(input,'utf8');
+
+const html=fs.readFileSync('index.html','utf8');
 const ids=[...html.matchAll(/\bid=["']([^"']+)["']/g)].map(m=>m[1]);
 assert.equal(new Set(ids).size,ids.length,'duplicate HTML ids');
-const start=html.indexOf('const Q=['); assert(start>=0,'Q array not found'); let depth=0, end=-1, inStr=false, quote=''; for(let i=start+8;i<html.length;i++){const c=html[i],p=html[i-1]; if(inStr){if(c===quote&&p!=='\\')inStr=false; continue;} if(c==='\"'||c==="'"){inStr=true;quote=c;continue;} if(c==='[')depth++; else if(c===']'){depth--; if(depth===0){end=i+1;break;}}} assert(end>0,'Q array end not found'); const Q=Function(`return ${html.slice(start+8,end)}`)();
-assert.equal(Q.length,300,'question count must be 300');
-assert.deepEqual(Q.map(q=>q.id),Array.from({length:300},(_,i)=>String(i+1).padStart(4,'0')),'question IDs must be 0001..0300');
-for(const q of Q){assert(q.answer!==undefined && q.answer!=='',`missing answer ${q.id}`);assert(q.skill,`missing skill ${q.id}`);}
-assert(html.includes("value=\"de\"")&&html.includes("value=\"en\"")&&html.includes("value=\"ar\""),'language selector missing');
+
+function readArrayFile(path,assignment){
+  const source=fs.readFileSync(path,'utf8');
+  const escaped=assignment.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const match=source.match(new RegExp('^\\s*window\\.'+escaped+'\\s*=\\s*(\\[[\\s\\S]*\\])\\s*;?\\s*$'));
+  assert(match, path+' must contain a JSON array assigned to window.'+assignment);
+  return JSON.parse(match[1]);
+}
+
+const baseStart=html.indexOf('const BASE_Q=[');
+assert(baseStart>=0,'BASE_Q array not found');
+let depth=0,end=-1,inString=false,quote='';
+for(let i=baseStart+13;i<html.length;i++){
+  const ch=html[i],previous=html[i-1];
+  if(inString){if(ch===quote&&previous!=='\\')inString=false;continue;}
+  if(ch==='"'||ch==="'"){inString=true;quote=ch;continue;}
+  if(ch==='[')depth++;
+  else if(ch===']'){depth--;if(depth===0){end=i+1;break;}}
+}
+assert(end>0,'BASE_Q array end not found');
+const base=Function('return '+html.slice(baseStart+13,end))();
+const extra=readArrayFile('questions-v37.js','VIDO_EXTRA_QUESTIONS');
+const questions=[...base,...extra];
+
+assert.equal(base.length,300,'base question count must remain 300');
+assert.equal(extra.length,100,'V37 must add exactly 100 questions');
+assert.equal(questions.length,400,'total question count must be 400');
+assert.deepEqual(questions.map(q=>q.id),Array.from({length:400},(_,i)=>String(i+1).padStart(4,'0')),'question IDs must be 0001..0400');
+assert.equal(new Set(questions.map(q=>q.skill)).size,40,'expected 40 unique skills');
+for(const q of questions){
+  assert(q.answer!==undefined&&q.answer!=='',`missing answer ${q.id}`);
+  assert(q.skill&&q.topic,`missing skill or topic ${q.id}`);
+  assert(q.target&&q.en&&q.ar,`missing DE/EN/AR question text ${q.id}`);
+}
+const skillCounts=new Map();
+for(const q of questions)skillCounts.set(q.skill,(skillCounts.get(q.skill)||0)+1);
+for(const [skill,count] of skillCounts)assert.equal(count,10,`${skill} must have 10 questions`);
+
+const lessons=readArrayFile('lessons-v37.js','VIDO_LESSONS');
+assert.equal(lessons.length,10,'expected 10 new lessons');
+for(const lesson of lessons){
+  assert(lesson.id&&lesson.topic&&lesson.sources?.length,`missing lesson metadata: ${lesson.id}`);
+  assert.equal(questions.filter(q=>q.topic===lesson.topic).length,10,`lesson ${lesson.id} must map to 10 questions`);
+  for(const locale of ['de','en','ar']){
+    const v=lesson[locale];
+    assert(v?.title&&v.summary,`missing ${locale} title/summary: ${lesson.id}`);
+    assert.equal(v.sections?.length,4,`lesson ${lesson.id} must have 4 ${locale} sections`);
+    assert(v.sections.every(section=>section.heading&&section.body),`empty lesson section: ${lesson.id}/${locale}`);
+    assert(v.example?.heading&&v.example.body&&v.example.code,`missing example: ${lesson.id}/${locale}`);
+    assert.equal(v.practice?.steps?.length,3,`lesson ${lesson.id} must have 3 practice steps`);
+    assert(v.exam?.heading&&v.exam.text,`missing exam context: ${lesson.id}/${locale}`);
+    assert.equal(v.terms?.length,4,`lesson ${lesson.id} must have 4 glossary terms`);
+  }
+}
+assert(html.includes('<script src="questions-v37.js"></script>'),'question data script is not loaded');
+assert(html.includes('<script src="lessons-v37.js"></script>'),'lesson data script is not loaded');
+assert(html.includes('function renderLessons()'),'lesson renderer missing');
+assert(html.includes('id="lessonList"')&&html.includes('id="lessonDetail"'),'lesson UI is incomplete');
+assert(html.includes("value=\\"de\\"")&&html.includes("value=\\"en\\"")&&html.includes("value=\\"ar\\""),'language selector missing');
 assert(html.includes('showAnswer'),'show answer missing');
 assert(html.includes('VIDO Tutor'),'Tutor integration missing');
 assert(html.includes('Adaptive Learning')||html.includes('Adaptives Lernen'),'adaptive learning missing');
-assert(html.includes('Spaced Repetition')||html.includes('Spaced Repetition'),'spaced repetition missing');
-console.log(`PASS: ${Q.length} questions, ${ids.length} unique IDs, foundation-linked features present.`);
+assert(html.includes('Spaced Repetition'),'spaced repetition missing');
+
+const sw=fs.readFileSync('service-worker.js','utf8');
+assert(sw.includes('vido-ui-20261113-v37-learning-library'),'service worker cache version is stale');
+assert(sw.includes('./questions-v37.js')&&sw.includes('./lessons-v37.js'),'lesson data is not cached');
+console.log(`PASS: ${questions.length} questions / ${skillCounts.size} skills / ${lessons.length} lessons (DE/EN/AR) / ${ids.length} unique HTML IDs.`);
