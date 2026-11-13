@@ -1,0 +1,11 @@
+V34 - Cisco Network Lab expansion
+
+- Added DHCP pool configuration, excluded addresses, DHCP leases and client-side DHCP acquisition.
+- Added DHCP Relay through router subinterface ip helper-address.
+- Added router-scoped standard IPv4 ACLs with permit/deny rules and interface in/out binding.
+- Added NAT/PAT overload configuration and an ICMP translation table.
+- Added physical routed router interfaces and static-route path validation, including return paths.
+- Added deterministic STP loop prevention and show spanning-tree output.
+- Added a Cisco simulator guide and test report.
+- Updated Service Worker cache identifier to V34 so clients can fetch the new UI.
+- Educational simulation only; detailed limitations are documented.
