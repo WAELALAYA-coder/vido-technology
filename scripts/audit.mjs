@@ -60,13 +60,19 @@ for(const lesson of lessons){
 }
 assert(html.includes('<script src="questions-v37.js"></script>'),'question data script is not loaded');
 assert(html.includes('<script src="lessons-v37.js"></script>'),'lesson data script is not loaded');
+assert(html.indexOf('<script src="questions-v37.js"></script>')<html.indexOf('const BASE_Q=['),'question dataset must load before the app script');
 assert(html.includes('function renderLessons()'),'lesson renderer missing');
 assert(html.includes('id="lessonList"')&&html.includes('id="lessonDetail"'),'lesson UI is incomplete');
-assert(html.includes("value=\\"de\\"")&&html.includes("value=\\"en\\"")&&html.includes("value=\\"ar\\""),'language selector missing');
+assert(html.includes('value="de"')&&html.includes('value="en"')&&html.includes('value="ar"'),'language selector missing');
 assert(html.includes('showAnswer'),'show answer missing');
 assert(html.includes('VIDO Tutor'),'Tutor integration missing');
 assert(html.includes('Adaptive Learning')||html.includes('Adaptives Lernen'),'adaptive learning missing');
 assert(html.includes('Spaced Repetition'),'spaced repetition missing');
+
+const backend=fs.readFileSync('backend/server.js','utf8');
+assert(backend.includes("app.get('/questions-v37.js'"),'question data route missing from Express');
+assert(backend.includes("app.get('/lessons-v37.js'"),'lesson data route missing from Express');
+assert(backend.includes("'Content-Type':'application/javascript; charset=utf-8'"),'learning data routes must declare JavaScript content type');
 
 const sw=fs.readFileSync('service-worker.js','utf8');
 assert(sw.includes('vido-ui-20261113-v37-learning-library'),'service worker cache version is stale');
