@@ -2074,5 +2074,821 @@ window.VIDO_LESSONS = [
         }
       ]
     }
+  },
+  {
+    "id": "java-programming",
+    "topic": "Java Programming",
+    "icon": "☕",
+    "sources": [
+      {
+        "label": "Dev.java – Official Java learning path",
+        "url": "https://dev.java/learn/"
+      },
+      {
+        "label": "Oracle Java Tutorials – Language basics",
+        "url": "https://docs.oracle.com/javase/tutorial/java/nutsandbolts/"
+      },
+      {
+        "label": "Oracle Java Tutorials – Classes and objects",
+        "url": "https://docs.oracle.com/javase/tutorial/java/javaOO/"
+      },
+      {
+        "label": "BIBB – Fachinformatiker Systemintegration occupational profile",
+        "url": "https://www.bibb.de/dienst/berufesuche/de/index_berufesuche.php/profile/apprenticeship/olkiu98"
+      }
+    ],
+    "de": {
+      "title": "Java-Grundlagen: vom Ablauf zum Objekt",
+      "summary": "Variablen, Bedingungen, Schleifen, Methoden und Klassen mit kleinen nachvollziehbaren Beispielen.",
+      "sections": [
+        {
+          "heading": "1. Programm und Datentypen",
+          "body": "Ein Java-Programm besteht aus Anweisungen, die der Compiler in Bytecode übersetzt. Variablen speichern Werte. Häufige Typen sind int für ganze Zahlen, double für Kommazahlen, boolean für wahr/falsch und String für Text. Ein Datentyp legt fest, welche Art von Wert gespeichert wird."
+        },
+        {
+          "heading": "2. Bedingungen und Schleifen",
+          "body": "Mit if/else verzweigt das Programm abhängig von einer Bedingung. Schleifen wiederholen Anweisungen: for eignet sich oft bei bekannter Anzahl von Durchläufen; while wiederholt, solange eine Bedingung wahr ist. Achte darauf, dass eine Schleife enden kann."
+        },
+        {
+          "heading": "3. Methoden und Arrays",
+          "body": "Eine Methode bündelt eine Aufgabe und kann Parameter entgegennehmen sowie einen Wert zurückgeben. void bedeutet: kein Rückgabewert. Ein Array speichert mehrere Werte desselben Typs; der erste Index ist 0. Ein Zugriff außerhalb des gültigen Bereichs führt zu einem Fehler."
+        },
+        {
+          "heading": "4. Klassen und Objekte",
+          "body": "Eine Klasse ist ein Bauplan. Ein Objekt ist eine konkrete Instanz. Attribute beschreiben den Zustand, Methoden das Verhalten. Konstruktoren initialisieren neue Objekte. private schützt interne Felder; kontrollierter Zugriff erfolgt häufig über Methoden."
+        }
+      ],
+      "example": {
+        "heading": "Kosten einer IT-Bestellung",
+        "body": "Wir berechnen den Gesamtpreis von drei Monitoren. Die Methode erhält Stückzahl und Einzelpreis und gibt das Ergebnis zurück.",
+        "code": "public class Bestellung {\\n  static double gesamtpreis(int anzahl, double preis) {\\n    return anzahl * preis;\\n  }\\n\\n  public static void main(String[] args) {\\n    System.out.println(gesamtpreis(3, 129.90));\\n  }\\n}"
+      },
+      "practice": {
+        "heading": "Mini-Übung",
+        "steps": [
+          "Ändere die Stückzahl auf 2 und berechne das Ergebnis von Hand.",
+          "Ergänze eine if-Bedingung: Gib einen Rabatt aus, wenn die Stückzahl mindestens 3 ist.",
+          "Erkläre den Unterschied zwischen Klasse, Objekt, Attribut und Methode."
+        ]
+      },
+      "exam": {
+        "heading": "IHK-Bezug",
+        "text": "Die Java-Grundlagen passen zu Programmierung und strukturierter Softwareentwicklung. In Aufgaben solltest du Datentypen auswählen, Bedingungen und Schleifen lesen, Methoden verstehen und einfache Abläufe nachvollziehen können. UML und Pseudocode helfen, die Lösung vor dem Programmieren zu planen."
+      },
+      "terms": [
+        {
+          "term": "Variable",
+          "meaning": "Variable",
+          "definition": "Benannter Speicherplatz für einen Wert."
+        },
+        {
+          "term": "Datentyp",
+          "meaning": "Data type",
+          "definition": "Legt Art und zulässige Werte einer Variable fest."
+        },
+        {
+          "term": "Methode",
+          "meaning": "Method",
+          "definition": "Zusammenhängender Programmblock für eine Aufgabe."
+        },
+        {
+          "term": "Objekt",
+          "meaning": "Object",
+          "definition": "Konkrete Instanz einer Klasse."
+        }
+      ]
+    },
+    "en": {
+      "title": "Java basics: from flow to objects",
+      "summary": "Variables, conditions, loops, methods and classes explained through small examples.",
+      "sections": [
+        {
+          "heading": "1. Programs and data types",
+          "body": "A Java program contains statements that the compiler translates into bytecode. Variables store values. Common types include int for integers, double for decimal numbers, boolean for true/false and String for text. A data type defines which kind of value can be stored."
+        },
+        {
+          "heading": "2. Conditions and loops",
+          "body": "if/else selects a path based on a condition. Loops repeat statements: for is often useful when the number of iterations is known; while repeats as long as a condition is true. Make sure a loop can terminate."
+        },
+        {
+          "heading": "3. Methods and arrays",
+          "body": "A method groups a task and can receive parameters and return a value. void means no return value. An array stores multiple values of the same type; its first index is 0. Accessing an invalid index causes an error."
+        },
+        {
+          "heading": "4. Classes and objects",
+          "body": "A class is a blueprint. An object is a concrete instance. Fields describe state and methods describe behavior. Constructors initialize new objects. private protects internal fields; controlled access is commonly provided through methods."
+        }
+      ],
+      "example": {
+        "heading": "IT order cost",
+        "body": "Calculate the total price of three monitors. The method receives quantity and unit price and returns the result.",
+        "code": "public class Order {\\n  static double totalPrice(int quantity, double price) {\\n    return quantity * price;\\n  }\\n\\n  public static void main(String[] args) {\\n    System.out.println(totalPrice(3, 129.90));\\n  }\\n}"
+      },
+      "practice": {
+        "heading": "Quick practice",
+        "steps": [
+          "Change the quantity to 2 and calculate the result manually.",
+          "Add an if condition that prints a discount when quantity is at least 3.",
+          "Explain the difference between a class, object, field and method."
+        ]
+      },
+      "exam": {
+        "heading": "IHK focus",
+        "text": "These Java fundamentals support programming and structured software development. Be able to choose data types, read conditions and loops, understand methods and trace simple program flows. UML and pseudocode help plan a solution before coding."
+      },
+      "terms": [
+        {
+          "term": "Variable",
+          "meaning": "Variable",
+          "definition": "A named storage location for a value."
+        },
+        {
+          "term": "Datentyp",
+          "meaning": "Data type",
+          "definition": "Defines the kind and valid values of a variable."
+        },
+        {
+          "term": "Methode",
+          "meaning": "Method",
+          "definition": "A named block of code that performs a task."
+        },
+        {
+          "term": "Objekt",
+          "meaning": "Object",
+          "definition": "A concrete instance of a class."
+        }
+      ]
+    },
+    "ar": {
+      "title": "أساسيات Java: من تسلسل الأوامر إلى الكائنات",
+      "summary": "المتغيرات والشروط والحلقات والدوال والكلاسات بأمثلة صغيرة وواضحة.",
+      "sections": [
+        {
+          "heading": "1. البرنامج وأنواع البيانات",
+          "body": "يتكون برنامج Java من تعليمات يحولها Compiler إلى Bytecode. تخزن Variables القيم. من الأنواع الشائعة int للأعداد الصحيحة وdouble للأعداد العشرية وboolean للقيم true/false وString للنصوص. يحدد Data Type نوع القيمة التي يمكن تخزينها."
+        },
+        {
+          "heading": "2. الشروط والحلقات",
+          "body": "تستخدم if/else لاختيار مسار حسب تحقق شرط. تكرر Loops التعليمات: تناسب for غالباً عدد التكرارات المعروف، بينما تستمر while طالما الشرط صحيح. يجب التأكد من وجود طريقة لإنهاء الحلقة."
+        },
+        {
+          "heading": "3. Methods وArrays",
+          "body": "تجمع Method مهمة محددة، ويمكن أن تستقبل Parameters وتعيد قيمة. تعني void عدم وجود قيمة معادة. يخزن Array عدة قيم من النوع نفسه، ويبدأ الفهرس من 0. الوصول إلى فهرس خارج المجال يسبب خطأ."
+        },
+        {
+          "heading": "4. Classes وObjects",
+          "body": "الـ Class هو مخطط أو قالب. أما Object فهو نسخة فعلية منه. تصف Attributes حالة الكائن، وتحدد Methods سلوكه. يقوم Constructor بتهيئة الكائن الجديد. تساعد private على حماية البيانات الداخلية."
+        }
+      ],
+      "example": {
+        "heading": "حساب تكلفة طلب IT",
+        "body": "نحسب السعر الإجمالي لثلاث شاشات. تستقبل Method عدد القطع وسعر القطعة وتعيد الناتج.",
+        "code": "public class Bestellung {\\n  static double gesamtpreis(int anzahl, double preis) {\\n    return anzahl * preis;\\n  }\\n\\n  public static void main(String[] args) {\\n    System.out.println(gesamtpreis(3, 129.90));\\n  }\\n}"
+      },
+      "practice": {
+        "heading": "تدريب قصير",
+        "steps": [
+          "غيّر عدد الشاشات إلى 2 واحسب الناتج يدوياً.",
+          "أضف شرط if يطبع رسالة خصم عندما يكون العدد 3 أو أكثر.",
+          "اشرح الفرق بين Class وObject وAttribute وMethod."
+        ]
+      },
+      "exam": {
+        "heading": "الارتباط بامتحان IHK",
+        "text": "ترتبط أساسيات Java بالبرمجة وتطوير البرامج بشكل منظم. تدرب على اختيار نوع البيانات وقراءة الشروط والحلقات وفهم الدوال وتتبع تنفيذ البرنامج. يساعد UML وPseudocode على تخطيط الحل قبل كتابة الكود."
+      },
+      "terms": [
+        {
+          "term": "Variable",
+          "meaning": "متغير",
+          "definition": "مكان مسمى لتخزين قيمة."
+        },
+        {
+          "term": "Datentyp",
+          "meaning": "نوع البيانات",
+          "definition": "يحدد نوع القيمة المسموح بتخزينها."
+        },
+        {
+          "term": "Methode",
+          "meaning": "دالة/طريقة",
+          "definition": "كتلة تعليمات تنفذ مهمة محددة."
+        },
+        {
+          "term": "Objekt",
+          "meaning": "كائن",
+          "definition": "نسخة فعلية من Class."
+        }
+      ]
+    }
+  },
+  {
+    "id": "uml-algorithms",
+    "topic": "UML & Algorithms",
+    "icon": "📐",
+    "sources": [
+      {
+        "label": "OMG – Unified Modeling Language 2.5.1 specification",
+        "url": "https://www.omg.org/spec/UML/2.5.1/"
+      },
+      {
+        "label": "BIBB – Fachinformatiker Systemintegration occupational profile",
+        "url": "https://www.bibb.de/dienst/berufesuche/de/index_berufesuche.php/profile/apprenticeship/olkiu98"
+      },
+      {
+        "label": "BIBB – IT training and practice examples",
+        "url": "https://www.bibb.de/dienst/berufesuche/de/index_berufesuche.php"
+      }
+    ],
+    "de": {
+      "title": "UML und Algorithmen planen",
+      "summary": "Use-Case-, Aktivitäts-, Klassen- und Sequenzdiagramme sowie Pseudocode und Programmablaufpläne unterscheiden.",
+      "sections": [
+        {
+          "heading": "1. Warum modellieren?",
+          "body": "Ein Modell vereinfacht ein System, bevor es gebaut wird. Es macht Anforderungen, Abläufe und Beziehungen sichtbar. UML ist eine standardisierte Modellierungssprache. Ein Diagramm ersetzt nicht jede technische Dokumentation, hilft aber beim gemeinsamen Verständnis."
+        },
+        {
+          "heading": "2. Vier wichtige UML-Diagramme",
+          "body": "Use-Case-Diagramm: Akteure und Ziele. Aktivitätsdiagramm: Arbeitsschritte, Entscheidungen und parallele Abläufe. Klassendiagramm: Klassen, Attribute, Methoden und Beziehungen. Sequenzdiagramm: Nachrichten zwischen Beteiligten in zeitlicher Reihenfolge."
+        },
+        {
+          "heading": "3. Algorithmen vor dem Code",
+          "body": "Ein Algorithmus beschreibt eine endliche Folge eindeutiger Schritte. Pseudocode formuliert diese Schritte sprachunabhängig. Ein Programmablaufplan (PAP/Flowchart) nutzt Symbole: Oval für Start/Ende, Rechteck für Verarbeitung, Raute für Entscheidung und Pfeile für den Ablauf."
+        },
+        {
+          "heading": "4. Beziehungen und Qualität",
+          "body": "Im Klassendiagramm beschreibt eine Assoziation eine Beziehung. Generalisierung steht für Vererbung. Prüfe bei jedem Modell: Sind alle Akteure, Bedingungen, Ausnahmen und Endzustände berücksichtigt? Ein gutes Modell ist verständlich und nicht unnötig kompliziert."
+        }
+      ],
+      "example": {
+        "heading": "Ablauf: Passwort prüfen",
+        "body": "Vor dem Code beschreiben wir den Ablauf: Eingabe lesen, Mindestlänge prüfen, Ergebnis ausgeben.",
+        "code": "START\\n  Eingabe: passwort\\n  WENN Länge(passwort) >= 12\\n    AUSGABE: ausreichend\\n  SONST\\n    AUSGABE: zu kurz\\nENDE"
+      },
+      "practice": {
+        "heading": "Mini-Übung",
+        "steps": [
+          "Wähle für „Benutzer meldet sich an“ das passende UML-Diagramm, um Akteur und Ziel zu zeigen.",
+          "Zeichne einen PAP mit Start, Passworteingabe, Entscheidung und zwei Ausgängen.",
+          "Nenne zwei Unterschiede zwischen Klassen- und Sequenzdiagramm."
+        ]
+      },
+      "exam": {
+        "heading": "IHK-Bezug",
+        "text": "Im WBS-Programmierblock gehören UML, Pseudocode, Programmablaufplan und Struktogramm zur strukturierten Softwareentwicklung. Achte auf die Frage: Wird eine Struktur, ein Ablauf, ein Ziel oder eine zeitliche Kommunikation dargestellt?"
+      },
+      "terms": [
+        {
+          "term": "Akteur",
+          "meaning": "Actor",
+          "definition": "Rolle außerhalb des betrachteten Systems."
+        },
+        {
+          "term": "Aktivität",
+          "meaning": "Activity",
+          "definition": "Ein Arbeitsschritt innerhalb eines Ablaufs."
+        },
+        {
+          "term": "Assoziation",
+          "meaning": "Association",
+          "definition": "Strukturelle Beziehung zwischen Klassen."
+        },
+        {
+          "term": "Pseudocode",
+          "meaning": "Pseudocode",
+          "definition": "Sprachunabhängige Beschreibung von Programmschritten."
+        }
+      ]
+    },
+    "en": {
+      "title": "UML and algorithm design",
+      "summary": "Distinguish use-case, activity, class and sequence diagrams, plus pseudocode and flowcharts.",
+      "sections": [
+        {
+          "heading": "1. Why model?",
+          "body": "A model simplifies a system before it is built. It makes requirements, workflows and relationships visible. UML is a standardized modeling language. A diagram does not replace all technical documentation, but it supports a shared understanding."
+        },
+        {
+          "heading": "2. Four important UML diagrams",
+          "body": "Use-case diagram: actors and goals. Activity diagram: steps, decisions and parallel flows. Class diagram: classes, attributes, methods and relationships. Sequence diagram: messages between participants in time order."
+        },
+        {
+          "heading": "3. Algorithms before code",
+          "body": "An algorithm is a finite sequence of unambiguous steps. Pseudocode describes those steps without depending on a programming language. A flowchart uses symbols: oval for start/end, rectangle for processing, diamond for a decision and arrows for flow."
+        },
+        {
+          "heading": "4. Relationships and quality",
+          "body": "In a class diagram, an association describes a relationship. Generalization represents inheritance. Check whether a model includes all actors, conditions, exceptions and end states. A good model is clear and not unnecessarily complex."
+        }
+      ],
+      "example": {
+        "heading": "Flow: validate a password",
+        "body": "Describe the process before coding: read input, check minimum length and display the result.",
+        "code": "START\\n  INPUT password\\n  IF length(password) >= 12\\n    OUTPUT: sufficient\\n  ELSE\\n    OUTPUT: too short\\nEND"
+      },
+      "practice": {
+        "heading": "Quick practice",
+        "steps": [
+          "Choose the UML diagram that shows the actor and goal for a user sign-in.",
+          "Draw a flowchart with start, password input, a decision and two outcomes.",
+          "Name two differences between a class diagram and a sequence diagram."
+        ]
+      },
+      "exam": {
+        "heading": "IHK focus",
+        "text": "Your WBS programming module includes UML, pseudocode, flowcharts and structure charts as part of structured software development. Ask what the task represents: structure, workflow, goal or time-ordered communication."
+      },
+      "terms": [
+        {
+          "term": "Akteur",
+          "meaning": "Actor",
+          "definition": "A role outside the system being considered."
+        },
+        {
+          "term": "Aktivität",
+          "meaning": "Activity",
+          "definition": "A work step in a process."
+        },
+        {
+          "term": "Assoziation",
+          "meaning": "Association",
+          "definition": "A structural relationship between classes."
+        },
+        {
+          "term": "Pseudocode",
+          "meaning": "Pseudocode",
+          "definition": "A language-independent description of program steps."
+        }
+      ]
+    },
+    "ar": {
+      "title": "تخطيط الخوارزميات باستخدام UML",
+      "summary": "التمييز بين Use Case وActivity وClass وSequence Diagrams، إضافة إلى Pseudocode ومخطط التدفق.",
+      "sections": [
+        {
+          "heading": "1. لماذا نستخدم النمذجة؟",
+          "body": "يبسط Model النظام قبل بنائه، ويجعل المتطلبات والتدفقات والعلاقات واضحة. UML هي لغة نمذجة معيارية. لا يغني المخطط عن كل التوثيق التقني، لكنه يساعد الفريق على فهم مشترك."
+        },
+        {
+          "heading": "2. أربعة مخططات UML مهمة",
+          "body": "Use-Case Diagram يعرض Actors وأهدافهم. Activity Diagram يعرض خطوات العمل والقرارات والتوازي. Class Diagram يعرض Classes وAttributes وMethods والعلاقات. Sequence Diagram يعرض الرسائل بين المشاركين حسب الترتيب الزمني."
+        },
+        {
+          "heading": "3. الخوارزمية قبل الكود",
+          "body": "Algorithm هي سلسلة محدودة وواضحة من الخطوات. يصف Pseudocode هذه الخطوات دون الارتباط بلغة برمجة. يستخدم Programmablaufplan رموزاً: الشكل البيضاوي للبداية والنهاية، المستطيل للمعالجة، المعين للقرار، والأسهم لتوضيح المسار."
+        },
+        {
+          "heading": "4. العلاقات وجودة المخطط",
+          "body": "تعني Association علاقة بين Classes، بينما تمثل Generalization الوراثة. افحص أن المخطط يوضح كل المشاركين والشروط والاستثناءات ونقاط النهاية. يجب أن يكون مفهوماً دون تعقيد زائد."
+        }
+      ],
+      "example": {
+        "heading": "تدفق فحص كلمة المرور",
+        "body": "نصف العملية قبل البرمجة: قراءة الإدخال، فحص الحد الأدنى للطول، ثم عرض النتيجة.",
+        "code": "START\\n  INPUT password\\n  IF length(password) >= 12\\n    OUTPUT: ausreichend\\n  ELSE\\n    OUTPUT: zu kurz\\nEND"
+      },
+      "practice": {
+        "heading": "تدريب قصير",
+        "steps": [
+          "اختر مخطط UML الذي يعرض المستخدم والهدف عند تسجيل الدخول.",
+          "ارسم Flowchart فيه بداية وإدخال كلمة المرور وقرار ونتيجتان.",
+          "اذكر فرقين بين Class Diagram وSequence Diagram."
+        ]
+      },
+      "exam": {
+        "heading": "الارتباط بامتحان IHK",
+        "text": "يتضمن محور البرمجة في WBS مخططات UML وPseudocode ومخطط التدفق وStruktogramm ضمن تطوير البرامج المنظم. اسأل نفسك: هل المطلوب عرض بنية أم خطوات أم هدف أم تواصل زمني؟"
+      },
+      "terms": [
+        {
+          "term": "Akteur",
+          "meaning": "Actor",
+          "definition": "دور خارج النظام محل الدراسة."
+        },
+        {
+          "term": "Aktivität",
+          "meaning": "Activity",
+          "definition": "خطوة عمل ضمن تسلسل."
+        },
+        {
+          "term": "Assoziation",
+          "meaning": "Association",
+          "definition": "علاقة بنيوية بين Classes."
+        },
+        {
+          "term": "Pseudocode",
+          "meaning": "شبه كود",
+          "definition": "وصف خطوات البرنامج دون لغة محددة."
+        }
+      ]
+    }
+  },
+  {
+    "id": "it-law-data-protection",
+    "topic": "IT Law & Data Protection",
+    "icon": "⚖️",
+    "sources": [
+      {
+        "label": "EUR-Lex – Regulation (EU) 2016/679 (GDPR)",
+        "url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj"
+      },
+      {
+        "label": "EUR-Lex – GDPR summary",
+        "url": "https://eur-lex.europa.eu/EN/legal-content/summary/general-data-protection-regulation-gdpr.html"
+      },
+      {
+        "label": "BIBB – Fachinformatiker Systemintegration occupational profile",
+        "url": "https://www.bibb.de/dienst/berufesuche/de/index_berufesuche.php/profile/apprenticeship/olkiu98"
+      },
+      {
+        "label": "BfDI – Data protection information",
+        "url": "https://www.bfdi.bund.de/"
+      }
+    ],
+    "de": {
+      "title": "Datenschutz und IT-Recht in der Praxis",
+      "summary": "Personenbezogene Daten, DSGVO-Grundsätze, Rechtsgrundlagen und technische Schutzmaßnahmen.",
+      "sections": [
+        {
+          "heading": "1. Personenbezogene Daten",
+          "body": "Personenbezogene Daten beziehen sich auf eine identifizierte oder identifizierbare natürliche Person. Beispiele sind Name, E-Mail-Adresse oder eine zuordenbare Kennung. Nicht jede technische Information ist automatisch personenbezogen; entscheidend ist die Möglichkeit der Zuordnung."
+        },
+        {
+          "heading": "2. Grundsätze der DSGVO",
+          "body": "Wichtige Grundsätze aus Artikel 5 sind Rechtmäßigkeit und Transparenz, Zweckbindung, Datenminimierung, Richtigkeit, Speicherbegrenzung sowie Integrität und Vertraulichkeit. Erhebe nur Daten, die für einen klaren Zweck benötigt werden, und bewahre sie nicht unbegrenzt auf."
+        },
+        {
+          "heading": "3. Rechtsgrundlage und Betroffenenrechte",
+          "body": "Eine Verarbeitung benötigt grundsätzlich eine Rechtsgrundlage nach Artikel 6, zum Beispiel Vertrag, rechtliche Verpflichtung oder Einwilligung, wenn deren Voraussetzungen erfüllt sind. Betroffene haben unter anderem Rechte auf Auskunft, Berichtigung und unter bestimmten Voraussetzungen Löschung. Einwilligung ist nicht die einzige Rechtsgrundlage."
+        },
+        {
+          "heading": "4. Aufgaben der IT",
+          "body": "IT-Fachkräfte setzen Vorgaben um: Rollen und Rechte, sichere Übertragung, Updates, Backups, Protokollierung und Löschkonzepte. TOM bedeutet technische und organisatorische Maßnahmen. Bei Auftragsverarbeitung muss die Organisation die Anforderungen aus Artikel 28 beachten. Bei Unsicherheit Datenschutzbeauftragte oder zuständige Fachstelle einbeziehen."
+        }
+      ],
+      "example": {
+        "heading": "Neues Ticketsystem",
+        "body": "Ein Support-Team möchte Namen, E-Mail-Adressen und Fehlerbeschreibungen speichern. Vor dem Start werden Zweck, Rechtsgrundlage, Zugriffsgruppen, Aufbewahrungsfrist und Löschprozess festgelegt. Support-Mitarbeiter sehen nur die Tickets, die sie für ihre Arbeit benötigen.",
+        "code": "Datenfluss prüfen:\\n1. Zweck dokumentieren\\n2. Rechtsgrundlage klären\\n3. Zugriff nach Rollen begrenzen\\n4. Aufbewahrungsfrist definieren\\n5. Löschung und Backups berücksichtigen"
+      },
+      "practice": {
+        "heading": "Mini-Übung",
+        "steps": [
+          "Warum ist eine E-Mail-Adresse in vielen Fällen ein personenbezogenes Datum?",
+          "Nenne zwei DSGVO-Grundsätze und erkläre sie an einem Ticketsystem.",
+          "Warum reicht es nicht, für jede Datenverarbeitung pauschal eine Einwilligung anzunehmen?"
+        ]
+      },
+      "exam": {
+        "heading": "IHK-Bezug",
+        "text": "Datenschutz ist Teil der beruflichen Handlungskompetenz von Fachinformatikern. In einer Prüfungssituation solltest du Datenarten erkennen, eine passende Rechtsgrundlage nicht einfach erfinden und technische sowie organisatorische Schutzmaßnahmen begründen. Dies ist eine Lernübersicht, keine individuelle Rechtsberatung."
+      },
+      "terms": [
+        {
+          "term": "DSGVO",
+          "meaning": "GDPR",
+          "definition": "EU-Datenschutz-Grundverordnung."
+        },
+        {
+          "term": "Personenbezogene Daten",
+          "meaning": "Personal data",
+          "definition": "Informationen über eine identifizierte oder identifizierbare Person."
+        },
+        {
+          "term": "Datenminimierung",
+          "meaning": "Data minimisation",
+          "definition": "Nur erforderliche Daten verarbeiten."
+        },
+        {
+          "term": "TOM",
+          "meaning": "Technical and organisational measures",
+          "definition": "Technische und organisatorische Schutzmaßnahmen."
+        }
+      ]
+    },
+    "en": {
+      "title": "Data protection and IT law in practice",
+      "summary": "Personal data, GDPR principles, legal bases and technical safeguards.",
+      "sections": [
+        {
+          "heading": "1. Personal data",
+          "body": "Personal data relates to an identified or identifiable natural person. Examples include a name, email address or an identifier that can be linked to a person. Not every technical detail is automatically personal data; identifiability matters."
+        },
+        {
+          "heading": "2. GDPR principles",
+          "body": "Important Article 5 principles include lawfulness and transparency, purpose limitation, data minimisation, accuracy, storage limitation, and integrity and confidentiality. Collect only what is needed for a clear purpose and do not keep it indefinitely."
+        },
+        {
+          "heading": "3. Legal basis and individual rights",
+          "body": "Processing generally requires a legal basis under Article 6, for example a contract, legal obligation or consent when its conditions are met. Individuals have rights including access, rectification and, in certain circumstances, erasure. Consent is not the only legal basis."
+        },
+        {
+          "heading": "4. IT responsibilities",
+          "body": "IT staff implement safeguards: roles and permissions, secure transmission, updates, backups, logging and deletion concepts. TOM means technical and organisational measures. For processing by a processor, the organisation must consider Article 28. Consult the data protection officer or responsible specialist when uncertain."
+        }
+      ],
+      "example": {
+        "heading": "New ticketing system",
+        "body": "A support team wants to store names, email addresses and incident descriptions. Before launch, define the purpose, legal basis, access groups, retention period and deletion process. Support staff should only see tickets needed for their work.",
+        "code": "Review the data flow:\\n1. Document the purpose\\n2. Establish the legal basis\\n3. Restrict access by role\\n4. Define retention periods\\n5. Consider deletion and backups"
+      },
+      "practice": {
+        "heading": "Quick practice",
+        "steps": [
+          "Why is an email address often personal data?",
+          "Name two GDPR principles and explain them using a ticketing system.",
+          "Why is it incorrect to assume consent is always the legal basis for processing?"
+        ]
+      },
+      "exam": {
+        "heading": "IHK focus",
+        "text": "Data protection is part of a system integrator's professional competence. In an exam, identify data types, do not invent a legal basis and justify technical and organisational safeguards. This is a learning overview, not individual legal advice."
+      },
+      "terms": [
+        {
+          "term": "DSGVO",
+          "meaning": "GDPR",
+          "definition": "The EU General Data Protection Regulation."
+        },
+        {
+          "term": "Personenbezogene Daten",
+          "meaning": "Personal data",
+          "definition": "Information about an identified or identifiable person."
+        },
+        {
+          "term": "Datenminimierung",
+          "meaning": "Data minimisation",
+          "definition": "Process only data that is necessary."
+        },
+        {
+          "term": "TOM",
+          "meaning": "Technical and organisational measures",
+          "definition": "Technical and organisational safeguards."
+        }
+      ]
+    },
+    "ar": {
+      "title": "حماية البيانات والقانون في بيئة IT",
+      "summary": "البيانات الشخصية ومبادئ GDPR والأساس القانوني ووسائل الحماية التقنية والتنظيمية.",
+      "sections": [
+        {
+          "heading": "1. البيانات الشخصية",
+          "body": "البيانات الشخصية هي معلومات تتعلق بشخص طبيعي محدد أو يمكن تحديده. أمثلة: الاسم وعنوان البريد الإلكتروني أو معرّف يمكن ربطه بشخص. ليست كل معلومة تقنية بيانات شخصية تلقائياً؛ المهم إمكانية تحديد الشخص."
+        },
+        {
+          "heading": "2. مبادئ GDPR",
+          "body": "من مبادئ المادة 5: المشروعية والشفافية، تحديد الغرض، تقليل البيانات، الدقة، تحديد مدة التخزين، وسلامة البيانات وسريتها. اجمع فقط ما تحتاجه لغرض واضح، ولا تحتفظ به إلى الأبد."
+        },
+        {
+          "heading": "3. الأساس القانوني وحقوق الأشخاص",
+          "body": "تحتاج المعالجة عادةً إلى أساس قانوني وفق المادة 6، مثل العقد أو الالتزام القانوني أو الموافقة عندما تتحقق شروطها. من حقوق الشخص الوصول إلى بياناته وتصحيحها، والحذف في حالات معينة. الموافقة ليست الأساس القانوني الوحيد."
+        },
+        {
+          "heading": "4. مسؤولية موظف IT",
+          "body": "ينفذ موظف IT وسائل الحماية مثل الأدوار والصلاحيات والنقل الآمن والتحديثات والنسخ الاحتياطي والتسجيل وسياسة الحذف. تعني TOM التدابير التقنية والتنظيمية. عند معالجة البيانات بالنيابة يجب مراعاة المادة 28. عند الشك ارجع إلى مسؤول حماية البيانات أو الجهة المختصة."
+        }
+      ],
+      "example": {
+        "heading": "نظام تذاكر الدعم الجديد",
+        "body": "يريد فريق الدعم حفظ الأسماء والبريد الإلكتروني ووصف الأعطال. قبل تشغيل النظام يجب تحديد الغرض والأساس القانوني ومجموعات الوصول ومدة الاحتفاظ وطريقة الحذف. لا يرى موظف الدعم إلا التذاكر اللازمة لعمله.",
+        "code": "مراجعة تدفق البيانات:\\n1. توثيق الغرض\\n2. تحديد الأساس القانوني\\n3. تقييد الوصول حسب الدور\\n4. تحديد مدة الاحتفاظ\\n5. مراعاة الحذف والنسخ الاحتياطية"
+      },
+      "practice": {
+        "heading": "تدريب قصير",
+        "steps": [
+          "لماذا يعتبر البريد الإلكتروني غالباً بيانات شخصية؟",
+          "اذكر مبدأين من GDPR واشرحهما باستخدام نظام التذاكر.",
+          "لماذا لا يصح اعتبار الموافقة أساساً قانونياً وحيداً لكل معالجة؟"
+        ]
+      },
+      "exam": {
+        "heading": "الارتباط بامتحان IHK",
+        "text": "حماية البيانات جزء من الكفاءة المهنية لفني أنظمة المعلومات. في الامتحان حدد نوع البيانات، ولا تفترض أساساً قانونياً دون تحقق، واشرح التدابير التقنية والتنظيمية المناسبة. هذا ملخص تعليمي وليس استشارة قانونية فردية."
+      },
+      "terms": [
+        {
+          "term": "DSGVO",
+          "meaning": "GDPR",
+          "definition": "اللائحة الأوروبية العامة لحماية البيانات."
+        },
+        {
+          "term": "Personenbezogene Daten",
+          "meaning": "بيانات شخصية",
+          "definition": "معلومات عن شخص محدد أو قابل للتحديد."
+        },
+        {
+          "term": "Datenminimierung",
+          "meaning": "تقليل البيانات",
+          "definition": "معالجة البيانات الضرورية فقط."
+        },
+        {
+          "term": "TOM",
+          "meaning": "تدابير تقنية وتنظيمية",
+          "definition": "إجراءات تقنية وتنظيمية لحماية البيانات."
+        }
+      ]
+    }
+  },
+  {
+    "id": "customer-requirements-procurement",
+    "topic": "Customer Requirements & Procurement",
+    "icon": "🧾",
+    "sources": [
+      {
+        "label": "BIBB – Fachinformatiker Systemintegration occupational profile",
+        "url": "https://www.bibb.de/dienst/berufesuche/de/index_berufesuche.php/profile/apprenticeship/olkiu98"
+      },
+      {
+        "label": "BIBB – IT occupational training resources",
+        "url": "https://www.bibb.de/dienst/berufesuche/de/index_berufesuche.php"
+      },
+      {
+        "label": "IHK – Project and training guidance",
+        "url": "https://www.ihk.de/"
+      }
+    ],
+    "de": {
+      "title": "Kundenanforderungen und IT-Beschaffung",
+      "summary": "Bedarf erfassen, Anforderungen unterscheiden und IT-Lösungen nachvollziehbar vergleichen.",
+      "sections": [
+        {
+          "heading": "1. Bedarf verstehen",
+          "body": "Beginne mit Fragen: Welches Problem soll gelöst werden? Wer nutzt die Lösung? Wie viele Personen und Geräte sind betroffen? Welche bestehenden Systeme müssen berücksichtigt werden? Halte Muss- und Wunsch-Anforderungen getrennt fest."
+        },
+        {
+          "heading": "2. Funktional und nichtfunktional",
+          "body": "Funktionale Anforderungen beschreiben, was ein System tun soll, zum Beispiel Benutzer anmelden oder Dateien sichern. Nichtfunktionale Anforderungen beschreiben Qualitätsmerkmale wie Verfügbarkeit, Leistung, Sicherheit, Bedienbarkeit und Wartbarkeit. Formuliere Anforderungen möglichst messbar."
+        },
+        {
+          "heading": "3. Lösungen vergleichen",
+          "body": "Vergleiche Alternativen anhand gleicher Kriterien: Anschaffung, Lizenzen, Betrieb, Energie, Schulung, Wartung und spätere Erweiterung. TCO (Total Cost of Ownership) betrachtet die Kosten über den Lebenszyklus. Eine Nutzwertanalyse bewertet Kriterien mit Gewichtung und Punkten; die Gewichtung muss nachvollziehbar sein."
+        },
+        {
+          "heading": "4. Angebot und Übergabe",
+          "body": "Prüfe Leistungsumfang, Mengen, Termine, Support, Garantie, Datenschutz und Abnahmekriterien. Dokumentiere Entscheidungen und offene Punkte. Nach Umsetzung testest du die vereinbarten Anforderungen, weist den Kunden ein und hältst die Abnahme nachvollziehbar fest."
+        }
+      ],
+      "example": {
+        "heading": "Arbeitsplätze für zehn Mitarbeitende",
+        "body": "Ein Kunde benötigt zehn Büroarbeitsplätze. Muss-Anforderungen: Windows-kompatible Geräte, 16 GB RAM, verschlüsselte SSD und drei Jahre Support. Wunsch: besonders leichtes Gehäuse. Vergleiche drei Angebote mit identischen Kriterien und berechne TCO statt nur den Kaufpreis zu vergleichen.",
+        "code": "TCO = Anschaffung + Lizenzen + Betrieb + Wartung + Support + Entsorgung\\nNutzwert = Summe (Punktzahl je Kriterium × Gewichtung)"
+      },
+      "practice": {
+        "heading": "Mini-Übung",
+        "steps": [
+          "Formuliere zwei funktionale und zwei nichtfunktionale Anforderungen für einen neuen Fileserver.",
+          "Warum kann ein günstiger Kaufpreis trotzdem zu höheren Gesamtkosten führen?",
+          "Welche Kriterien sollten vor der Abnahme eines neuen Arbeitsplatzes getestet werden?"
+        ]
+      },
+      "exam": {
+        "heading": "IHK-Bezug",
+        "text": "Die BIBB-Beschreibung des Berufs nennt Kunden informieren und beraten, marktgängige IT-Systeme beurteilen, Lösungen entwickeln und Aufträge abschließen. In einer Prüfung musst du technische und wirtschaftliche Kriterien verbinden und deine Entscheidung begründen."
+      },
+      "terms": [
+        {
+          "term": "Anforderungsanalyse",
+          "meaning": "Requirements analysis",
+          "definition": "Systematische Ermittlung von Bedarf und Rahmenbedingungen."
+        },
+        {
+          "term": "Funktionale Anforderung",
+          "meaning": "Functional requirement",
+          "definition": "Beschreibt eine benötigte Systemfunktion."
+        },
+        {
+          "term": "TCO",
+          "meaning": "Total Cost of Ownership",
+          "definition": "Gesamtkosten über den Lebenszyklus."
+        },
+        {
+          "term": "Nutzwertanalyse",
+          "meaning": "Weighted scoring analysis",
+          "definition": "Vergleich anhand gewichteter Kriterien."
+        }
+      ]
+    },
+    "en": {
+      "title": "Customer requirements and IT procurement",
+      "summary": "Capture needs, distinguish requirements and compare IT solutions transparently.",
+      "sections": [
+        {
+          "heading": "1. Understand the need",
+          "body": "Start with questions: What problem must be solved? Who will use the solution? How many people and devices are affected? Which existing systems must be considered? Keep mandatory requirements separate from preferences."
+        },
+        {
+          "heading": "2. Functional and non-functional requirements",
+          "body": "Functional requirements describe what a system must do, such as authenticate users or back up files. Non-functional requirements describe qualities such as availability, performance, security, usability and maintainability. Make requirements measurable whenever possible."
+        },
+        {
+          "heading": "3. Compare solutions",
+          "body": "Compare alternatives using the same criteria: purchase, licences, operation, energy, training, maintenance and future expansion. TCO (Total Cost of Ownership) considers lifecycle costs. Weighted scoring evaluates criteria using weights and scores; the weighting must be transparent."
+        },
+        {
+          "heading": "4. Offer and handover",
+          "body": "Check scope, quantities, dates, support, warranty, data protection and acceptance criteria. Document decisions and open points. After implementation, test the agreed requirements, train the customer and record acceptance clearly."
+        }
+      ],
+      "example": {
+        "heading": "Workstations for ten employees",
+        "body": "A customer needs ten office workstations. Mandatory requirements: Windows-compatible devices, 16 GB RAM, encrypted SSD and three years of support. Preference: lightweight case. Compare three offers using identical criteria and calculate TCO instead of comparing purchase price only.",
+        "code": "TCO = purchase + licences + operation + maintenance + support + disposal\\nWeighted score = sum (criterion score × criterion weight)"
+      },
+      "practice": {
+        "heading": "Quick practice",
+        "steps": [
+          "Write two functional and two non-functional requirements for a new file server.",
+          "Why can a low purchase price still lead to higher total costs?",
+          "Which criteria should be tested before accepting a new workstation?"
+        ]
+      },
+      "exam": {
+        "heading": "IHK focus",
+        "text": "The BIBB occupational profile includes informing and advising customers, assessing market solutions, developing solutions and closing orders. In an exam, combine technical and economic criteria and justify your recommendation."
+      },
+      "terms": [
+        {
+          "term": "Anforderungsanalyse",
+          "meaning": "Requirements analysis",
+          "definition": "Systematic identification of needs and constraints."
+        },
+        {
+          "term": "Funktionale Anforderung",
+          "meaning": "Functional requirement",
+          "definition": "Describes a required system function."
+        },
+        {
+          "term": "TCO",
+          "meaning": "Total Cost of Ownership",
+          "definition": "Lifecycle costs of a solution."
+        },
+        {
+          "term": "Nutzwertanalyse",
+          "meaning": "Weighted scoring analysis",
+          "definition": "Comparison using weighted criteria."
+        }
+      ]
+    },
+    "ar": {
+      "title": "متطلبات العميل وشراء حلول IT",
+      "summary": "فهم الاحتياج وتمييز أنواع المتطلبات ومقارنة الحلول التقنية والاقتصادية.",
+      "sections": [
+        {
+          "heading": "1. فهم احتياج العميل",
+          "body": "ابدأ بأسئلة: ما المشكلة المطلوب حلها؟ من سيستخدم الحل؟ كم عدد الأشخاص والأجهزة؟ ما الأنظمة الحالية التي يجب مراعاتها؟ افصل المتطلبات الإلزامية عن الميزات المرغوبة."
+        },
+        {
+          "heading": "2. متطلبات وظيفية وغير وظيفية",
+          "body": "تصف Functional Requirements ما الذي يجب أن ينفذه النظام، مثل تسجيل دخول المستخدم أو النسخ الاحتياطي للملفات. أما Non-functional Requirements فتصف الجودة مثل التوافر والأداء والأمان وسهولة الاستخدام والصيانة. اجعل المتطلبات قابلة للقياس قدر الإمكان."
+        },
+        {
+          "heading": "3. مقارنة الحلول",
+          "body": "قارن البدائل باستخدام المعايير نفسها: الشراء والتراخيص والتشغيل والطاقة والتدريب والصيانة والتوسع لاحقاً. يحسب TCO التكلفة طوال دورة الحياة. وتقيّم Nutzwertanalyse البدائل بأوزان ونقاط؛ يجب أن تكون الأوزان واضحة ومبررة."
+        },
+        {
+          "heading": "4. العرض والتسليم",
+          "body": "افحص نطاق العمل والكميات والمواعيد والدعم والضمان وحماية البيانات ومعايير القبول. وثق القرارات والنقاط المفتوحة. بعد التنفيذ اختبر المتطلبات المتفق عليها، ودرّب العميل، ووثق عملية Abnahme."
+        }
+      ],
+      "example": {
+        "heading": "محطات عمل لعشرة موظفين",
+        "body": "يحتاج العميل إلى عشر محطات عمل. المتطلبات الإلزامية: أجهزة متوافقة مع Windows وذاكرة 16 GB وSSD مشفر ودعم لثلاث سنوات. الميزة المرغوبة: وزن خفيف. قارن ثلاثة عروض بالمعايير نفسها واحسب TCO بدلاً من مقارنة سعر الشراء فقط.",
+        "code": "TCO = سعر الشراء + التراخيص + التشغيل + الصيانة + الدعم + التخلص\\nNutzwert = مجموع (نقاط المعيار × وزن المعيار)"
+      },
+      "practice": {
+        "heading": "تدريب قصير",
+        "steps": [
+          "اكتب متطلبين وظيفيين ومتطلبين غير وظيفيين لخادم ملفات جديد.",
+          "لماذا قد يؤدي سعر الشراء المنخفض إلى تكاليف إجمالية أعلى؟",
+          "ما المعايير التي يجب اختبارها قبل قبول محطة عمل جديدة؟"
+        ]
+      },
+      "exam": {
+        "heading": "الارتباط بامتحان IHK",
+        "text": "يذكر BIBB ضمن مهنة Fachinformatiker مهام إرشاد العملاء وتقييم حلول IT المتاحة وتطوير الحلول وإغلاق الطلبات. في الامتحان اربط بين المعايير التقنية والاقتصادية وبرر قرارك."
+      },
+      "terms": [
+        {
+          "term": "Anforderungsanalyse",
+          "meaning": "تحليل المتطلبات",
+          "definition": "تحديد الاحتياجات والقيود بطريقة منظمة."
+        },
+        {
+          "term": "Funktionale Anforderung",
+          "meaning": "متطلب وظيفي",
+          "definition": "يصف وظيفة يجب أن ينفذها النظام."
+        },
+        {
+          "term": "TCO",
+          "meaning": "التكلفة الكلية للملكية",
+          "definition": "تكاليف الحل طوال دورة حياته."
+        },
+        {
+          "term": "Nutzwertanalyse",
+          "meaning": "تحليل القيمة",
+          "definition": "مقارنة البدائل باستخدام معايير وأوزان."
+        }
+      ]
+    }
   }
 ];
