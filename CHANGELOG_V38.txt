@@ -1,0 +1,34 @@
+VIDO Technology V38 — Diagram Academy
+Date: 14 November 2026
+Base: V37 learning expansion on maintenance/v36-ci-and-docs
+
+Diagram learning
+- Added 11 progressive modules in German, English and Arabic, from diagram basics to professional review.
+- Topics: flowcharts/PAP, UML use-case/activity, UML classes/components, UML sequence/state, ERD, physical/logical network diagrams, BPMN, C4 architecture, DFD and review practice.
+- Added eight editable example templates: Flowchart, Network, UML Class, ERD, Sequence, BPMN, C4 and DFD.
+- Added 20 original trilingual practice questions. These are not official IHK exam questions.
+- Added browser-based JSON model editor, live SVG preview, SVG export, local draft/progress storage and an 8-point handover checklist.
+
+Validation and quality
+- Added a dedicated diagram validation engine for model metadata, unique IDs, valid connections, disconnected nodes, type-specific notation constraints and relationship checks.
+- Added diagram-audit.mjs to test all 11 trilingual modules, all eight example models, 20 questions, official source links and negative validator cases.
+- Extended the existing application audit and CI JavaScript syntax checks.
+- Extended Express smoke tests for all four diagram learning assets and their content types/cache headers.
+- Updated service-worker cache name and precached diagram assets.
+- Updated learning source references, deployment notes, security baseline and this changelog.
+
+Official references
+- ISO 5807 flowchart conventions
+- OMG UML 2.5.1 and BPMN 2.0.2
+- C4 model official documentation
+- Cisco network topology guidance
+- PostgreSQL relational database tutorial
+- Mermaid flowchart and sequence diagram references
+- BIBB occupational profile for Fachinformatiker/in Systemintegration
+
+Scope and limitations
+- No database schema/data, authentication, authorization, payment logic, secrets, production deployment or sensitive network settings changed.
+- Diagram drafts and learning completion remain in browser local storage; no new API storage was added.
+- The validator detects structural and common notation issues. It is not a formal standards certification and cannot prove that a real network matches the diagram.
+- Local Windows/iPhone end-to-end testing and production deployment are not claimed.
+- Release remains on the existing open pull request and has not been merged into main.
