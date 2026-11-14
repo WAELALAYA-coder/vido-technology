@@ -36,3 +36,14 @@ Scope: Fachinformatiker/in für Systemintegration (FiSi), IHK-oriented foundatio
 ## Maintenance
 
 When a source moves or a command changes, update the lesson and its question set together. Run `npm test` and review the GitHub Actions workflow before merging a content release.
+
+| Java programming | [Dev.java – Java learning path](https://dev.java/learn/), [Oracle – Language basics](https://docs.oracle.com/javase/tutorial/java/nutsandbolts/), [Oracle – Classes and objects](https://docs.oracle.com/javase/tutorial/java/javaOO/) |
+| UML and algorithms | [OMG – UML 2.5.1 specification](https://www.omg.org/spec/UML/2.5.1/), [BIBB – FiSi occupational profile](https://www.bibb.de/dienst/berufesuche/de/index_berufesuche.php/profile/apprenticeship/olkiu98) |
+| IT law and data protection | [EUR-Lex – GDPR Regulation (EU) 2016/679](https://eur-lex.europa.eu/eli/reg/2016/679/oj), [EUR-Lex – GDPR summary](https://eur-lex.europa.eu/EN/legal-content/summary/general-data-protection-regulation-gdpr.html), [BfDI](https://www.bfdi.bund.de/) |
+| Customer requirements and procurement | [BIBB – FiSi occupational profile](https://www.bibb.de/dienst/berufesuche/de/index_berufesuche.php/profile/apprenticeship/olkiu98), [BIBB – IT occupational resources](https://www.bibb.de/dienst/berufesuche/de/index_berufesuche.php) |
+
+## V37 curriculum extension
+
+The V37 content now includes 14 additional skills and 140 additional questions (IDs 0301–0440), taking the combined question bank to 440 questions across 44 skills. Four additional trilingual lessons cover Java fundamentals, UML and algorithm design, IT law/data protection, and customer requirements/procurement. The Java references include both the current Dev.java learning path and Oracle's established language and object-oriented tutorials. The UML reference is the OMG formal UML 2.5.1 specification. Data-protection material is linked to the EU GDPR legal text and EUR-Lex summary. Customer/procurement content is aligned with the BIBB occupational profile for system integration.
+
+The GDPR lesson is an educational overview only. It does not replace legal advice or a case-specific assessment. The exact legal basis and obligations depend on the processing context.
