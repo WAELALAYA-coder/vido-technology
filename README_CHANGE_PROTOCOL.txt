@@ -1,3 +1,22 @@
+STATUS UPDATE — 14 November 2026
+
+This document contains the legacy V2 ZIP-based change workflow. The referenced
+VIDO_FOUNDATION_LOCKED_V1.md and VIDO_CHANGEABLE_BUILD ZIP are not present in
+the current repository tree, so their contents and current applicability cannot
+be verified from this repository.
+
+For the current GitHub repository, use a separate maintenance branch and pull
+request. Run the repository's npm test suite and review the GitHub Actions CI
+result before proposing a merge. Current runtime and deployment information is
+in README_DEPLOYMENT.md; the security posture and release limitations are in
+SECURITY_BASELINE.md.
+
+The original V2 instructions below are retained for historical reference.
+Do not treat the ZIP workflow as the current repository release process unless
+the repository owner explicitly reactivates it.
+
+---
+
 VIDO Technology — Changeable Build V2
 
 IMMUTABLE FOUNDATION:
