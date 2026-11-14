@@ -15,12 +15,83 @@ window.VIDO_DIAGRAM_CONTENT = {
   ],
   templates: [
     {id:"flow-basic",title:"Anmeldung prüfen",kind:"flow",model:{meta:{title:"Anmeldung prüfen",purpose:"Einen Login-Ablauf mit Fehlerpfad zeigen.",audience:"Lernende und Entwickler",scope:"Eingabeprüfung bis zur Anmeldung",author:"VIDO Technology",updated:"2026-11-14",legend:"Oval = Start/Ende; Rechteck = Prozess; Raute = Entscheidung"},width:1000,height:420,nodes:[{id:"start",label:"Start",kind:"start",x:90,y:205},{id:"input",label:"Daten eingeben",kind:"io",x:270,y:205},{id:"check",label:"Daten gültig?",kind:"decision",x:470,y:205},{id:"error",label:"Fehler anzeigen",kind:"process",x:690,y:100},{id:"login",label:"Anmelden",kind:"process",x:690,y:300},{id:"end",label:"Ende",kind:"end",x:900,y:300}],links:[{from:"start",to:"input"},{from:"input",to:"check"},{from:"check",to:"error",label:"Nein"},{from:"error",to:"input",label:"Korrigieren"},{from:"check",to:"login",label:"Ja"},{from:"login",to:"end"}]}},
-    {id:"network-office",title:"Büro-Netzwerk",kind:"network",model:{meta:{title:"Büro-Netzwerk – logisch",purpose:"Zentrale Komponenten und Datenwege dokumentieren.",audience:"Systemadministration",scope:"Internet bis Endgeräte",author:"VIDO Technology",updated:"2026-11-14",legend:"Router = Layer 3; Switch = Layer 2; Firewall = Sicherheitsgrenze"},width:1000,height:450,nodes:[{id:"internet",label:"Internet",kind:"cloud",x:90,y:220},{id:"fw",label:"Firewall",kind:"firewall",x:270,y:220},{id:"router",label:"Router",kind:"router",x:450,y:220},{id:"core",label:"Core-Switch",kind:"switch",x:640,y:220},{id:"access",label:"Access-Switch",kind:"switch",x:820,y:110},{id:"client",label:"Client\nVLAN 10",kind:"client",x:950,y:110},{id:"server",label:"Server\nVLAN 20",kind:"server",x:820,y:340}],links:[{from:"internet",to:"fw",label:"WAN"},{from:"fw",to:"router",label:"Policy"},{from:"router",to:"core",label:"LAN"},{from:"core",to:"access",label:"Trunk"},{from:"access",to:"client",label:"Access VLAN 10"},{from:"core",to:"server",label:"Access VLAN 20"}]}},
+    {id:"network-office",title:"Büro-Netzwerk",kind:"network",model:{meta:{title:"Büro-Netzwerk – logisch",purpose:"Zentrale Komponenten und Datenwege dokumentieren.",audience:"Systemadministration",scope:"Internet bis Endgeräte",author:"VIDO Technology",updated:"2026-11-14",legend:"Router = Layer 3; Switch = Layer 2; Firewall = Sicherheitsgrenze"},width:1100,height:450,nodes:[{id:"internet",label:"Internet",kind:"cloud",x:90,y:220},{id:"fw",label:"Firewall",kind:"firewall",x:260,y:220},{id:"router",label:"Router",kind:"router",x:430,y:220},{id:"core",label:"Core-Switch",kind:"switch",x:610,y:220},{id:"access",label:"Access-Switch",kind:"switch",x:790,y:110},{id:"client",label:"Client\nVLAN 10",kind:"client",x:980,y:110},{id:"server",label:"Server\nVLAN 20",kind:"server",x:790,y:340}],links:[{from:"internet",to:"fw",label:"WAN"},{from:"fw",to:"router",label:"Policy"},{from:"router",to:"core",label:"LAN"},{from:"core",to:"access",label:"Trunk"},{from:"access",to:"client",label:"Access VLAN 10"},{from:"core",to:"server",label:"Access VLAN 20"}]}},
     {id:"uml-class",title:"Helpdesk – Klassen",kind:"uml-class",model:{meta:{title:"Helpdesk – Klassendiagramm",purpose:"Statische Struktur der Ticketverwaltung darstellen.",audience:"Entwicklungsteam",scope:"User, Ticket und Agent",author:"VIDO Technology",updated:"2026-11-14",legend:"+ public; - private; 1..* = Multiplizität"},width:1000,height:460,nodes:[{id:"user",label:"User",kind:"class",details:["- id: UUID","- email: String","+ createTicket(): Ticket"],x:230,y:190},{id:"ticket",label:"Ticket",kind:"class",details:["- id: UUID","- subject: String","- status: Status","+ assign(): void"],x:520,y:190},{id:"agent",label:"Agent",kind:"class",details:["- employeeNo: String","+ resolve(): void"],x:820,y:190}],links:[{from:"user",to:"ticket",label:"creates 1 : 0..*" ,kind:"association"},{from:"agent",to:"ticket",label:"handles 0..1 : 0..*","kind":"association"}]}},
-    {id:"erd-helpdesk",title:"Helpdesk – ER-Modell",kind:"erd",model:{meta:{title:"Helpdesk – ER-Diagramm",purpose:"Datenstruktur und referenzielle Beziehungen zeigen.",audience:"Datenbankdesign",scope:"Kunden, Tickets und Benutzer",author:"VIDO Technology",updated:"2026-11-14",legend:"PK = Primärschlüssel; FK = Fremdschlüssel"},width:1000,height:440,nodes:[{id:"customer",label:"CUSTOMER",kind:"entity",details:["PK customer_id","name","email"],x:220,y:210},{id:"ticket",label:"TICKET",kind:"entity",details:["PK ticket_id","FK customer_id","FK assigned_user_id","subject"],x:530,y:210},{id:"user",label:"USER",kind:"entity",details:["PK user_id","email","display_name"],x:830,y:210}],links:[{from:"customer",to:"ticket",label:"1 : N" ,kind:"relationship"},{from:"user",to:"ticket",label:"1 : 0..N","kind":"relationship"}]}},
+    {id:"erd-helpdesk",title:"Helpdesk – ER-Modell",kind:"erd",model:{meta:{title:"Helpdesk – ER-Diagramm",purpose:"Datenstruktur und referenzielle Beziehungen zeigen.",audience:"Datenbankdesign",scope:"Kunden, Tickets und Benutzer",author:"VIDO Technology",updated:"2026-11-14",legend:"PK = Primärschlüssel; FK = Fremdschlüssel"},width:1000,height:440,nodes:[{id:"customer",label:"CUSTOMER",kind:"entity",details:["PK customer_id","name","email"],x:220,y:210},{id:"ticket",label:"TICKET",kind:"entity",details:["PK ticket_id","FK customer_id","FK assigned_user_id","subject"],x:530,y:210},{id:"user",label:"USER",kind:"entity",details:["PK user_id","email","display_name"],x:830,y:210}],links:[{from:"customer",to:"ticket",label:"1 : N" ,kind:"relationship"},{from:"user",to:"ticket",label:"1 : 0..*","kind":"relationship"}]}},
     {id:"sequence-login",title:"Login – Sequenz",kind:"sequence",model:{meta:{title:"Login – Sequenzdiagramm",purpose:"Nachrichten zwischen Browser, Anwendung und Datenbank erklären.",audience:"Entwicklung und Betrieb",scope:"Anmeldeprüfung",author:"VIDO Technology",updated:"2026-11-14",legend:"Zeit von oben nach unten; Pfeil = Nachricht"},width:1000,height:520,nodes:[{id:"browser",label:"Browser",kind:"participant",x:180,y:65},{id:"app",label:"Web-App",kind:"participant",x:500,y:65},{id:"db",label:"Datenbank",kind:"participant",x:820,y:65}],links:[{from:"browser",to:"app",label:"1. POST /login",order:1},{from:"app",to:"db",label:"2. SELECT user",order:2},{from:"db",to:"app",label:"3. User + Hash",order:3},{from:"app",to:"browser",label:"4. Session / Error",order:4}]}},
     {id:"bpmn-ticket",title:"Ticketprozess – BPMN",kind:"bpmn",model:{meta:{title:"Ticketprozess – BPMN",purpose:"Ticketbearbeitung mit Entscheidungszweig modellieren.",audience:"Service Desk",scope:"Annahme und Zuweisung",author:"VIDO Technology",updated:"2026-11-14",legend:"Kreis = Event; abgerundetes Rechteck = Task; Raute = Gateway"},width:1000,height:420,nodes:[{id:"start",label:"Ticket eingegangen",kind:"startEvent",x:100,y:210},{id:"capture",label:"Ticket erfassen",kind:"task",x:300,y:210},{id:"complete",label:"Angaben vollständig?",kind:"gateway",x:500,y:210},{id:"ask",label:"Rückfrage senden",kind:"task",x:710,y:95},{id:"assign",label:"Ticket zuweisen",kind:"task",x:710,y:315},{id:"end",label:"Bearbeitung startet",kind:"endEvent",x:910,y:315}],links:[{from:"start",to:"capture"},{from:"capture",to:"complete"},{from:"complete",to:"ask",label:"Nein"},{from:"ask",to:"capture",label:"Ergänzung"},{from:"complete",to:"assign",label:"Ja"},{from:"assign",to:"end"}]}},
     {id:"c4-vido",title:"VIDO – Systemkontext",kind:"c4",model:{meta:{title:"VIDO – Systemkontext / Container",purpose:"Benutzer, Anwendung und Datenspeicher abgrenzen.",audience:"Architektur und Betrieb",scope:"Lernplattform",author:"VIDO Technology",updated:"2026-11-14",legend:"Person = Nutzer; Container = Anwendung; Database = Datenspeicher"},width:1000,height:450,nodes:[{id:"learner",label:"Lernender",kind:"person",x:120,y:220},{id:"web",label:"Web-App",kind:"container",details:["Browser UI","HTTPS"],x:400,y:130},{id:"api",label:"Backend API",kind:"container",details:["Express","JSON API"],x:650,y:130},{id:"db",label:"PostgreSQL",kind:"database",details:["Users","Learning state"],x:850,y:320}],links:[{from:"learner",to:"web",label:"HTTPS"},{from:"web",to:"api",label:"HTTPS / JSON"},{from:"api",to:"db",label:"SQL"}]}}
+  ,
+{
+      "id": "dfd-login",
+      "title": "Login – Datenfluss",
+      "kind": "dfd",
+      "model": {
+        "meta": {
+          "title": "Login – Data Flow Diagram",
+          "purpose": "Logische Datenbewegung und Vertrauensgrenze darstellen.",
+          "audience": "IT-Security und Entwicklung",
+          "scope": "Anmeldeprozess bis zur Benutzerdatenbank",
+          "author": "VIDO Technology",
+          "updated": "2026-11-14",
+          "legend": "External = externer Akteur; Process = Datenverarbeitung; Data store = Datenspeicher"
+        },
+        "width": 1000,
+        "height": 430,
+        "nodes": [
+          {
+            "id": "user",
+            "label": "Benutzer",
+            "kind": "external",
+            "x": 120,
+            "y": 210
+          },
+          {
+            "id": "login",
+            "label": "Login prüfen",
+            "kind": "process",
+            "x": 430,
+            "y": 210,
+            "details": [
+              "HTTPS request"
+            ]
+          },
+          {
+            "id": "db",
+            "label": "Benutzerdaten",
+            "kind": "dataStore",
+            "x": 780,
+            "y": 210,
+            "details": [
+              "Credentials hash",
+              "Account status"
+            ]
+          }
+        ],
+        "links": [
+          {
+            "from": "user",
+            "to": "login",
+            "label": "E-Mail + Passwort"
+          },
+          {
+            "from": "login",
+            "to": "db",
+            "label": "User lookup"
+          },
+          {
+            "from": "db",
+            "to": "login",
+            "label": "Hash + Status"
+          },
+          {
+            "from": "login",
+            "to": "user",
+            "label": "Session / Fehler"
+          }
+        ]
+      }
+    }
   ],
   quiz: [
     {id:"q01",topic:"Foundations",q:{de:"Welcher Diagrammtyp zeigt Kommunikation über die Zeit?",en:"Which diagram shows communication over time?",ar:"أي نوع مخطط يوضح التواصل عبر الزمن؟"},o:{de:["Sequenzdiagramm","ERD","Netzplan","Organigramm"],en:["Sequence diagram","ERD","Network diagram","Org chart"],ar:["Sequence Diagram","ERD","مخطط شبكة","هيكل تنظيمي"]},a:0,why:{de:"Das Sequenzdiagramm ordnet Nachrichten zeitlich von oben nach unten.",en:"A sequence diagram orders messages over time from top to bottom.",ar:"Sequence Diagram يرتّب الرسائل حسب الزمن من الأعلى إلى الأسفل."}},
