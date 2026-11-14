@@ -21,6 +21,10 @@ app.get('/manifest.webmanifest', (_req,res)=>res.sendFile('manifest.webmanifest'
 app.get('/service-worker.js', (_req,res)=>res.sendFile('service-worker.js',{root:PUBLIC_ROOT,headers:{'Service-Worker-Allowed':'/'}}));
 app.get('/questions-v37.js', (_req,res)=>res.sendFile('questions-v37.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
 app.get('/lessons-v37.js', (_req,res)=>res.sendFile('lessons-v37.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
+app.get('/diagram-curriculum-v38.js', (_req,res)=>res.sendFile('diagram-curriculum-v38.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
+app.get('/diagram-engine-v38.js', (_req,res)=>res.sendFile('diagram-engine-v38.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
+app.get('/diagram-trainer.js', (_req,res)=>res.sendFile('diagram-trainer.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
+app.get('/diagram-trainer.css', (_req,res)=>res.sendFile('diagram-trainer.css',{root:PUBLIC_ROOT,headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-cache'}}));
 const pool = process.env.DATABASE_URL ? new Pool({connectionString:process.env.DATABASE_URL, ssl:false}) : null;
 const JWT_SECRET = process.env.JWT_SECRET || '';
 if (process.env.NODE_ENV === 'production' && JWT_SECRET.length < 32) { throw new Error('JWT_SECRET must be at least 32 characters in production'); }
