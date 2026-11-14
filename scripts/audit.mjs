@@ -43,7 +43,7 @@ const questions=[...base,...extra];
 assert.equal(base.length,300,'base question count must remain 300');
 assert.equal(extra.length,140,'V37 must add exactly 140 questions');
 assert.equal(questions.length,440,'total question count must be 440');
-assert.deepEqual(questions.map(q=>q.id),Array.from({length:440},(_,i)=>String(i+1).padStart(4,'0')),'question IDs must be 0001..0400');
+assert.deepEqual(questions.map(q=>q.id),Array.from({length:440},(_,i)=>String(i+1).padStart(4,'0')),'question IDs must be 0001..0440');
 assert.equal(new Set(questions.map(q=>q.skill)).size,44,'expected 44 unique skills');
 for(const q of questions){
   if(q.id>='0301')assert(q.why&&q.whyEn&&q.whyAr,`missing V37 explanations ${q.id}`);
@@ -63,7 +63,7 @@ for(const q of questions)skillCounts.set(q.skill,(skillCounts.get(q.skill)||0)+1
 for(const [skill,count] of skillCounts)assert.equal(count,10,`${skill} must have 10 questions`);
 
 const lessons=readArrayFile('lessons-v37.js','VIDO_LESSONS');
-assert.equal(lessons.length,10,'expected 10 new lessons');
+assert.equal(lessons.length,14,'expected 14 new lessons');
 for(const lesson of lessons){
   assert(lesson.id&&lesson.topic&&lesson.sources?.length,`missing lesson metadata: ${lesson.id}`);
   assert(lesson.sources.every(source=>/^https:\/\//.test(source.url)&&source.label),'invalid lesson source URL: '+lesson.id);
