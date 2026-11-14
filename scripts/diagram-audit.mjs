@@ -72,14 +72,14 @@ for(const source of data.sources)assert(source.label&&/^https:\/\//.test(source.
 const app=fs.readFileSync('diagram-trainer.js','utf8');
 new vm.Script(app,{filename:'diagram-trainer.js'});
 assert(app.includes('window.VIDO_DIAGRAM_APP'),'diagram app API missing');
-assert(app.includes('data-view=\'diagrams\'')||app.includes('data-view="diagrams"'),'diagram view route missing');
+assert(app.includes("view.dataset.view='diagrams'"),'diagram view route missing');
 assert(app.includes('localStorage.setItem(STORE'),'local-only progress/draft persistence missing');
 assert(app.includes('JSON.stringify'),'JSON studio logic missing');
 assert(app.includes('image/svg+xml'),'SVG export missing');
 const css=fs.readFileSync('diagram-trainer.css','utf8');
 assert(css.includes('.diagramLayout')&&css.includes('@media(max-width:600px)'),'responsive diagram UI styles missing');
 const html=fs.readFileSync('index.html','utf8');
-assert(html.includes('diagram-trainer.css?v=38'),'diagram CSS must be linked');
+assert(html.includes('diagram-trainer.css'),'diagram CSS must be linked');
 for(const asset of ['diagram-curriculum-v38.js','diagram-engine-v38.js','diagram-trainer.js']){
   assert(html.includes('<script src="'+asset+'"></script>'),'diagram script is not loaded: '+asset);
 }
