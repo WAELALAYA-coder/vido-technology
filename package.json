@@ -6,7 +6,8 @@
   "scripts": {
     "server": "node backend/server.js",
     "audit": "node scripts/audit.mjs",
-    "test": "node scripts/audit.mjs"
+    "test": "node scripts/diagram-audit.mjs && node scripts/audit.mjs",
+    "audit:diagrams": "node scripts/diagram-audit.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",
