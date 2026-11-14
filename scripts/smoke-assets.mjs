@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 const port=35000+(process.pid%10000);
 const base=`http://127.0.0.1:${port}`;
 const child=spawn(process.execPath,['backend/server.js'],{
-  env:{...process.env,PORT:String(port),DATABASE_URL:'',JWT_SECRET:'ci-only-not-a-real-secret'},
+  env:{PATH:process.env.PATH||'',PORT:String(port),DATABASE_URL:'',JWT_SECRET:'ci-only-not-a-real-secret',NODE_ENV:'test'},
   stdio:'ignore'
 });
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
