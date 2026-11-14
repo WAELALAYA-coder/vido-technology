@@ -76,6 +76,7 @@ assert(app.includes("view.dataset.view='diagrams'"),'diagram view route missing'
 assert(app.includes('localStorage.setItem(STORE'),'local-only progress/draft persistence missing');
 assert(app.includes('JSON.stringify'),'JSON studio logic missing');
 assert(app.includes('image/svg+xml'),'SVG export missing');
+assert(app.includes('offset=(state.quizIndex*3+1)%4'),'quiz answer positions must be rotated');
 const css=fs.readFileSync('diagram-trainer.css','utf8');
 assert(css.includes('.diagramLayout')&&css.includes('@media(max-width:600px)'),'responsive diagram UI styles missing');
 const html=fs.readFileSync('index.html','utf8');
