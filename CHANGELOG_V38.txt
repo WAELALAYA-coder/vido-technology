@@ -32,3 +32,10 @@ Scope and limitations
 - The validator detects structural and common notation issues. It is not a formal standards certification and cannot prove that a real network matches the diagram.
 - Local Windows/iPhone end-to-end testing and production deployment are not claimed.
 - Release remains on the existing open pull request and has not been merged into main.
+
+
+Maintenance follow-up — 14 November 2026
+- Corrected deployment and security documentation to identify V38 and the exact V37 learning-library counts (440 questions across 44 skills and 14 lessons).
+- Documented all six explicit learning-asset routes and the Diagram Academy audit coverage.
+- Pinned the existing checkout and setup-node workflow actions to verified immutable v4 release commit SHAs.
+- No application runtime, database schema/data, authentication, authorization, payment logic, secrets, or production deployment configuration changed.

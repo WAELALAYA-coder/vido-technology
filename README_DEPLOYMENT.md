@@ -2,10 +2,11 @@
 
 ## Current application build
 
-The current learning build is **VIDO Technology V37** (13 November 2026). It extends the V35 application foundation with an expanded learning library; the backend authentication and database model are unchanged.
+The current learning build is **VIDO Technology V38** (14 November 2026). It builds on the V35 application foundation and includes the V37 learning library plus the V38 Diagram Academy. The backend authentication and database model are unchanged.
 
 - Frontend: `index.html`, `manifest.webmanifest`, and `service-worker.js` (PWA).
-- Learning data: `questions-v37.js` (100 new questions) and `lessons-v37.js` (10 structured lessons in German, English and Arabic).
+- Learning data: `questions-v37.js` (140 additional questions, IDs `0301`–`0440`; 440 questions total) and `lessons-v37.js` (14 structured lessons in German, English and Arabic).
+- Diagram Academy: 11 trilingual learning modules, eight editable example models and 20 original practice questions, with browser-side editing and SVG export.
 - Backend: Node.js 22 and Express 5.
 - Database: PostgreSQL 16.
 - Local runtime: Docker Compose.
@@ -43,16 +44,20 @@ Install the locked Node dependencies and run the local checks:
     npm test
     npm audit --omit=dev --audit-level=high
 
-The content audit checks 440 questions across 44 skills, fourteen lesson modules in German/English/Arabic, the mapping of each lesson to ten related questions, source records, PWA asset wiring and unique HTML element IDs. It also checks the existing learning foundation. Automated checks do not replace real browser testing on desktop and mobile devices.
+The audits check 440 questions across 44 skills, fourteen lesson modules in German/English/Arabic, ten-question lesson mappings, eleven trilingual diagram modules, eight example models, twenty original diagram quizzes, official source records, negative validator cases, PWA asset wiring and unique HTML element IDs. Automated checks do not replace real browser testing on desktop and mobile devices.
 
 ## Continuous integration
 
 GitHub Actions validates pushes to `main` and pull requests targeting `main`. The workflow:
 
 1. Installs the exact dependency versions from `package-lock.json` with `npm ci`.
-2. Runs `npm test`.
-3. Checks production dependency advisories at high severity and above.
-4. Builds the production Docker image.
+2. Checks JavaScript syntax for the backend, learning assets and audit scripts.
+3. Runs `npm test` (diagram audit and application/content audit).
+4. Smoke-tests the six public learning assets and confirms private backend/configuration paths return HTTP 404.
+5. Checks production dependency advisories at high severity and above.
+6. Builds the production Docker image.
+
+The workflow grants only `contents: read` and pins third-party actions to immutable full commit SHAs.
 
 The workflow result is the source of truth for whether those CI checks passed. Local checks and documentation must not be described as a successful CI run unless GitHub reports a successful run.
 
@@ -65,7 +70,7 @@ The repository includes:
 - `compose.production.yml`: Caddy is the only public service. The app has no published host port. PostgreSQL is on a private internal Docker network.
 - `Caddyfile.production`: reverse proxy, automatic HTTPS, and security headers.
 
-The Express app serves the two learning-data files through explicit public frontend routes (`/questions-v37.js` and `/lessons-v37.js`). Backend source, SQL, environment files and Compose configuration remain outside the public route list.
+The Express app serves six learning assets through explicit public frontend routes: `/questions-v37.js`, `/lessons-v37.js`, `/diagram-curriculum-v38.js`, `/diagram-engine-v38.js`, `/diagram-trainer.js`, and `/diagram-trainer.css`. These routes expose browser learning content only. Backend source, SQL, environment files and Compose configuration remain outside the public route list.
 - `.env.production.example`: environment template only; it contains placeholders, not usable credentials.
 
 The Node, PostgreSQL, and Caddy images are pinned by digest in the production configuration.

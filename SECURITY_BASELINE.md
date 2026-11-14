@@ -1,13 +1,13 @@
 # VIDO Technology — Security Baseline
 
-Review date: 13 November 2026
-Build: VIDO Technology V37 (V35 application foundation + 100 questions and 10 multilingual lessons)
+Review date: 14 November 2026
+Build: VIDO Technology V38 (V35 application foundation + V37 learning library + V38 Diagram Academy)
 Current deployment: Local Windows 11 host with Docker Compose
 Public release status: Not deployed. Public self-registration is disabled.
 
 ## Implemented controls
 
-- Express serves the public frontend routes: /, /index.html, /manifest.webmanifest, /service-worker.js, /questions-v37.js, and /lessons-v37.js. The two new JavaScript routes expose only learning content and use explicit JavaScript content types with no-cache headers. Backend source, SQL schema, package files, Compose configuration, Git metadata, and environment files are not served.
+- Express serves the public frontend routes: `/`, `/index.html`, `/manifest.webmanifest`, `/service-worker.js`, `/questions-v37.js`, `/lessons-v37.js`, `/diagram-curriculum-v38.js`, `/diagram-engine-v38.js`, `/diagram-trainer.js`, and `/diagram-trainer.css`. The six learning-asset routes expose only browser content and use explicit content types with no-cache headers. Backend source, SQL schema, package files, Compose configuration, Git metadata, and environment files are not served.
 - The local Docker deployment publishes the app on TCP 3000 for trusted home-LAN access. Windows Firewall has an inbound allow rule for TCP 3000 restricted to RemoteAddress LocalSubnet. PostgreSQL remains bound to 127.0.0.1:5432. The app transport is plain HTTP; use this LAN access only on a trusted private network.
 - Public self-registration is disabled by default. The API returns HTTP 403 while disabled. New accounts can be created by the owner through the authenticated administration API.
 - Failed-login counters are stored in PostgreSQL. The table contains SHA-256 bucket identifiers rather than raw email addresses or IP values.
@@ -22,6 +22,7 @@ Public release status: Not deployed. Public self-registration is disabled.
 - Security headers include X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, and Cross-Origin-Resource-Policy. The Express identification header is disabled. API responses are marked no-store.
 - The production Dockerfile uses npm ci --omit=dev, runs as the non-root node user, and has a read-only runtime filesystem in the production Compose configuration.
 - Node, PostgreSQL, and Caddy production images are pinned by digest in the production templates.
+- The GitHub Actions workflow grants only `contents: read` and pins its third-party actions to immutable full commit SHAs.
 - npm audit reports zero known vulnerabilities in the checked dependency tree.
 
 ## Verification performed
@@ -39,7 +40,8 @@ Public release status: Not deployed. Public self-registration is disabled.
 - Production Compose configuration passed docker compose config --quiet using the example environment file.
 - Caddyfile passed caddy validate and was formatted.
 - Production app image built successfully from the pinned Node base image. It runs as UID 1000 and contains no .env, .env.production, .git, backup directory, or temporary test scripts.
-- The automated content audit checks 440 questions across 44 skills, fourteen structured lessons in German/English/Arabic, ten question mappings per lesson, source metadata, PWA asset loading and unique HTML IDs.
+- The automated content audits check 440 questions across 44 skills, fourteen structured lessons in German/English/Arabic, ten question mappings per lesson, eleven trilingual diagram modules, eight example models, twenty original diagram questions, official source links, negative validator cases, PWA asset loading and unique HTML IDs.
+- The HTTP smoke tests verify all six public learning assets and confirm that backend/configuration paths remain unavailable (HTTP 404).
 - Host and container dependency audits reported zero known vulnerabilities.
 
 ## Learning content expansion (V37)
@@ -94,3 +96,4 @@ Important: GitHub Pages can host only a static frontend. It cannot run this Expr
 - These assets contain instructional material and example models; they do not contain credentials, user records, production configuration or secrets.
 - Diagram drafts and completion progress are stored locally in the user's browser. No new database schema, authentication, payment or production deployment settings were changed for V38.
 - The semantic validator is a learning-time consistency checker, not proof that a real network or system configuration is correct. Validate network diagrams against the actual device configuration and approved documentation.
+- The diagram audit checks the 11 modules, eight example templates, 20 trilingual quizzes, source links and negative validator cases; this is structural validation, not formal standards certification.
