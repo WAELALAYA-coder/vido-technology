@@ -86,3 +86,11 @@ The production configuration was validated and the app image was built. The prod
 Important: GitHub Pages can host only a static frontend. It cannot run this Express API and PostgreSQL database, so it is not a complete VIDO hosting target.
 
 - The production-only credential gate requires a unique JWT secret of at least 48 characters, owner and quick-admin passwords of at least 12 characters, different owner/admin passwords, a real database URL, and disabled public registration. It rejects the example placeholders before the public service can start. The local development Compose profile does not enable this gate.
+
+
+## V38 diagram learning assets
+
+- Public learning assets: `diagram-curriculum-v38.js`, `diagram-engine-v38.js`, `diagram-trainer.js`, and `diagram-trainer.css`, served only through explicit Express routes.
+- These assets contain instructional material and example models; they do not contain credentials, user records, production configuration or secrets.
+- Diagram drafts and completion progress are stored locally in the user's browser. No new database schema, authentication, payment or production deployment settings were changed for V38.
+- The semantic validator is a learning-time consistency checker, not proof that a real network or system configuration is correct. Validate network diagrams against the actual device configuration and approved documentation.
