@@ -135,7 +135,6 @@ window.vidoTrack = function(eventName, props) {
 </main></div><footer class="bottom" data-i18n="footer">VIDO Technology · Learning Foundation · IPv4 / Subnetting / Cisco / IHK</footer></div>
 <script src="questions-v37.js"></script>
 <script src="lessons-v37.js"></script>
-<script src="diagramm-v38.js"></script>
 
 <script>
 (()=>{
@@ -178,7 +177,7 @@ function loadState(){
   const merged={...DEFAULT_STATE,...parsed};
   merged.notes=Array.isArray(merged.notes)?merged.notes:[];
   merged.mistakes=Array.isArray(merged.mistakes)?merged.mistakes:[];
-  merged.history=Array.isArray(merged.history)&&merged.history.length?merged.history.filter(x=>['home','topics','path','learn','search','notes','mistakes','videos','progress','glossary','help','ihk','sim'].includes(x)):['home'];
+  merged.history=Array.isArray(merged.history)&&merged.history.length?merged.history.filter(x=>['home','topics','path','learn','search','notes','mistakes','videos','progress','glossary','help','ihk','sim','diagrams'].includes(x)):['home'];
   merged.answers=merged.answers&&typeof merged.answers==='object'?merged.answers:{};
   merged.hints=merged.hints&&typeof merged.hints==='object'?merged.hints:{};
   merged.learningTopic=typeof merged.learningTopic==='string'?merged.learningTopic:'all';
