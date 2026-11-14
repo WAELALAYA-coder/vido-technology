@@ -55,7 +55,7 @@ const skillsMatch=html.match(/const skills=\[([\s\S]*?)\];\s*const glossary=/);
 assert(skillsMatch,'skill catalogue not found');
 const skillList=Function('return ['+skillsMatch[1]+']')();
 assert.equal(skillList.length,44,'skill catalogue must contain 44 skills');
-assert.equal(new Set(skillList).size,40,'skill catalogue must not contain duplicates');
+assert.equal(new Set(skillList).size,44,'skill catalogue must not contain duplicates');
 assert.deepEqual([...new Set(questions.map(q=>q.skill))].sort(),[...skillList].sort(),'every question skill must exist in the skill catalogue');
 
 const skillCounts=new Map();
