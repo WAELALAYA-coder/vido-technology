@@ -41,10 +41,10 @@ const extra=readArrayFile('questions-v37.js','VIDO_EXTRA_QUESTIONS');
 const questions=[...base,...extra];
 
 assert.equal(base.length,300,'base question count must remain 300');
-assert.equal(extra.length,100,'V37 must add exactly 100 questions');
-assert.equal(questions.length,400,'total question count must be 400');
-assert.deepEqual(questions.map(q=>q.id),Array.from({length:400},(_,i)=>String(i+1).padStart(4,'0')),'question IDs must be 0001..0400');
-assert.equal(new Set(questions.map(q=>q.skill)).size,40,'expected 40 unique skills');
+assert.equal(extra.length,140,'V37 must add exactly 140 questions');
+assert.equal(questions.length,440,'total question count must be 440');
+assert.deepEqual(questions.map(q=>q.id),Array.from({length:440},(_,i)=>String(i+1).padStart(4,'0')),'question IDs must be 0001..0400');
+assert.equal(new Set(questions.map(q=>q.skill)).size,44,'expected 44 unique skills');
 for(const q of questions){
   if(q.id>='0301')assert(q.why&&q.whyEn&&q.whyAr,`missing V37 explanations ${q.id}`);
   assert(q.answer!==undefined&&q.answer!=='',`missing answer ${q.id}`);
@@ -54,7 +54,7 @@ for(const q of questions){
 const skillsMatch=html.match(/const skills=\[([\s\S]*?)\];\s*const glossary=/);
 assert(skillsMatch,'skill catalogue not found');
 const skillList=Function('return ['+skillsMatch[1]+']')();
-assert.equal(skillList.length,40,'skill catalogue must contain 40 skills');
+assert.equal(skillList.length,44,'skill catalogue must contain 44 skills');
 assert.equal(new Set(skillList).size,40,'skill catalogue must not contain duplicates');
 assert.deepEqual([...new Set(questions.map(q=>q.skill))].sort(),[...skillList].sort(),'every question skill must exist in the skill catalogue');
 
