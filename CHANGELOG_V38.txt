@@ -39,3 +39,4 @@ Maintenance follow-up — 14 November 2026
 - Documented all six explicit learning-asset routes and the Diagram Academy audit coverage.
 - Pinned the existing checkout and setup-node workflow actions to verified immutable v4 release commit SHAs.
 - No application runtime, database schema/data, authentication, authorization, payment logic, secrets, or production deployment configuration changed.
+- Recorded the remaining Node.js 20 deprecation warning from the pinned v4 actions; migration to a newer major is deferred to avoid an unreviewed breaking change.

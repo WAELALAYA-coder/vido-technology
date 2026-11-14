@@ -57,7 +57,7 @@ GitHub Actions validates pushes to `main` and pull requests targeting `main`. Th
 5. Checks production dependency advisories at high severity and above.
 6. Builds the production Docker image.
 
-The workflow grants only `contents: read` and pins third-party actions to immutable full commit SHAs.
+The workflow grants only `contents: read` and pins third-party actions to immutable full commit SHAs. The pinned v4 releases still produce GitHub's Node.js 20 deprecation warning on the current Node.js 24 runner; migration to a newer action major is deferred to a separately reviewed change.
 
 The workflow result is the source of truth for whether those CI checks passed. Local checks and documentation must not be described as a successful CI run unless GitHub reports a successful run.
 
