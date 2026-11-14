@@ -109,3 +109,8 @@ Do not start the production Compose file on the current local PC as a public lau
 The production Compose profile enables a startup credential gate. It refuses to start if the JWT secret is shorter than 48 characters or still a placeholder, if the owner/admin passwords are shorter than 12 characters or still placeholders, if those two passwords are identical, if the database URL still contains a placeholder, or if public registration is enabled.
 
 For the current security posture and known limitations, see `SECURITY_BASELINE.md`.
+
+
+## Diagram Academy V38 assets
+
+The V38 learning interface adds a browser-side Diagram Academy. The Express server exposes only the explicit learning asset routes for the diagram curriculum, validator, trainer JavaScript and trainer CSS. The diagram practice editor stores drafts and progress in the browser's local storage; it does not add database tables or send diagram drafts to the API. The SVG export is generated client-side. CI validates the curriculum and sample models and smoke-tests the explicit asset routes.
