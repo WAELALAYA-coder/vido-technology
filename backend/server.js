@@ -21,6 +21,7 @@ app.get('/manifest.webmanifest', (_req,res)=>res.sendFile('manifest.webmanifest'
 app.get('/service-worker.js', (_req,res)=>res.sendFile('service-worker.js',{root:PUBLIC_ROOT,headers:{'Service-Worker-Allowed':'/'}}));
 app.get('/questions-v37.js', (_req,res)=>res.sendFile('questions-v37.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
 app.get('/lessons-v37.js', (_req,res)=>res.sendFile('lessons-v37.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
+app.get('/diagramm-v38.js', (_req,res)=>res.sendFile('diagramm-v38.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
 app.get('/diagram-curriculum-v38.js', (_req,res)=>res.sendFile('diagram-curriculum-v38.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
 app.get('/diagram-engine-v38.js', (_req,res)=>res.sendFile('diagram-engine-v38.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
 app.get('/diagram-trainer.js', (_req,res)=>res.sendFile('diagram-trainer.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
