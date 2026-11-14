@@ -39,7 +39,7 @@ Public release status: Not deployed. Public self-registration is disabled.
 - Production Compose configuration passed docker compose config --quiet using the example environment file.
 - Caddyfile passed caddy validate and was formatted.
 - Production app image built successfully from the pinned Node base image. It runs as UID 1000 and contains no .env, .env.production, .git, backup directory, or temporary test scripts.
-- The automated content audit checks 400 questions across 40 skills, ten structured lessons in German/English/Arabic, ten question mappings per lesson, source metadata, PWA asset loading and unique HTML IDs.
+- The automated content audit checks 440 questions across 44 skills, fourteen structured lessons in German/English/Arabic, ten question mappings per lesson, source metadata, PWA asset loading and unique HTML IDs.
 - Host and container dependency audits reported zero known vulnerabilities.
 
 ## Learning content expansion (V37)
