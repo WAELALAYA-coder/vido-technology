@@ -43,7 +43,7 @@ Install the locked Node dependencies and run the local checks:
     npm test
     npm audit --omit=dev --audit-level=high
 
-The content audit checks 400 questions across 40 skills, ten lesson modules in German/English/Arabic, the mapping of each lesson to ten related questions, source records, PWA asset wiring and unique HTML element IDs. It also checks the existing learning foundation. Automated checks do not replace real browser testing on desktop and mobile devices.
+The content audit checks 440 questions across 44 skills, fourteen lesson modules in German/English/Arabic, the mapping of each lesson to ten related questions, source records, PWA asset wiring and unique HTML element IDs. It also checks the existing learning foundation. Automated checks do not replace real browser testing on desktop and mobile devices.
 
 ## Continuous integration
 
