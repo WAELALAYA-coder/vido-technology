@@ -45,7 +45,7 @@ try{
     const response=await get(privatePath);
     assert.equal(response.status,404,`private path must not be served: ${privatePath}`);
   }
-  console.log('PASS: Express serves the home page, seven learning assets and keeps backend/configuration paths private.');
+  console.log('PASS: Express serves the home page, six learning assets and keeps backend/configuration paths private.');
 } finally {
   if(child.exitCode===null&&child.signalCode===null){
     child.kill('SIGTERM');
