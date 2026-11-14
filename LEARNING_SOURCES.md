@@ -29,7 +29,7 @@ Scope: Fachinformatiker/in für Systemintegration (FiSi), IHK-oriented foundatio
 
 - The lessons are original summaries written for VIDO Technology. They paraphrase concepts and link to the underlying documentation; they do not reproduce full source pages.
 - Each lesson has German, English and Arabic explanations, a practical example, three review prompts, an IHK-oriented note, a glossary and source links.
-- The 100 new questions are original review questions mapped ten per new skill. They are not official IHK examination questions and must not be presented as such.
+- The 140 new questions are original review questions mapped ten per new skill. They are not official IHK examination questions and must not be presented as such.
 - Product interfaces and command syntax can change. Always use the linked vendor documentation for current behavior, supported versions and production configuration.
 - The IHK source is chamber-specific guidance, not a universal guarantee of the exact structure of every candidate's examination. Check the responsible chamber's current notices.
 
@@ -47,3 +47,21 @@ When a source moves or a command changes, update the lesson and its question set
 The V37 content now includes 14 additional skills and 140 additional questions (IDs 0301–0440), taking the combined question bank to 440 questions across 44 skills. Four additional trilingual lessons cover Java fundamentals, UML and algorithm design, IT law/data protection, and customer requirements/procurement. The Java references include both the current Dev.java learning path and Oracle's established language and object-oriented tutorials. The UML reference is the OMG formal UML 2.5.1 specification. Data-protection material is linked to the EU GDPR legal text and EUR-Lex summary. Customer/procurement content is aligned with the BIBB occupational profile for system integration.
 
 The GDPR lesson is an educational overview only. It does not replace legal advice or a case-specific assessment. The exact legal basis and obligations depend on the processing context.
+
+
+## V38 diagram curriculum and modelling references
+
+V38 adds an original trilingual (German, English and Arabic) diagram learning path with eleven modules: diagram foundations, flowcharts/program flowcharts, UML use cases and activities, UML classes and components, UML sequence and state models, ER diagrams and relational data modelling, physical/logical network diagrams, BPMN, C4 architecture, data-flow diagrams and professional review. Eight editable example models are included for flowcharts, network topology, UML class structure, ERD, sequence, BPMN, C4 and DFD. Twenty original practice questions are supplied in all three languages; they are not official IHK exam questions.
+
+| Topic | Official or primary reference |
+|---|---|
+| Flowchart symbols | [ISO 5807:1985 — Documentation symbols and conventions](https://www.iso.org/standard/11955.html) |
+| UML | [OMG — UML 2.5.1](https://www.omg.org/spec/UML/2.5.1) |
+| BPMN | [OMG — BPMN 2.0.2](https://www.omg.org/spec/BPMN/2.0.2) |
+| C4 architecture | [C4 model — official documentation](https://c4model.com/) |
+| Network topology | [Cisco — What is network topology?](https://www.cisco.com/site/us/en/learn/topics/networking/what-is-network-topology.html) |
+| Relational data modelling | [PostgreSQL — Tutorial](https://www.postgresql.org/docs/current/tutorial.html) |
+| Diagram examples and syntax | [Mermaid — Flowcharts](https://mermaid.js.org/syntax/flowchart.html), [Mermaid — Sequence diagrams](https://mermaid.js.org/syntax/sequenceDiagram.html) |
+| FiSi context | [BIBB — Fachinformatiker/in Systemintegration occupational profile](https://www.bibb.de/dienst/berufesuche/de/index_berufesuche.php/profile/apprenticeship/olkiu98) |
+
+The V38 validator checks model structure, metadata, unique node identifiers, connection endpoints, graph connectivity and rules specific to supported diagram kinds (flow, network, UML class, ERD, sequence, BPMN, C4 and DFD). It is a teaching aid, not a formal certification of standards compliance. Physical network diagrams must still be verified against the actual configuration; legal, security and architecture decisions require context-specific review.
