@@ -96,6 +96,8 @@ assert(backend.includes("app.get('/lessons-v37.js'"),'lesson data route missing 
 assert(backend.includes("'Content-Type':'application/javascript; charset=utf-8'"),'learning data routes must declare JavaScript content type');
 
 const sw=fs.readFileSync('service-worker.js','utf8');
-assert(sw.includes('vido-ui-20261113-v37-learning-library'),'service worker cache version is stale');
+assert(sw.includes('vido-ui-20261114-v38-diagram-academy'),'service worker cache version is stale');
 assert(sw.includes('./questions-v37.js')&&sw.includes('./lessons-v37.js'),'lesson data is not cached');
+for(const asset of ['./diagram-curriculum-v38.js','./diagram-engine-v38.js','./diagram-trainer.js','./diagram-trainer.css'])assert(sw.includes(asset),'diagram asset is not cached: '+asset);
+for(const route of ['/diagram-curriculum-v38.js','/diagram-engine-v38.js','/diagram-trainer.js','/diagram-trainer.css'])assert(backend.includes("app.get('"+route+"'"),'diagram route missing: '+route);
 console.log(`PASS: ${questions.length} questions / ${skillCounts.size} skills / ${lessons.length} lessons (DE/EN/AR) / ${inlineScriptCount} inline scripts / ${ids.length} unique HTML IDs.`);
