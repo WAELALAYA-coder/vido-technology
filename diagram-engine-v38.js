@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const VALID_KINDS = new Set(['flow','network','uml-class','erd','sequence','bpmn','c4']);
+  const VALID_KINDS = new Set(['flow','network','uml-class','erd','sequence','bpmn','c4','dfd']);
   const list = value => Array.isArray(value) ? value : [];
   const text = value => String(value ?? '').trim();
   function validateModel(model) {
@@ -111,6 +111,12 @@
         if(outs.length<2)add(errors,'BPMN_GATEWAY_BRANCHES',n.label);
         if(outs.some(e=>!text(e.label)))add(warnings,'BPMN_GATEWAY_LABELS',n.label);
       });
+    } else if (model.kind==='dfd') {
+      if (!count('external')) add(errors,'DFD_EXTERNAL');
+      if (!count('process')) add(errors,'DFD_PROCESS');
+      if (!count('dataStore')) add(errors,'DFD_DATASTORE');
+      if (!links.length) add(errors,'DFD_FLOW');
+      links.forEach(e=>{if(!text(e.label))add(errors,'DFD_LABEL',e.from+' → '+e.to);});
     } else if (model.kind==='c4') {
       if (!count('person')) add(errors,'C4_PERSON');
       if (!count('container')) add(errors,'C4_CONTAINER');
