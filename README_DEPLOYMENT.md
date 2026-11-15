@@ -2,7 +2,7 @@
 
 ## Current application build
 
-The current learning build is **VIDO Technology V38** (15 November 2026). It builds on the V35 application foundation and includes the V37 learning library plus the V38 Diagram Academy. The backend authentication and database model are unchanged.
+The current learning build is **VIDO Technology V38** (15 November 2026). It builds on the V35 application foundation and includes the V37 learning library plus the V38 Diagram Academy. The learning-content update does not require database schema or user-data changes. The open maintenance branch also contains a separate account-wide logout/token-revocation change; that authentication change is outside the Diagram Academy scope and requires explicit review before merge.
 
 - Frontend: `index.html`, `manifest.webmanifest`, and `service-worker.js` (PWA).
 - Learning data: `questions-v37.js` (140 additional questions, IDs `0301`–`0440`; 440 questions total) and `lessons-v37.js` (14 structured lessons in German, English and Arabic).
