@@ -52,3 +52,11 @@ Maintenance follow-up — 15 November 2026
 - CI must complete successfully on the updated workflow before this migration is considered verified.
 
 - Restricted JWT signing and verification to HS256 explicitly, preventing tokens signed with any other accepted algorithm from passing authentication. Added a regression guard to the application audit.
+
+
+Maintenance security follow-up — 15 November 2026
+- Restricted AI tutor inputs to bounded field lengths and the supported German, English, and Arabic locales.
+- Added a PostgreSQL-backed per-account limit of 10 AI tutor requests per 60-second window, with atomic counter updates and bounded blocked counters.
+- Added a 30-second timeout to outbound AI provider requests.
+- Kept upstream provider error payloads out of browser responses and added static regression checks for the request controls.
+- These changes are on the maintenance branch only; production deployment and PR merge were not performed.
