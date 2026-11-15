@@ -146,6 +146,17 @@ app.get('/api/auth/me', auth, async (req,res)=>{
   res.json({user:r.rows[0]});
 });
 
+app.post('/api/auth/logout', auth, async (req,res)=>{
+  try{
+    const result=await pool.query('UPDATE users SET token_version=token_version+1 WHERE id=$1 AND token_version=$2 RETURNING id',[req.user.sub,Number(req.user.ver??0)]);
+    if(!result.rowCount) return res.status(401).json({error:'unauthorized'});
+    logSecurity({userId:req.user.sub,eventType:'logout',req}).catch(()=>{});
+    return res.json({ok:true,scope:'all_sessions'});
+  }catch{
+    return res.status(503).json({error:'logout_failed'});
+  }
+});
+
 app.post('/api/auth/quick-admin', async (req,res)=>{
   if(!requireDb(res)) return;
   const username=String(req.body?.username||'').trim();
