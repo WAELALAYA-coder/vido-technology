@@ -22,6 +22,9 @@
     if (nodes.length < 2) add(errors,'NODES_TOO_FEW');
     if (nodes.length > 100) add(errors,'NODES_TOO_MANY');
     if (links.length > 200) add(errors,'LINKS_TOO_MANY');
+    if (nodes.length > 100 || links.length > 200) {
+      return { errors, warnings, score:0, valid:false };
+    }
     const byId = new Map();
     nodes.forEach((node,index) => {
       if (!node || typeof node !== 'object') { add(errors,'NODE_INVALID',String(index+1)); return; }
