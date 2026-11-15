@@ -129,3 +129,11 @@ CI PostgreSQL integration follow-up — 15 November 2026
 - Fixed the first PostgreSQL authentication test step to receive the CI-only VIDO_TEST_DATABASE_URL.
 - Added a local-host and test/ci database-name guard to the second PostgreSQL integration script so it refuses to run against remote or production-looking databases.
 - Both integration scripts use the ephemeral, digest-pinned PostgreSQL service created for the GitHub Actions job.
+
+
+PostgreSQL integration verification — 15 November 2026
+- CI run #92 passed on commit 80af6cb02c95c97e1d43b215dc5b2b3aee5fd97d with the digest-pinned PostgreSQL 16 service healthy.
+- Both database-backed suites passed: cookie-only owner login, same-origin policy, disabled registration, CSRF rejection and acceptance, user-state persistence, seven-day remember-me cookies, logout revoking all sessions, quick-admin owner-role enforcement and owner-only admin API access.
+- CI also passed JavaScript syntax, application/diagram audits, production-mode smoke tests, production dependency advisories and Docker image build.
+- The PostgreSQL service uses an ephemeral vido_test database and CI-only random/generated credentials. Both test scripts reject non-local database hosts or database names without a test/ci marker.
+- Remaining pre-production validation: verify cookie behavior through the actual Caddy HTTPS endpoint and conduct browser E2E testing, including iOS Safari. No merge or production deployment occurred.
