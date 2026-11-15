@@ -693,17 +693,23 @@ window.vidoCore={
   const renderProgress=core.renderProgress;
   const setRoute=core.setRoute;
   const API_BASE=window.VIDO_API_BASE||'/api';
-  window.VIDO_API_CLIENT=window.VIDO_API_CLIENT||function(path,opts={},tokenOverride){
-    let token=tokenOverride;
-    if(!token){try{token=JSON.parse(sessionStorage.getItem('vidoEngineV2')||'{}').token||null;}catch{}}
+  const readCsrfCookie=()=>{for(const item of document.cookie.split(';')){const part=item.trim();if(part.startsWith('vido_csrf=')){try{return decodeURIComponent(part.slice('vido_csrf='.length))}catch{return ''}}}return ''};
+  window.VIDO_API_CLIENT=function(path,opts={}){
     const headers=Object.assign({'content-type':'application/json'},opts?.headers||{});
-    if(token)headers.authorization='Bearer '+token;
-    return fetch(API_BASE+path,Object.assign({},opts||{},{headers}));
+    const method=String(opts?.method||'GET').toUpperCase();
+    if(['POST','PUT','PATCH','DELETE'].includes(method)){
+      const csrf=readCsrfCookie();
+      if(csrf)headers['x-csrf-token']=csrf;
+    }
+    return fetch(API_BASE+path,Object.assign({},opts||{},{headers,credentials:'same-origin'}));
   };
   const engineState=JSON.parse(sessionStorage.getItem('vidoEngineV2')||'{}');
-  engineState.review=engineState.review||{};engineState.answerStartedAt=engineState.answerStartedAt||Date.now();engineState.sessionEvents=engineState.sessionEvents||[];engineState.token=engineState.token||null;engineState.sim=engineState.sim||{devices:[],links:[],arp:{},mac:{},routes:[{network:'192.168.10.0/24',nextHop:'connected',interface:'G0/0'},{network:'0.0.0.0/0',nextHop:'192.168.10.254',interface:'G0/0'}]};
-  const persist=()=>sessionStorage.setItem('vidoEngineV2',JSON.stringify(engineState));
-  const api=(path,opts={})=>window.VIDO_API_CLIENT(path,opts,engineState.token);
+  delete engineState.token;
+  try{sessionStorage.setItem('vidoEngineV2',JSON.stringify(engineState))}catch{}
+  let authenticated=false;
+  engineState.review=engineState.review||{};engineState.answerStartedAt=engineState.answerStartedAt||Date.now();engineState.sessionEvents=engineState.sessionEvents||[];engineState.sim=engineState.sim||{devices:[],links:[],arp:{},mac:{},routes:[{network:'192.168.10.0/24',nextHop:'connected',interface:'G0/0'},{network:'0.0.0.0/0',nextHop:'192.168.10.254',interface:'G0/0'}]};
+  const persist=()=>{delete engineState.token;sessionStorage.setItem('vidoEngineV2',JSON.stringify(engineState))};
+  const api=(path,opts={})=>window.VIDO_API_CLIENT(path,opts);
   const grade=(q,a)=>{const norm=s=>String(s??'').trim().toLowerCase().replace(/\s+/g,'').replace(/[−–—]/g,'-');const x=norm(a);const candidates=Array.isArray(q.answer)?q.answer:[q.answer];return candidates.some(v=>{const y=norm(v);return x===y||(y.includes('-')&&x===y.replace(/\s+/g,''));});};
   const simLog=msg=>{const el=$('simEvents');if(!el)return;const d=document.createElement('div');d.className='row';d.textContent=`${new Date().toLocaleTimeString()} · ${msg}`;el.prepend(d)};
   const dueDate=d=>new Date(Date.now()+d*86400000).toISOString();
@@ -768,18 +774,18 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
   function gateStatus(msg){if($('gateMsg'))$('gateMsg').textContent=msg||''}
   function applyAuthGateText(){if(!$('authGate'))return;const m={title:t('auth_title'),sub:t('auth_sub'),email:t('auth_email'),password:t('auth_password'),login:t('auth_login'),admin:t('auth_admin'),hint:t('auth_hint'),register:t('auth_register'),registerMode:t('auth_register_mode'),confirm:t('auth_register_confirm'),back:t('auth_back_login')};$('authGateTitle').textContent=authRegisterMode?m.registerMode:m.title;$('authGateSub').textContent=authRegisterMode?m.registerMode:m.sub;$('gateEmail').placeholder=m.email;$('gatePassword').placeholder=m.password;$('gatePasswordConfirm').placeholder=m.confirm;$('gateLogin').textContent=m.login;$('gateAdmin').textContent=m.admin;$('gateRegister').textContent=authRegisterMode?m.back:m.register;$('gateHint').textContent=m.hint}
   function setLogoutVisible(show){const b=$('logoutBtn');if(b)b.classList.toggle('visible',!!show)}
-  function unlockApp(user){engineState.token=engineState.token||null;engineState.role=user?.role||engineState.role||null;engineState.email=user?.email||engineState.email||null;persist();document.body.classList.remove('authLocked');if(authGate)authGate.hidden=true;setLogoutVisible(true);checkAdminAccess();}
-  async function logout(){let revokeFailed=false;if(engineState.token){try{const r=await api('/auth/logout',{method:'POST'});if(!r.ok)revokeFailed=true;}catch{revokeFailed=true}}engineState.token=null;engineState.role=null;engineState.email=null;engineState.review={};engineState.sessionEvents=[];engineState.lastRecorded=null;sessionStorage.removeItem('vidoEngineV2');document.body.classList.add('authLocked');if(authGate)authGate.hidden=false;showAdminButton(false);setLogoutVisible(false);if($('gatePassword'))$('gatePassword').value='';if($('gateMsg'))$('gateMsg').textContent='';if($('gateEmail'))$('gateEmail').value='';if($('gatePasswordConfirm')){$('gatePasswordConfirm').value='';$('gatePasswordConfirm').hidden=true;}if($('gatePasswordConfirmRow'))$('gatePasswordConfirmRow').hidden=true;authRegisterMode=false;applyAuthGateText();if(revokeFailed)gateStatus(getLang()==='ar'?'تم الخروج من هذا الجهاز، لكن تعذّر إبطال الجلسات على الخادم.':getLang()==='en'?'Signed out locally, but server-side session revocation failed.':'Lokal abgemeldet, aber die serverseitige Sitzungswiderrufung ist fehlgeschlagen.');else gateStatus('');setRoute('home',false);}
-  async function validateStoredSession(){if(!engineState.token){setLogoutVisible(false);return false}try{const r=await api('/auth/me');if(!r.ok)throw new Error();const d=await r.json();unlockApp(d.user);return true}catch{engineState.token=null;engineState.role=null;engineState.email=null;sessionStorage.setItem('vidoEngineV2',JSON.stringify(engineState));setLogoutVisible(false);return false}}
-  async function gateLogin(){const email=$('gateEmail').value.trim(),password=$('gatePassword').value;if(!email||!password)return gateStatus(t('auth_failed'));gateStatus('');try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});const d=await r.json();if(!r.ok)throw new Error(d.error||'login');engineState.token=d.token;engineState.role=d.user?.role||null;engineState.email=d.user?.email||email;unlockApp(d.user);accountStatus(getLang()==='ar'?'تم تسجيل الدخول.':getLang()==='en'?'Signed in.':'Angemeldet.');sync()}catch(e){gateStatus(t('auth_failed'))}}
-  async function gateRegister(){const email=$('gateEmail').value.trim(),password=$('gatePassword').value,confirm=$('gatePasswordConfirm').value;if(!/^\S+@\S+\.\S+$/.test(email)||password.length<12||password!==confirm)return gateStatus(t('auth_register_failed'));gateStatus('');try{const r=await api('/auth/register',{method:'POST',body:JSON.stringify({email,password})});const d=await r.json();if(!r.ok)throw new Error(d.error||'register');engineState.token=d.token;engineState.role=d.user?.role||'user';engineState.email=d.user?.email||email;unlockApp(d.user);accountStatus(t('auth_register_success'));sync()}catch(e){gateStatus(e.message==='email already registered'?(getLang()==='ar'?'البريد الإلكتروني مستخدم مسبقًا.':getLang()==='en'?'Email is already registered.':'E-Mail ist bereits registriert.'):t('auth_register_failed'))}}
+  function unlockApp(user){authenticated=true;delete engineState.token;engineState.role=user?.role||null;engineState.email=user?.email||null;persist();document.body.classList.remove('authLocked');if(authGate)authGate.hidden=true;setLogoutVisible(true);checkAdminAccess();}
+  async function logout(){let revokeFailed=false;if(authenticated){try{const r=await api('/auth/logout',{method:'POST'});if(!r.ok)revokeFailed=true;}catch{revokeFailed=true}}authenticated=false;delete engineState.token;engineState.role=null;engineState.email=null;engineState.review={};engineState.sessionEvents=[];engineState.lastRecorded=null;sessionStorage.removeItem('vidoEngineV2');document.body.classList.add('authLocked');if(authGate)authGate.hidden=false;showAdminButton(false);setLogoutVisible(false);if($('gatePassword'))$('gatePassword').value='';if($('gateMsg'))$('gateMsg').textContent='';if($('gateEmail'))$('gateEmail').value='';if($('gatePasswordConfirm')){$('gatePasswordConfirm').value='';$('gatePasswordConfirm').hidden=true;}if($('gatePasswordConfirmRow'))$('gatePasswordConfirmRow').hidden=true;authRegisterMode=false;applyAuthGateText();if(revokeFailed)gateStatus(getLang()==='ar'?'تم الخروج من هذا الجهاز، لكن تعذّر إبطال الجلسات على الخادم.':getLang()==='en'?'Signed out locally, but server-side session revocation failed.':'Lokal abgemeldet, aber die serverseitige Sitzungswiderrufung ist fehlgeschlagen.');else gateStatus('');setRoute('home',false);}
+  async function validateStoredSession(){try{const r=await api('/auth/me');if(!r.ok)throw new Error();const d=await r.json();unlockApp(d.user);return true}catch{authenticated=false;delete engineState.token;engineState.role=null;engineState.email=null;persist();setLogoutVisible(false);return false}}
+  async function gateLogin(){const email=$('gateEmail').value.trim(),password=$('gatePassword').value;if(!email||!password)return gateStatus(t('auth_failed'));gateStatus('');try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password,remember:!!$('gateRemember')?.checked})});const d=await r.json();if(!r.ok)throw new Error(d.error||'login');engineState.role=d.user?.role||null;engineState.email=d.user?.email||email;unlockApp(d.user);accountStatus(getLang()==='ar'?'تم تسجيل الدخول.':getLang()==='en'?'Signed in.':'Angemeldet.');sync()}catch(e){gateStatus(t('auth_failed'))}}
+  async function gateRegister(){const email=$('gateEmail').value.trim(),password=$('gatePassword').value,confirm=$('gatePasswordConfirm').value;if(!/^\S+@\S+\.\S+$/.test(email)||password.length<12||password!==confirm)return gateStatus(t('auth_register_failed'));gateStatus('');try{const r=await api('/auth/register',{method:'POST',body:JSON.stringify({email,password,remember:!!$('gateRemember')?.checked})});const d=await r.json();if(!r.ok)throw new Error(d.error||'register');engineState.role=d.user?.role||'user';engineState.email=d.user?.email||email;unlockApp(d.user);accountStatus(t('auth_register_success'));sync()}catch(e){gateStatus(e.message==='email already registered'?(getLang()==='ar'?'البريد الإلكتروني مستخدم مسبقًا.':getLang()==='en'?'Email is already registered.':'E-Mail ist bereits registriert.'):t('auth_register_failed'))}}
   function toggleAuthRegister(){authRegisterMode=!authRegisterMode;const confirmInput=$('gatePasswordConfirm'),confirmRow=$('gatePasswordConfirmRow');if(confirmInput)confirmInput.hidden=!authRegisterMode;if(confirmRow)confirmRow.hidden=!authRegisterMode;$('gateAdmin').hidden=authRegisterMode;$('gateLogin').hidden=authRegisterMode;$('gateRegister').textContent=authRegisterMode?t('auth_back_login'):t('auth_register');if(authRegisterMode){$('authGateTitle').textContent=t('auth_register_mode');$('authGateSub').textContent=t('auth_register_mode')}else{applyAuthGateText()}gateStatus('')}
-  async function gateAdminLogin(){const password=$('gatePassword').value;if(!password)return gateStatus(t('auth_admin_failed'));gateStatus('');try{const r=await api('/auth/quick-admin',{method:'POST',body:JSON.stringify({username:($('gateEmail').value.trim()||'Admin'),password})});const d=await r.json();if(!r.ok)throw new Error(d.error||'admin');engineState.token=d.token;engineState.role='owner';engineState.email=d.user?.email||'admin';unlockApp(d.user);accountStatus(getLang()==='ar'?'تم تسجيل دخول Admin.':getLang()==='en'?'Admin signed in.':'Admin angemeldet.');sync()}catch(e){gateStatus(t('auth_admin_failed'))}}
+  async function gateAdminLogin(){const password=$('gatePassword').value;if(!password)return gateStatus(t('auth_admin_failed'));gateStatus('');try{const r=await api('/auth/quick-admin',{method:'POST',body:JSON.stringify({username:($('gateEmail').value.trim()||'Admin'),password,remember:!!$('gateRemember')?.checked})});const d=await r.json();if(!r.ok)throw new Error(d.error||'admin');engineState.role='owner';engineState.email=d.user?.email||'admin';unlockApp(d.user);accountStatus(getLang()==='ar'?'تم تسجيل دخول Admin.':getLang()==='en'?'Admin signed in.':'Admin angemeldet.');sync()}catch(e){gateStatus(t('auth_admin_failed'))}}
   $('gateLogin')?.addEventListener('click',gateLogin);$('gateAdmin')?.addEventListener('click',gateAdminLogin);$('gateRegister')?.addEventListener('click',()=>authRegisterMode?gateRegister():toggleAuthRegister());$('logoutBtn')?.addEventListener('click',logout);$('gatePassword')?.addEventListener('keydown',e=>{if(e.key==='Enter')authRegisterMode?gateRegister():gateLogin()});$('gatePasswordConfirm')?.addEventListener('keydown',e=>{if(e.key==='Enter')gateRegister()});
   function accountStatus(msg){if($('accountStatus'))$('accountStatus').textContent=msg}
-  async function register(){const email=$('accountEmail').value.trim(),password=$('accountPassword').value;if(!/^\S+@\S+\.\S+$/.test(email)||password.length<12)return accountStatus(getLang()==='ar'?'أدخل بريدًا صحيحًا وكلمة مرور من 8 أحرف على الأقل.':getLang()==='en'?'Enter a valid email and a password of at least 12 characters.':'Gültige E-Mail und Passwort mit mindestens 8 Zeichen eingeben.');try{const r=await api('/auth/register',{method:'POST',body:JSON.stringify({email,password})});const d=await r.json();if(!r.ok)return accountStatus(d.error||'Registration failed');engineState.token=d.token;engineState.role=d.user?.role||null;engineState.email=d.user?.email||email;persist();checkAdminAccess();accountStatus(getLang()==='ar'?'تم إنشاء الحساب وتسجيل الدخول.':getLang()==='en'?'Registered and signed in.':'Registriert und angemeldet.');await sync()}catch{accountStatus(getLang()==='ar'?'تعذر الاتصال بالخادم.':getLang()==='en'?'Could not connect to the backend.':'Verbindung zum Backend fehlgeschlagen.')}}
-  async function login(){const email=$('accountEmail').value.trim(),password=$('accountPassword').value;if(!email||!password)return accountStatus(getLang()==='ar'?'أدخل البريد الإلكتروني وكلمة المرور.':getLang()==='en'?'Enter email and password.':'E-Mail und Passwort eingeben.');try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});const d=await r.json();if(!r.ok)return accountStatus(d.error||'Login failed');engineState.token=d.token;engineState.role=d.user?.role||null;engineState.email=d.user?.email||email;persist();checkAdminAccess();accountStatus(getLang()==='ar'?'تم تسجيل الدخول.':getLang()==='en'?'Signed in.':'Angemeldet.');await sync()}catch{accountStatus(getLang()==='ar'?'تعذر الاتصال بالخادم.':getLang()==='en'?'Could not connect to the backend.':'Verbindung zum Backend fehlgeschlagen.')}}
-  async function sync(){if(!engineState.token)return accountStatus(getLang()==='ar'?'سجّل الدخول أولًا.':getLang()==='en'?'Sign in first.':'Bitte zuerst anmelden.');const r=await api('/state');if(r.ok){const remote=await r.json();if(remote){Object.assign(state,remote);save();renderStats();renderQuestion();renderLists();renderProgress()}}await api('/state',{method:'PUT',body:JSON.stringify({state})});accountStatus('Cloud sync completed.')}
+  async function register(){const email=$('accountEmail').value.trim(),password=$('accountPassword').value;if(!/^\S+@\S+\.\S+$/.test(email)||password.length<12)return accountStatus(getLang()==='ar'?'أدخل بريدًا صحيحًا وكلمة مرور من 8 أحرف على الأقل.':getLang()==='en'?'Enter a valid email and a password of at least 12 characters.':'Gültige E-Mail und Passwort mit mindestens 8 Zeichen eingeben.');try{const r=await api('/auth/register',{method:'POST',body:JSON.stringify({email,password})});const d=await r.json();if(!r.ok)return accountStatus(d.error||'Registration failed');delete engineState.token;engineState.role=d.user?.role||null;engineState.email=d.user?.email||email;persist();location.reload();accountStatus(getLang()==='ar'?'تم إنشاء الحساب وتسجيل الدخول.':getLang()==='en'?'Registered and signed in.':'Registriert und angemeldet.');await sync()}catch{accountStatus(getLang()==='ar'?'تعذر الاتصال بالخادم.':getLang()==='en'?'Could not connect to the backend.':'Verbindung zum Backend fehlgeschlagen.')}}
+  async function login(){const email=$('accountEmail').value.trim(),password=$('accountPassword').value;if(!email||!password)return accountStatus(getLang()==='ar'?'أدخل البريد الإلكتروني وكلمة المرور.':getLang()==='en'?'Enter email and password.':'E-Mail und Passwort eingeben.');try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});const d=await r.json();if(!r.ok)return accountStatus(d.error||'Login failed');delete engineState.token;engineState.role=d.user?.role||null;engineState.email=d.user?.email||email;persist();location.reload();accountStatus(getLang()==='ar'?'تم تسجيل الدخول.':getLang()==='en'?'Signed in.':'Angemeldet.');await sync()}catch{accountStatus(getLang()==='ar'?'تعذر الاتصال بالخادم.':getLang()==='en'?'Could not connect to the backend.':'Verbindung zum Backend fehlgeschlagen.')}}
+  async function sync(){if(!authenticated)return accountStatus(getLang()==='ar'?'سجّل الدخول أولًا.':getLang()==='en'?'Sign in first.':'Bitte zuerst anmelden.');const r=await api('/state');if(r.ok){const remote=await r.json();if(remote){Object.assign(state,remote);save();renderStats();renderQuestion();renderLists();renderProgress()}}await api('/state',{method:'PUT',body:JSON.stringify({state})});accountStatus('Cloud sync completed.')}
   $('accountRegister')?.addEventListener('click',register);$('accountLogin')?.addEventListener('click',login);$('accountSync')?.addEventListener('click',sync);
 
   function showAdminButton(show){document.querySelectorAll('.adminOnly').forEach(b=>b.hidden=!show)}
@@ -799,8 +805,8 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
   async function loadAdminSystem(){const r=await adminFetch('/admin/system');const d=await r.json();const roles=d.roles.map(x=>[escHtml(x.role),x.count]);$('adminPanel').innerHTML='<h3>System</h3><div class="grid two"><div class="card"><div class="eyebrow">Backend</div><div class="big">'+escHtml(d.node)+'</div><div class="muted">Environment: '+escHtml(d.environment)+' · Database: '+(d.database?'OK':'OFF')+' · AI: '+(d.ai?'configured':'not configured')+'</div></div><div class="card"><h4>Users by Role</h4>'+adminTable(['Role','Count'],roles)+'</div></div>'}
   async function renderAdmin(){try{updateAdminLabels();await loadAdminOverview();await loadAdminUsers()}catch(e){if($('adminPanel'))$('adminPanel').innerHTML='<div class="feedback">Admin access required or backend/database is not configured.</div>';}}
   $('adminRefresh')?.addEventListener('click',()=>renderAdmin());$('adminUsersBtn')?.addEventListener('click',()=>loadAdminUsers().catch(()=>{}));$('adminCreateBtn')?.addEventListener('click',()=>renderCreateUser());$('adminActivityBtn')?.addEventListener('click',()=>loadAdminActivity().catch(()=>{}));$('adminSecurityBtn')?.addEventListener('click',()=>loadAdminSecurity().catch(()=>{}));$('adminAuditBtn')?.addEventListener('click',()=>loadAdminAudit().catch(()=>{}));$('adminSystemBtn')?.addEventListener('click',()=>loadAdminSystem().catch(()=>{}));
-  async function checkAdminAccess(){if(!engineState.token){showAdminButton(false);return}try{const r=await api('/admin/overview');if(r.ok){const d=await r.json();engineState.role=d.role;engineState.email=engineState.email||d.email;persist();showAdminButton(true)}else showAdminButton(false)}catch{showAdminButton(false)}}
-  window.vidoTrackRoute=async function(routeName){if(!engineState.token)return;api('/activity',{method:'POST',body:JSON.stringify({eventType:'view',route:routeName,metadata:{language:getLang()}})}).catch(()=>{})}
+  async function checkAdminAccess(){try{const r=await api('/admin/overview');if(r.ok){const d=await r.json();engineState.role=d.role;engineState.email=engineState.email||d.email;persist();showAdminButton(true)}else showAdminButton(false)}catch{showAdminButton(false)}}
+  window.vidoTrackRoute=async function(routeName){if(!authenticated)return;api('/activity',{method:'POST',body:JSON.stringify({eventType:'view',route:routeName,metadata:{language:getLang()}})}).catch(()=>{})}
     const labels={de:{tutor:'✦ VIDO Tutor',account:'◉ Account & Sync',admin:'👑 Admin',tutor_title:'VIDO Tutor',tutor_subtitle:'Sokratischer IT-Lernassistent',tutor_context:'Aktuelle Aufgabe',tutor_ask:'Tutor fragen',tutor_response:'Tutor-Antwort',account_title:'Account & Sync',adaptive_title:'Adaptives Lernen & Spaced Repetition',adaptive_due:'Fällige Reviews',adaptive_next:'Nächste Auswahl',adaptive_start:'Adaptive Aufgabe starten'},en:{tutor:'✦ VIDO Tutor',account:'◉ Account & Sync',admin:'👑 Admin',tutor_title:'VIDO Tutor',tutor_subtitle:'Socratic IT learning assistant',tutor_context:'Current task',tutor_ask:'Ask Tutor',tutor_response:'Tutor response',account_title:'Account & Sync',adaptive_title:'Adaptive Learning & Spaced Repetition',adaptive_due:'Reviews due',adaptive_next:'Next selection',adaptive_start:'Start adaptive task'},ar:{tutor:'✦ مساعد VIDO',account:'◉ الحساب والمزامنة',admin:'👑 Admin',tutor_title:'مساعد VIDO',tutor_subtitle:'مساعد تعليمي لتقنية المعلومات بطريقة سقراطية',tutor_context:'السؤال الحالي',tutor_ask:'اسأل المساعد',tutor_response:'رد المساعد',account_title:'الحساب والمزامنة',adaptive_title:'التعلم التكيفي والتكرار المتباعد',adaptive_due:'المراجعات المستحقة',adaptive_next:'الاختيار التالي',adaptive_start:'بدء سؤال تكيفي'}};
   function updateV2Labels(){const currentLang=getLang();const l=labels[currentLang]||labels.de;document.querySelectorAll('[data-route="tutor"]').forEach(b=>b.textContent=l.tutor);document.querySelectorAll('[data-route="account"]').forEach(b=>b.textContent=l.account);document.querySelectorAll('[data-route="admin"]').forEach(b=>b.textContent=l.admin);const map={tutor_title:'tutor_title',tutor_subtitle:'tutor_subtitle',tutor_context:'tutor_context',tutor_ask:'tutor_ask',tutor_response:'tutor_response',account_title:'account_title',adaptive_title:'adaptive_title',adaptive_due:'adaptive_due',adaptive_next:'adaptive_next',adaptive_start:'adaptive_start'};Object.entries(map).forEach(([id,k])=>{const e=document.querySelector('[data-i18n="'+id+'"]');if(e)e.textContent=l[k]});if($('accountEmail'))$('accountEmail').placeholder=currentLang==='ar'?'البريد الإلكتروني':currentLang==='en'?'Email':'E-Mail';if($('accountPassword'))$('accountPassword').placeholder=currentLang==='ar'?'كلمة المرور (8 أحرف على الأقل)':currentLang==='en'?'Password (12+ characters)':'Passwort (12+ Zeichen)';renderAdaptive()}
   window.vidoUpdateV2Labels=updateV2Labels;$('langSelect')?.addEventListener('change',()=>setTimeout(()=>{updateV2Labels();applyAuthGateText()},0));updateV2Labels();applyAuthGateText();
@@ -825,9 +831,9 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
       const x=await read(await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})}));
       if(!x.r.ok)return status(x.d.error||'Login fehlgeschlagen.');
       const st=JSON.parse(sessionStorage.getItem('vidoEngineV2')||'{}');
-      st.token=x.d.token; st.role=x.d.user?.role||null; st.email=x.d.user?.email||email;
+      delete st.token; st.role=x.d.user?.role||null; st.email=x.d.user?.email||email;
       sessionStorage.setItem('vidoEngineV2',JSON.stringify(st));
-      status('Angemeldet.');
+      status('Angemeldet.');location.reload();
     }catch(e){status('Verbindung zum VIDO-Backend fehlgeschlagen.');}
   }
   async function register(){
@@ -838,9 +844,9 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
       const x=await read(await api('/auth/register',{method:'POST',body:JSON.stringify({email,password})}));
       if(!x.r.ok)return status(x.d.error||'Registrierung fehlgeschlagen.');
       const st=JSON.parse(sessionStorage.getItem('vidoEngineV2')||'{}');
-      st.token=x.d.token; st.role=x.d.user?.role||null; st.email=x.d.user?.email||email;
+      delete st.token; st.role=x.d.user?.role||null; st.email=x.d.user?.email||email;
       sessionStorage.setItem('vidoEngineV2',JSON.stringify(st));
-      status('Konto erstellt und angemeldet.');
+      status('Konto erstellt und angemeldet.');location.reload();
     }catch(e){status('Verbindung zum VIDO-Backend fehlgeschlagen.');}
   }
   function bind(id,fn){
@@ -865,7 +871,7 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
   }
   async function syncNow(){
     const st=getState();
-    if(!st.token){status('Bitte zuerst anmelden.');return}
+    if(document.body.classList.contains('authLocked')){status('Bitte zuerst anmelden.');return}
     const btn=document.getElementById('accountSync');
     if(btn)btn.disabled=true;
     status('Synchronisierung läuft …');
@@ -932,68 +938,53 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
 <script id="vido-auth-ux-v32-script">
 (function(){
   'use strict';
-  const REMEMBER_KEY='vidoRememberedSessionV32';
+  const LEGACY_REMEMBER_KEY='vidoRememberedSessionV32';
   const get=(id)=>document.getElementById(id);
-  const readJSON=(store,key)=>{try{return JSON.parse(store.getItem(key)||'null')}catch{return null}};
-  const writeSession=(st)=>{try{sessionStorage.setItem('vidoEngineV2',JSON.stringify(st))}catch{}};
   const getLangSafe=()=>{try{return typeof getLang==='function'?getLang():(get('langSelect')?.value||'de')}catch{return 'de'}};
   const rememberText={de:'Angemeldet bleiben',en:'Keep me signed in',ar:'البقاء مسجّل الدخول'};
   const showText={de:'Passwort anzeigen',en:'Show password',ar:'إظهار كلمة المرور'};
   const hideText={de:'Passwort verbergen',en:'Hide password',ar:'إخفاء كلمة المرور'};
+  function clearLegacyTokens(){
+    try{localStorage.removeItem(LEGACY_REMEMBER_KEY)}catch{}
+    try{
+      const st=JSON.parse(sessionStorage.getItem('vidoEngineV2')||'{}');
+      if(st&&Object.prototype.hasOwnProperty.call(st,'token')){delete st.token;sessionStorage.setItem('vidoEngineV2',JSON.stringify(st))}
+    }catch{}
+  }
   function updateUXText(){
-    const l=getLangSafe();
-    const r=get('gateRememberLabel'); if(r) r.textContent=rememberText[l]||rememberText.de;
-    document.querySelectorAll('.vidoPasswordToggle').forEach(b=>{const shown=b.dataset.shown==='1';const txt=(shown?hideText:showText)[l]||((shown?hideText:showText).de);b.title=txt;b.setAttribute('aria-label',txt)});
+    const l=getLangSafe(),r=get('gateRememberLabel');
+    if(r)r.textContent=rememberText[l]||rememberText.de;
+    document.querySelectorAll('.vidoPasswordToggle').forEach(b=>{
+      const shown=b.dataset.shown==='1',txt=(shown?hideText:showText)[l]||((shown?hideText:showText).de);
+      b.title=txt;b.setAttribute('aria-label',txt);
+    });
   }
   function togglePassword(inputId,button){
-    const input=get(inputId); if(!input)return;
-    const shown=input.type==='text'; input.type=shown?'password':'text';
-    button.dataset.shown=shown?'0':'1'; updateUXText(); input.focus();
+    const input=get(inputId);if(!input)return;
+    const shown=input.type==='text';input.type=shown?'password':'text';
+    button.dataset.shown=shown?'0':'1';updateUXText();input.focus();
   }
-  function bindToggle(btnId,inputId){const b=get(btnId);if(!b||b.dataset.v32Bound)return;b.addEventListener('click',()=>togglePassword(inputId,b));b.dataset.v32Bound='1'}
-  function rememberEnabled(){return !!get('gateRemember')?.checked}
-  function saveRemembered(){
-    try{
-      const st=readJSON(sessionStorage,'vidoEngineV2');
-      if(st?.token)localStorage.setItem(REMEMBER_KEY,JSON.stringify({token:st.token}));
-    }catch{}
+  function bindToggle(btnId,inputId){
+    const b=get(btnId);if(!b||b.dataset.v32Bound)return;
+    b.addEventListener('click',()=>togglePassword(inputId,b));b.dataset.v32Bound='1';
   }
-  function clearRemembered(){try{localStorage.removeItem(REMEMBER_KEY)}catch{}}
-  async function restoreRemembered(){
-    if(document.body.classList.contains('authLocked')===false)return;
-    const existing=readJSON(sessionStorage,'vidoEngineV2'); if(existing?.token)return;
-    const saved=readJSON(localStorage,REMEMBER_KEY); if(!saved?.token)return;
-    try{
-      const r=await window.VIDO_API_CLIENT('/auth/me',{},saved.token);
-      if(!r.ok){clearRemembered();return}
-      const d=await r.json();
-      writeSession({...(existing||{}),token:saved.token,role:d.user?.role||null,email:d.user?.email||null});
-      location.reload();
-    }catch{}
-  }
-  function syncRememberAfterAuth(){let tries=0;const tick=()=>{tries++;if(rememberEnabled()){const st=readJSON(sessionStorage,'vidoEngineV2');if(st?.token){saveRemembered();return}}if(tries<20)setTimeout(tick,250)};setTimeout(tick,250)}
   function patchLogout(){
-    const b=get('logoutBtn'); if(!b||b.dataset.v32Bound)return;
-    b.addEventListener('click',clearRemembered,true); b.dataset.v32Bound='1';
+    const b=get('logoutBtn');if(!b||b.dataset.v32Bound)return;
+    b.addEventListener('click',clearLegacyTokens,true);b.dataset.v32Bound='1';
   }
   function patchRegisterMode(){
-    const row=get('gatePasswordConfirmRow'), old=get('gatePasswordConfirm');
-    if(row&&old){
-      const sync=()=>{row.hidden=old.hidden};
-      const obs=new MutationObserver(sync); obs.observe(old,{attributes:true,attributeFilter:['hidden']}); sync();
-    }
+    const row=get('gatePasswordConfirmRow'),old=get('gatePasswordConfirm');
+    if(row&&old){const sync=()=>{row.hidden=old.hidden};const obs=new MutationObserver(sync);obs.observe(old,{attributes:true,attributeFilter:['hidden']});sync();}
   }
   function boot(){
+    clearLegacyTokens();
     bindToggle('gatePasswordToggle','gatePassword');bindToggle('gatePasswordConfirmToggle','gatePasswordConfirm');bindToggle('accountPasswordToggle','accountPassword');
-    const remember=get('gateRemember'); if(remember){try{remember.checked=!!readJSON(localStorage,REMEMBER_KEY)?.token}catch{} remember.addEventListener('change',()=>{if(!remember.checked)clearRemembered()})}
-    const login=get('gateLogin'),admin=get('gateAdmin'),reg=get('gateRegister');
-    [login,admin,reg].forEach(btn=>{if(btn&&!btn.dataset.v32Remember){btn.addEventListener('click',syncRememberAfterAuth,true);btn.dataset.v32Remember='1'}});
+    const remember=get('gateRemember');if(remember)remember.checked=false;
     patchLogout();patchRegisterMode();updateUXText();
-    const lang=get('langSelect'); if(lang&&!lang.dataset.v32Remember){lang.addEventListener('change',()=>setTimeout(updateUXText,0));lang.dataset.v32Remember='1'}
-    restoreRemembered();
+    const lang=get('langSelect');if(lang&&!lang.dataset.v32Remember){lang.addEventListener('change',()=>setTimeout(updateUXText,0));lang.dataset.v32Remember='1';}
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-  window.VIDO_AUTH_UX_V32={rememberKey:REMEMBER_KEY,clearRemembered};
+  window.VIDO_AUTH_UX_V32={clearRemembered:clearLegacyTokens};
 })();
 </script>
 
