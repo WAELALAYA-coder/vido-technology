@@ -48,6 +48,7 @@ app.get('/diagram-trainer.css', (_req,res)=>res.sendFile('diagram-trainer.css',{
 const pool = process.env.DATABASE_URL ? new Pool({connectionString:process.env.DATABASE_URL, ssl:false}) : null;
 const JWT_SECRET = process.env.JWT_SECRET || '';
 if (process.env.NODE_ENV === 'production' && JWT_SECRET.length < 32) { throw new Error('JWT_SECRET must be at least 32 characters in production'); }
+if (pool && JWT_SECRET.length < 32) throw new Error('JWT_SECRET must be at least 32 characters when database-backed sessions are enabled');
 const AI_URL = process.env.AI_API_URL || '';
 const AI_KEY = process.env.AI_API_KEY || '';
 const AI_MODEL = process.env.AI_MODEL || 'gpt-4o-mini';
@@ -154,8 +155,10 @@ async function auth(req,res,next){
   if(UNSAFE_METHODS.has(req.method)){
     const csrfCookie=readCookieValue(req.headers.cookie,CSRF_COOKIE_NAME);
     const csrfHeader=req.get('x-csrf-token')||'';
-    if(!csrfCookie||csrfHeader!==csrfCookie||!verifyCsrfToken(sessionToken,csrfCookie,JWT_SECRET))
+    if(!csrfCookie||csrfHeader!==csrfCookie||!verifyCsrfToken(sessionToken,csrfCookie,JWT_SECRET)){
+      clearAuthCookies(res);
       return res.status(403).json({error:'csrf_validation_failed'});
+    }
   }
   if(!requireDb(res))return;
   try{
