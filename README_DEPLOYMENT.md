@@ -2,7 +2,7 @@
 
 ## Current application build
 
-The current learning build is **VIDO Technology V38** (14 November 2026). It builds on the V35 application foundation and includes the V37 learning library plus the V38 Diagram Academy. The backend authentication and database model are unchanged.
+The current learning build is **VIDO Technology V38** (15 November 2026). It builds on the V35 application foundation and includes the V37 learning library plus the V38 Diagram Academy. The backend authentication and database model are unchanged.
 
 - Frontend: `index.html`, `manifest.webmanifest`, and `service-worker.js` (PWA).
 - Learning data: `questions-v37.js` (140 additional questions, IDs `0301`–`0440`; 440 questions total) and `lessons-v37.js` (14 structured lessons in German, English and Arabic).
@@ -57,7 +57,7 @@ GitHub Actions validates pushes to `main` and pull requests targeting `main`. Th
 5. Checks production dependency advisories at high severity and above.
 6. Builds the production Docker image.
 
-The workflow grants only `contents: read` and pins third-party actions to immutable full commit SHAs. The pinned v4 releases still produce GitHub's Node.js 20 deprecation warning on the current Node.js 24 runner; migration to a newer action major is deferred to a separately reviewed change.
+The workflow grants only `contents: read`, disables checkout credential persistence, and pins third-party actions to immutable full commit SHAs. It uses `actions/checkout` v7.0.1 and `actions/setup-node` v7.0.0 (Node.js 24 for the action runtime); the application test/runtime target remains Node.js 22 to match the production image. The former Node.js 20 action-runtime deprecation warning is resolved.
 
 The workflow result is the source of truth for whether those CI checks passed. Local checks and documentation must not be described as a successful CI run unless GitHub reports a successful run.
 
