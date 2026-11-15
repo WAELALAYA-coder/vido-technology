@@ -107,3 +107,10 @@ Important: GitHub Pages can host only a static frontend. It cannot run this Expr
 - Counter updates use a single PostgreSQL upsert, so simultaneous requests for one account cannot bypass the limit. Counters are capped at 11 while blocked and are removed by the existing one-day cleanup.
 - Outbound AI provider requests have a 30-second timeout. Upstream non-success response bodies are not returned to the browser.
 - These controls reduce accidental or abusive provider usage; they do not replace provider-side spending limits, monitoring, or account-level billing alerts.
+
+
+## Browser API client consolidation
+
+- The main application, account helper, button reliability helper, and remember-me session validation now route requests through one `window.VIDO_API_CLIENT` function.
+- The client preserves existing same-origin API paths, JSON headers, and current bearer-token behavior. JWT storage remains in sessionStorage, with the optional remember-me copy still in localStorage.
+- This is a preparatory refactor only. It does not claim HttpOnly cookie sessions or CSRF protection; those require a separate coordinated backend/frontend migration and dedicated session tests.
