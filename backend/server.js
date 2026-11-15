@@ -188,6 +188,80 @@ app.post('/api/auth/register', async (req,res)=>{
   try { const hash=await bcrypt.hash(password,12); const r=await pool.query('INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id,email,role,status,token_version',[email,hash]); await clearLoginFailures(req,email); await logSecurity({userId:r.rows[0].id,email:r.rows[0].email,eventType:'register',req}); await logActivity({userId:r.rows[0].id,eventType:'register',route:'/account',req}); issueSessionCookies(res,r.rows[0],req.body?.remember===true); res.status(201).json({user:r.rows[0]}); }
   catch(e){ if(e.code==='23505'){ return res.status(409).json({error:'email already registered'});} res.status(500).json({error:'registration failed'}); }
 });
+// Password reset email delivery is optional until a verified sender is configured.
+const PASSWORD_RESET_EMAIL_ENABLED = !!(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL && process.env.PUBLIC_APP_URL);
+app.get('/api/auth/recovery-status', (_req,res)=>res.json({emailEnabled:PASSWORD_RESET_EMAIL_ENABLED}));
+
+app.post('/api/auth/forgot-password', async (req,res)=>{
+  if(!requireDb(res)) return;
+  if(!PASSWORD_RESET_EMAIL_ENABLED) return res.status(503).json({error:'password_reset_email_not_configured'});
+  const email=String(req.body?.email||'').trim().toLowerCase().slice(0,254);
+  if(!/^\\S+@\\S+\\.\\S+$/.test(email)) return res.status(400).json({error:'valid_email_required'});
+  let allowed=false;
+  try{ allowed=await loginAllowed(req,'password-reset:'+email); }
+  catch{ return res.status(503).json({error:'password_reset_unavailable'}); }
+  if(!allowed) return res.json({ok:true,message:'If the account exists, a reset email will be sent.'});
+  try{
+    const found=await pool.query("SELECT id,email FROM users WHERE email=$1 AND status='active'",[email]);
+    if(found.rowCount){
+      const user=found.rows[0];
+      const token=crypto.randomBytes(32).toString('base64url');
+      const tokenHash=crypto.createHash('sha256').update(token).digest('hex');
+      await pool.query('DELETE FROM password_reset_tokens WHERE user_id=$1 OR expires_at<NOW()',[user.id]);
+      await pool.query("INSERT INTO password_reset_tokens(user_id,token_hash,expires_at) VALUES($1,$2,NOW()+INTERVAL '30 minutes')",[user.id,tokenHash]);
+      const baseUrl=String(process.env.PUBLIC_APP_URL).replace(/\\/+$/,'');
+      const resetUrl=baseUrl+'/?reset='+encodeURIComponent(token);
+      const emailResult=await fetch('https://api.resend.com/emails',{
+        method:'POST',
+        headers:{'Authorization':'Bearer '+process.env.RESEND_API_KEY,'Content-Type':'application/json'},
+        signal:AbortSignal.timeout(15000),
+        body:JSON.stringify({
+          from:process.env.RESEND_FROM_EMAIL,
+          to:[user.email],
+          subject:'VIDO Technology – Passwort zurücksetzen',
+          text:'Du hast das Zurücksetzen deines VIDO-Passworts angefordert. Öffne diesen Link innerhalb von 30 Minuten: '+resetUrl+'\\nFalls du die Anfrage nicht gestellt hast, ignoriere diese E-Mail.',
+          html:'<p>Du hast das Zurücksetzen deines VIDO-Passworts angefordert.</p><p><a href="'+resetUrl+'">Neues Passwort festlegen</a></p><p>Der Link ist 30 Minuten gültig. Falls du die Anfrage nicht gestellt hast, ignoriere diese E-Mail.</p>'
+        })
+      });
+      if(!emailResult.ok){
+        await pool.query('DELETE FROM password_reset_tokens WHERE token_hash=$1',[tokenHash]);
+        console.error('Password reset email delivery failed');
+        return res.status(503).json({error:'password_reset_delivery_failed'});
+      }
+    }
+    await clearLoginFailures(req,'password-reset:'+email);
+    return res.json({ok:true,message:'If the account exists, a reset email will be sent.'});
+  }catch{
+    return res.status(503).json({error:'password_reset_unavailable'});
+  }
+});
+
+app.post('/api/auth/reset-password', async (req,res)=>{
+  if(!requireDb(res)) return;
+  const token=String(req.body?.token||'');
+  const password=String(req.body?.password||'');
+  if(!/^[A-Za-z0-9_-]{40,60}$/.test(token)||password.length<12) return res.status(400).json({error:'invalid_reset_request'});
+  const tokenHash=crypto.createHash('sha256').update(token).digest('hex');
+  const passwordHash=await bcrypt.hash(password,12);
+  const client=await pool.connect();
+  try{
+    await client.query('BEGIN');
+    const found=await client.query("SELECT user_id FROM password_reset_tokens WHERE token_hash=$1 AND used_at IS NULL AND expires_at>NOW() FOR UPDATE",[tokenHash]);
+    if(!found.rowCount){await client.query('ROLLBACK');return res.status(400).json({error:'reset_link_invalid_or_expired'});}
+    const userId=found.rows[0].user_id;
+    const updated=await client.query("UPDATE users SET password_hash=$2,token_version=token_version+1 WHERE id=$1 AND status='active' RETURNING email",[userId,passwordHash]);
+    if(!updated.rowCount){await client.query('ROLLBACK');return res.status(400).json({error:'account_unavailable'});}
+    await client.query('DELETE FROM password_reset_tokens WHERE user_id=$1',[userId]);
+    await client.query('COMMIT');
+    clearAuthCookies(res);
+    await logSecurity({userId,email:updated.rows[0].email,eventType:'password_reset_success',req});
+    return res.json({ok:true,email:updated.rows[0].email});
+  }catch{
+    await client.query('ROLLBACK').catch(()=>{});
+    return res.status(503).json({error:'password_reset_unavailable'});
+  }finally{client.release();}
+});
+
 app.get('/api/auth/me', auth, async (req,res)=>{
   if(!requireDb(res)) return;
   const r=await pool.query('SELECT id,email,role,status FROM users WHERE id=$1',[req.user.sub]);
@@ -212,7 +286,7 @@ app.post('/api/auth/quick-admin', async (req,res)=>{
   const username=String(req.body?.username||'').trim();
   const password=String(req.body?.password||'');
   if(!(await loginAllowed(req,username))){ await logSecurity({email:username||ADMIN_USERNAME,eventType:'quick_admin_login_rate_limited',req}); return res.status(429).json({error:'too_many_login_attempts'}); }
-  if(!ADMIN_PASSWORD || username!==ADMIN_USERNAME || password!==ADMIN_PASSWORD){
+  if(!ADMIN_PASSWORD || username.toLowerCase()!==ADMIN_USERNAME.toLowerCase() || password!==ADMIN_PASSWORD){
 
     await logSecurity({email:username||ADMIN_USERNAME,eventType:'quick_admin_login_failed',req});
     return res.status(401).json({error:'invalid admin credentials'});
@@ -288,6 +362,8 @@ async function startServer(){
       await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0");
       await pool.query("CREATE TABLE IF NOT EXISTS auth_rate_limits (bucket_key TEXT PRIMARY KEY,window_started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0))");
       await pool.query('CREATE INDEX IF NOT EXISTS idx_auth_rate_limits_window ON auth_rate_limits(window_started_at)');
+      await pool.query(`CREATE TABLE IF NOT EXISTS password_reset_tokens (id BIGSERIAL PRIMARY KEY,user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,token_hash TEXT UNIQUE NOT NULL,expires_at TIMESTAMPTZ NOT NULL,used_at TIMESTAMPTZ,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+      await pool.query('CREATE INDEX IF NOT EXISTS idx_password_reset_user ON password_reset_tokens(user_id,expires_at)');
       await bootstrapOwner();
       const cleanup=setInterval(()=>{ pool.query("DELETE FROM auth_rate_limits WHERE window_started_at < NOW()-INTERVAL '1 day'").catch(()=>{}); },60*60*1000);
       cleanup.unref();
