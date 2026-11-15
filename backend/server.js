@@ -195,7 +195,7 @@ app.post('/api/tutor',auth,async(req,res)=>{
   if(!AI_URL||!AI_KEY) return res.status(503).json({error:'AI integration is not configured. Set AI_API_URL and AI_API_KEY on the server.'});
   const {question,answer,skill,level,hintsUsed,language}=req.body||{};
   const system=`You are VIDO Tutor for an IT/IHK learning platform. Respond in ${language||'de'}. Use Socratic guidance. Do not reveal the final answer unless explicitly requested. Explain the next reasoning step, rule, or diagnostic check. Keep technical terms precise.`;
-  try { const r=await fetch(AI_URL,{method:'POST',headers:{'content-type':'application/json','authorization':`Bearer ${AI_KEY}`},body:JSON.stringify({model:AI_MODEL,messages:[{role:'system',content:system},{role:'user',content:JSON.stringify({question,answer,skill,level,hintsUsed})}]})}); const data=await r.json(); if(!r.ok) return res.status(502).json({error:'AI provider error',detail:data}); res.json({reply:data.choices?.[0]?.message?.content||data.output_text||'No tutor response.'}); }
+  try { const r=await fetch(AI_URL,{method:'POST',headers:{'content-type':'application/json','authorization':`Bearer ${AI_KEY}`},body:JSON.stringify({model:AI_MODEL,messages:[{role:'system',content:system},{role:'user',content:JSON.stringify({question,answer,skill,level,hintsUsed})}]})}); const data=await r.json(); if(!r.ok) return res.status(502).json({error:'AI provider error'}); res.json({reply:data.choices?.[0]?.message?.content||data.output_text||'No tutor response.'}); }
   catch(e){res.status(502).json({error:'AI request failed'});}
 });
 
