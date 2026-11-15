@@ -150,3 +150,16 @@ A Windows Scheduled Task named `VIDO V39 Daily Backup` runs at 20:00 when the us
 The retired V33 app and database containers are stopped but not deleted. Their volumes are preserved for rollback. The old V33 backup task is disabled; it targeted the retired source and its script included an automatic push to `main`.
 
 The V39 AI Tutor remains disabled until a valid provider URL, API key and model are configured. This local deployment is not a public production release.
+
+
+## Account registration and password recovery
+
+The server keeps public registration disabled by default. Enabling it requires both `REGISTRATION_ENABLED=true` and the explicit production approval flag `VIDO_ALLOW_PUBLIC_REGISTRATION=true`. Registration validates email syntax, requires a password of at least 12 characters, and uses the database-backed login rate limits. There is no mailbox ownership verification until an email sender is configured.
+
+The sign-in screen provides account creation and a **Forgot password** flow. Password recovery uses single-use, random tokens stored only as SHA-256 hashes, expires after 30 minutes, and increments the account's token version so existing sessions are revoked. The reset email is sent through Resend. Configure all three server variables to activate delivery:
+
+- `RESEND_API_KEY`: Resend API key.
+- `RESEND_FROM_EMAIL`: a sender address verified by Resend.
+- `PUBLIC_APP_URL`: the public HTTPS origin, for example `https://vido-web-production.up.railway.app`.
+
+Without a configured, verified sender, the recovery screen explains that email delivery is not ready; it does not claim that a reset email was sent. Never place the Resend key in frontend code or commit it to Git.
