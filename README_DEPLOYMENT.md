@@ -2,7 +2,7 @@
 
 ## Current application build
 
-The current learning build is **VIDO Technology V38** (15 November 2026). It builds on the V35 application foundation and includes the V37 learning library plus the V38 Diagram Academy. The learning-content update does not require database schema or user-data changes. The open maintenance branch also contains a separate account-wide logout/token-revocation change; that authentication change is outside the Diagram Academy scope and requires explicit review before merge.
+The current learning build is **VIDO Technology V39** (15 November 2026): the V38 Diagram Academy and V37 learning library, plus the coordinated HttpOnly cookie-session and CSRF hardening. The V39 authentication changes use a session-bound CSRF token and account-wide logout revocation. They require a live PostgreSQL integration test and real-browser verification before production rollout.
 
 - Frontend: `index.html`, `manifest.webmanifest`, and `service-worker.js` (PWA).
 - Learning data: `questions-v37.js` (140 additional questions, IDs `0301`–`0440`; 440 questions total) and `lessons-v37.js` (14 structured lessons in German, English and Arabic).
@@ -13,7 +13,7 @@ The current learning build is **VIDO Technology V38** (15 November 2026). It bui
 - Public self-registration: disabled by default.
 - AI Tutor: optional; it requires a provider URL and API key in the server environment.
 
-GitHub is the private source-code repository. GitHub Pages can serve static files only; it cannot run the VIDO Express API or PostgreSQL database. A Pages-only deployment would therefore not provide login, administration, or cloud synchronization.
+GitHub is the source-code repository. GitHub Pages can serve static files only; it cannot run the VIDO Express API or PostgreSQL database. A Pages-only deployment would therefore not provide login, administration, or cloud synchronization.
 
 ## Local development and verification
 
@@ -107,7 +107,7 @@ The production stack has intentionally not been started on the local PC because 
 - Configure monitoring and alerts for disk space, container health, certificate renewal, database availability, and backup failures.
 - Keep SSH and provider firewall rules restricted. Do not publish the database port.
 - Refresh pinned image digests through a controlled security review process.
-- Review Content Security Policy and browser token storage before opening registration. The current frontend uses inline scripts/styles, and its bearer-token storage is documented in `SECURITY_BASELINE.md`.
+- Review Content Security Policy and complete browser-based HTTPS authentication tests (including Safari/iOS) before opening registration. The current frontend uses inline scripts/styles. Authentication now uses an HttpOnly session cookie and a separate session-bound CSRF cookie; the JWT is not returned to browser JavaScript.
 
 Do not start the production Compose file on the current local PC as a public launch. It publishes ports 80/443 and uses a separate production database volume. It is prepared for a future hosting server; the current local app remains on its existing Compose profile and volumes.
 
@@ -119,3 +119,12 @@ For the current security posture and known limitations, see `SECURITY_BASELINE.m
 ## Diagram Academy V38 assets
 
 The V38 learning interface adds a browser-side Diagram Academy. The Express server exposes only the explicit learning asset routes for the diagram curriculum, validator, trainer JavaScript and trainer CSS. The diagram practice editor stores drafts and progress in the browser's local storage; it does not add database tables or send diagram drafts to the API. The SVG export is generated client-side. CI validates the curriculum and sample models and smoke-tests the explicit asset routes.
+
+
+## V39 PostgreSQL authentication integration test
+
+The CI workflow runs `npm run test:auth-postgres` against a disposable PostgreSQL 16 service. The test initializes the schema, starts an isolated Express process and checks cookie-based login, CSRF rejection, same-origin enforcement, closed self-registration, quick-admin owner-role enforcement, and account-wide logout revocation.
+
+For local execution, set `VIDO_TEST_DATABASE_URL` to a disposable PostgreSQL database on `127.0.0.1` or `localhost` whose database name contains `test` or `ci`. The test intentionally refuses remote database hosts and database names that do not match that safety rule. Do not use a production or personal learning database.
+
+This integration test does not replace a manual HTTPS browser test. Safari/iOS and other real-device checks remain outstanding.
