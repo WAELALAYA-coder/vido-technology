@@ -102,6 +102,12 @@ assert(backend.includes("jwt.verify(h.slice(7),JWT_SECRET,{algorithms:['HS256']}
 const tutorStart=backend.indexOf("app.post('/api/tutor'");
 const tutorRoute=backend.slice(tutorStart);
 assert(tutorStart>=0&&!tutorRoute.includes('detail:data'),'AI provider error responses must not expose raw upstream details');
+assert(backend.includes('async function tutorRequestAllowed(userId)'),'AI tutor rate limiter missing');
+assert(backend.includes("INTERVAL '1 minute'")&&backend.includes('auth_rate_limits.attempts < 11'),'AI tutor database rate limiter must cap users at 10 requests per minute');
+assert(tutorRoute.includes('await tutorRequestAllowed(req.user.sub)'),'AI tutor route must enforce per-user rate limiting');
+assert(tutorRoute.includes('AbortSignal.timeout(30_000)'),'AI provider requests must have a 30-second timeout');
+assert(tutorRoute.includes('question.length>8000')&&tutorRoute.includes('answer.length>8000'),'AI tutor must bound question and answer lengths');
+assert(tutorRoute.includes("!['de','en','ar'].includes(language)"),'AI tutor must restrict response language to supported locales');
 assert(backend.includes("app.get('/questions-v37.js'"),'question data route missing from Express');
 assert(backend.includes("app.get('/lessons-v37.js'"),'lesson data route missing from Express');
 assert(backend.includes("'Content-Type':'application/javascript; charset=utf-8'"),'learning data routes must declare JavaScript content type');
