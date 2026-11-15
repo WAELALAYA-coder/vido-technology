@@ -123,3 +123,9 @@ Final V39 verification — 15 November 2026
 - CI now starts a digest-pinned PostgreSQL 16 service and tests same-origin enforcement, disabled registration, cookie-only login, CSRF rejection, account-wide logout revocation, quick-admin role checks and owner API access.
 - Added a repository README with Windows/Docker local startup and study instructions.
 - Corrected the deployment guide to describe the V39 HttpOnly cookie and CSRF design rather than the retired browser Bearer-token storage.
+
+
+CI PostgreSQL integration follow-up — 15 November 2026
+- Fixed the first PostgreSQL authentication test step to receive the CI-only VIDO_TEST_DATABASE_URL.
+- Added a local-host and test/ci database-name guard to the second PostgreSQL integration script so it refuses to run against remote or production-looking databases.
+- Both integration scripts use the ephemeral, digest-pinned PostgreSQL service created for the GitHub Actions job.
