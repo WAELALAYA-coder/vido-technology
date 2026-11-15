@@ -97,7 +97,7 @@ async function clearLoginFailures(req,identity){
     await pool.query('DELETE FROM auth_rate_limits WHERE bucket_key=$1',[identityKey]);
   }catch(e){ console.error('Authentication failure counter cleanup failed'); }
 }
-function token(user){ return jwt.sign({sub:user.id,email:user.email,role:user.role||'user',ver:Number(user.token_version||0)},JWT_SECRET,{expiresIn:'7d'}); }
+function token(user){ return jwt.sign({sub:user.id,email:user.email,role:user.role||'user',ver:Number(user.token_version||0)},JWT_SECRET,{algorithm:'HS256',expiresIn:'7d'}); }
 
 function ua(req){ return req.headers['user-agent']||null; }
 async function logSecurity({userId=null,email=null,eventType,req,metadata={}}){ if(!pool)return; await pool.query('INSERT INTO security_log(user_id,email,event_type,ip,user_agent,metadata) VALUES($1,$2,$3,$4,$5,$6)',[userId,email,eventType,clientIp(req),ua(req),metadata]); }
@@ -108,7 +108,7 @@ async function auth(req,res,next){
   const h=req.headers.authorization||'';
   if(!h.startsWith('Bearer ')) return res.status(401).json({error:'unauthorized'});
   let payload;
-  try{ payload=jwt.verify(h.slice(7),JWT_SECRET); }
+  try{ payload=jwt.verify(h.slice(7),JWT_SECRET,{algorithms:['HS256']}); }
   catch{ return res.status(401).json({error:'unauthorized'}); }
   if(!requireDb(res)) return;
   try{
