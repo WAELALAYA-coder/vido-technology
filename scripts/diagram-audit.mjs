@@ -103,3 +103,12 @@ for(const asset of ['diagram-curriculum-v38.js','diagram-engine-v38.js','diagram
   assert(serviceWorker.includes('./'+asset),'service worker does not precache '+asset);
 }
 console.log('PASS: 11 trilingual modules / 8 valid templates / 20 trilingual questions / 9 official sources / negative validator tests / browser wiring.');
+
+
+const trainer = fs.readFileSync('diagram-trainer.js','utf8');
+assert(trainer.includes('MAX_MODEL_JSON_CHARS=64*1024'),'diagram JSON size cap missing');
+assert(trainer.includes('function isPreviewSafe(model)'),'diagram preview safety guard missing');
+assert(trainer.includes('model.nodes.length<=100')&&trainer.includes('model.links.length<=200'),'diagram renderer must cap nodes and links before rendering');
+assert(trainer.includes('if(isPreviewSafe(model))renderDiagram(canvas,model);else canvas.textContent=t(\'previewUnsafe\')'),'saved diagram drafts must be checked before preview rendering');
+assert(trainer.includes('if(!isPreviewSafe(model))'),'SVG export must reject unsafe diagram structures');
+assert(trainer.includes('r.draft.length<=MAX_MODEL_JSON_CHARS'),'oversized saved drafts must be discarded when loaded');
