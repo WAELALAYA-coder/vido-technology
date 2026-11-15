@@ -59,7 +59,7 @@ export function clearSessionCookies({ secure = false } = {}) {
   const flags = '; Path=/; SameSite=Lax' + (secure ? '; Secure' : '') +
     '; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
   return [
-    SESSION_COOKIE_NAME + '=;' + flags + '; HttpOnly',
-    CSRF_COOKIE_NAME + '=;' + flags
+    SESSION_COOKIE_NAME + '=' + flags + '; HttpOnly',
+    CSRF_COOKIE_NAME + '=' + flags
   ];
 }
