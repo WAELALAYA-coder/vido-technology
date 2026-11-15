@@ -11,7 +11,9 @@ const sessionB='session-token-B.with.jwt.parts';
 const csrf=createCsrfToken(sessionA,secret);
 assert.equal(verifyCsrfToken(sessionA,csrf,secret),true,'valid token must verify');
 assert.equal(verifyCsrfToken(sessionB,csrf,secret),false,'CSRF token must be bound to its session');
-assert.equal(verifyCsrfToken(sessionA,csrf.slice(0,-1)+'x',secret),false,'tampered token must fail');
+const csrfParts=csrf.split('.');
+const changedSignature=(csrfParts[1][0]==='A'?'B':'A')+csrfParts[1].slice(1);
+assert.equal(verifyCsrfToken(sessionA,csrfParts[0]+'.'+changedSignature,secret),false,'tampered token must fail');
 assert.equal(verifyCsrfToken(sessionA,'',secret),false,'empty CSRF token must fail');
 assert.equal(verifyCsrfToken(sessionA,csrf,'short'),false,'weak secret must fail');
 
