@@ -128,3 +128,25 @@ The CI workflow runs `npm run test:auth-postgres` against a disposable PostgreSQ
 For local execution, set `VIDO_TEST_DATABASE_URL` to a disposable PostgreSQL database on `127.0.0.1` or `localhost` whose database name contains `test` or `ci`. The test intentionally refuses remote database hosts and database names that do not match that safety rule. Do not use a production or personal learning database.
 
 This integration test does not replace a manual HTTPS browser test. Safari/iOS and other real-device checks remain outstanding.
+
+
+## Active local Windows workstation setup — V39
+
+The maintained local project directory on the Windows workstation is:
+
+`C:\Users\waela\Documents\VIDO-Technology-V39`
+
+The active local URLs are:
+
+- VIDO frontend: `http://127.0.0.1:3001`
+- Backend health: `http://127.0.0.1:3001/api/health`
+
+The V39 app and PostgreSQL host ports are bound to loopback only. PostgreSQL is mapped to `127.0.0.1:5433`; it is not published to the LAN or public internet. Do not change these bindings to `0.0.0.0` for convenience.
+
+Use `start-vido.bat` in this folder to start V39 and `stop-vido.bat` to stop it. Stopping Compose does not delete the named database or Node modules volumes. The app container has an HTTP healthcheck; both V39 containers should report `healthy` after startup.
+
+A Windows Scheduled Task named `VIDO V39 Daily Backup` runs at 20:00 when the user session and Docker Desktop are available. It saves the PostgreSQL custom-format dump and a source ZIP under `C:\Users\waela\Documents\VIDO_Backups`, verifies both, and retains the latest 14 daily V39 backups. The task never pushes to GitHub. Keep the local `.env` file and credentials private; they are intentionally excluded from automatic backups.
+
+The retired V33 app and database containers are stopped but not deleted. Their volumes are preserved for rollback. The old V33 backup task is disabled; it targeted the retired source and its script included an automatic push to `main`.
+
+The V39 AI Tutor remains disabled until a valid provider URL, API key and model are configured. This local deployment is not a public production release.

@@ -103,7 +103,7 @@ const sessionSecurity=fs.readFileSync('backend/session-security.js','utf8');
 assert(backend.includes("readCookieValue(req.headers.cookie,SESSION_COOKIE_NAME)"),'auth middleware must read the HttpOnly session cookie');
 assert(backend.includes('verifyCsrfToken(sessionToken,csrfCookie,JWT_SECRET)'),'auth middleware must validate the session-bound CSRF token');
 assert(backend.includes("if (pool && JWT_SECRET.length < 32) throw new Error('JWT_SECRET must be at least 32 characters when database-backed sessions are enabled')"),'database-backed cookie sessions must fail startup with a weak JWT/CSRF secret');
-assert(backend.includes("clearAuthCookies(res);\n      return res.status(403).json({error:'csrf_validation_failed'})"),'failed CSRF validation must clear the local session cookies');
+assert(/clearAuthCookies\(res\);\s*return res\.status\(403\)\.json\(\{error:'csrf_validation_failed'\}\)/.test(backend),'failed CSRF validation must clear the local session cookies');
 assert(backend.includes('same_origin_required')&&backend.includes('csrf_validation_failed'),'mutating API requests must enforce origin and CSRF checks');
 assert(backend.includes('issueSessionCookies(res,r.rows[0],req.body?.remember===true)'),'login must issue an HttpOnly cookie and signed CSRF cookie');
 const authIntegration=fs.readFileSync('scripts/auth-integration-test.mjs','utf8');
@@ -147,8 +147,21 @@ assert(backend.includes("app.get('/lessons-v37.js'"),'lesson data route missing 
 assert(backend.includes("'Content-Type':'application/javascript; charset=utf-8'"),'learning data routes must declare JavaScript content type');
 
 const sw=fs.readFileSync('service-worker.js','utf8');
-assert(sw.includes('vido-ui-20261115-v39-cookie-sessions'),'service worker cache version is stale');
+assert(sw.includes('vido-ui-20261115-v39.1-pwa-responsive'),'service worker cache version is stale');
+const manifest=JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));
+for(const [src,size] of [['icons/vido-192.png','192x192'],['icons/vido-512.png','512x512']]){
+  assert(manifest.icons.some(icon=>icon.src===src&&icon.sizes===size&&icon.type==='image/png'),'missing installable PWA icon: '+src);
+  assert(fs.existsSync(src),'PWA icon file is missing: '+src);
+}
+assert(html.includes('rel="apple-touch-icon"'),'iOS home-screen icon link is missing');
+assert(html.includes('id="vido-v39-mobile-pwa-fix"'),'responsive narrow-screen login patch is missing');
 assert(sw.includes('./questions-v37.js')&&sw.includes('./lessons-v37.js'),'lesson data is not cached');
-for(const asset of ['./diagram-curriculum-v38.js','./diagram-engine-v38.js','./diagram-trainer.js','./diagram-trainer.css'])assert(sw.includes(asset),'diagram asset is not cached: '+asset);
-for(const route of ['/diagram-curriculum-v38.js','/diagram-engine-v38.js','/diagram-trainer.js','/diagram-trainer.css'])assert(backend.includes("app.get('"+route+"'"),'diagram route missing: '+route);
+for(const asset of ['./icons/vido-app-icon.svg','./icons/vido-192.png','./icons/vido-512.png','./diagram-curriculum-v38.js','./diagram-engine-v38.js','./diagram-trainer.js','./diagram-trainer.css'])assert(sw.includes(asset),'diagram asset is not cached: '+asset);
+assert(backend.includes("app.get('/icons/vido-app-icon.svg'"),'SVG icon route missing');
+assert(backend.includes("app.get('/icons/vido-192.png'"),'192px icon route missing');
+assert(backend.includes("app.get('/icons/vido-512.png'"),'512px icon route missing');
+assert(backend.includes("app.get('/diagram-curriculum-v38.js'"),'diagram curriculum route missing');
+assert(backend.includes("app.get('/diagram-engine-v38.js'"),'diagram engine route missing');
+assert(backend.includes("app.get('/diagram-trainer.js'"),'diagram trainer route missing');
+assert(backend.includes("app.get('/diagram-trainer.css'"),'diagram stylesheet route missing');
 console.log(`PASS: ${questions.length} questions / ${skillCounts.size} skills / ${lessons.length} lessons (DE/EN/AR) / ${inlineScriptCount} inline scripts / ${ids.length} unique HTML IDs.`);

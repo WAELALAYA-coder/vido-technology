@@ -80,3 +80,8 @@ The GitHub Actions workflow runs syntax checks, content and security audits, HTT
 ## License
 
 No license file is currently included. Public visibility allows people to inspect the repository on GitHub, but does not automatically grant permission to reuse or redistribute the code and learning material. Add an explicit license before accepting external reuse contributions.
+
+## Computer, tablet and phone support
+VIDO uses one responsive web application for desktop, tablet and mobile browsers; there are no separate Windows, Android or iOS codebases to keep in sync. On a deployed HTTPS address, use **Install app** in desktop Chrome/Edge, **Install app / Add to Home Screen** in Android Chrome, or **Share → Add to Home Screen** in iPhone Safari. The PWA includes VIDO app icons and an offline shell for previously cached learning assets; sign-in and API features still require the server to be reachable.
+
+**Local Windows note:** the default Docker setup binds to `127.0.0.1:3001` intentionally. It is reachable only on that computer. To use VIDO from a separate phone/tablet, deploy behind a trusted HTTPS hostname or configure a properly trusted private HTTPS reverse proxy. Do not expose the database port or disable Secure session cookies.

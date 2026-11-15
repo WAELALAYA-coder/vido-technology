@@ -70,7 +70,11 @@ body{width:100%;min-width:0;margin:0;background:var(--bg);overflow-x:hidden;over
 .authGate[hidden]{display:none}.authGateCard{width:100%;max-width:calc(100vw - 56px);min-width:0;box-sizing:border-box;background:#091625;border:1px solid #31506b;border-radius:18px;padding:24px;box-shadow:0 20px 70px #000b}.authGateBrand{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:900}.authGateTitle{font-size:28px;font-weight:900;margin:8px 0 5px}.authGateSub{color:var(--muted);font-size:13px;margin-bottom:18px}.authGate input{width:100%;box-sizing:border-box;background:#07111f;color:#fff;border:1px solid #31506b;border-radius:10px;padding:12px;margin-top:8px}.authGate .actions{display:flex;gap:8px;margin-top:12px}.authGate .actions button{flex:1}.authGateMsg{min-height:20px;margin-top:12px;font-size:13px;color:#ffb4c0}.authGateHint{margin-top:14px;padding:10px 12px;border-radius:10px;background:#07111f;border:1px solid var(--line);color:#8fa5ba;font-size:11px;line-height:1.45}
 body.authLocked #app{visibility:hidden;pointer-events:none}
 </style>
-<link href="manifest.webmanifest" rel="manifest"/><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/><!-- VIDO Analytics: privacy-friendly Plausible integration -->
+<link href="manifest.webmanifest" rel="manifest"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<link rel="icon" type="image/svg+xml" href="icons/vido-app-icon.svg"/>
+<link rel="apple-touch-icon" href="icons/vido-192.png"/><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/><!-- VIDO Analytics: privacy-friendly Plausible integration -->
 <script defer data-domain="waelvido-cyber.github.io" src="https://plausible.io/js/script.js"></script>
 <script>
 window.VIDO_ANALYTICS = {
@@ -93,6 +97,22 @@ window.vidoTrack = function(eventName, props) {
 @media(max-width:700px){.lessonGrid,.lessonTerms{grid-template-columns:1fr}.lessonLibraryHead h2{font-size:19px}.lessonTile{padding:13px}}
 </style>
 <link rel="stylesheet" href="diagram-trainer.css"/>
+<style id="vido-v39-mobile-pwa-fix">
+/* V39.1: keep the authentication panel and password controls inside narrow viewports. */
+.authGate,.authGate *{box-sizing:border-box}
+.authGate{padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+.authGateCard{width:min(100%,420px)!important;max-width:100%!important;min-width:0!important;flex:0 1 420px}
+.authGateCard input{width:100%;max-width:100%;min-width:0}
+.authGateCard .vidoPasswordRow{display:flex;width:100%;max-width:100%;min-width:0;align-items:center}
+.authGateCard .vidoPasswordRow input{flex:1 1 0;width:1%;max-width:100%;min-width:0}
+.authGateCard .vidoPasswordRow .vidoPasswordToggle{flex:0 0 38px;min-width:38px}
+@media(max-width:650px){
+ .authGate{min-height:100dvh;min-height:100svh}
+ .authGateCard{width:100%!important;max-width:100%!important;padding:clamp(16px,5vw,22px)!important}
+ .authGateCard .actions{width:100%;grid-template-columns:minmax(0,1fr)}
+ .authGateCard .actions button{width:100%;max-width:100%;min-width:0}
+}
+</style>
 </head>
 <body class="authLocked"><div class="authGate" id="authGate">
 <div class="authGateCard">

@@ -26,10 +26,29 @@ try{
   }
   assert(ready,'Express did not start the learning asset routes: '+(lastError?.message||'timeout'));
 
-  const paths=['/','/questions-v37.js','/lessons-v37.js','/diagram-curriculum-v38.js','/diagram-engine-v38.js','/diagram-trainer.js','/diagram-trainer.css'];
+  const paths=['/','/manifest.webmanifest','/icons/vido-app-icon.svg','/icons/vido-192.png','/icons/vido-512.png','/questions-v37.js','/lessons-v37.js','/diagram-curriculum-v38.js','/diagram-engine-v38.js','/diagram-trainer.js','/diagram-trainer.css'];
   const responses=await Promise.all(paths.map(get));
-  const [home,questions,lessons,curriculum,engine,trainer,styles]=responses;
+  const byPath=new Map(paths.map((path,index)=>[path,responses[index]]));
   for(let i=0;i<responses.length;i++)assert.equal(responses[i].status,200,'public asset must be served: '+paths[i]);
+  const home=byPath.get('/');
+  const manifest=byPath.get('/manifest.webmanifest');
+  const iconSvg=byPath.get('/icons/vido-app-icon.svg');
+  const icon192=byPath.get('/icons/vido-192.png');
+  const icon512=byPath.get('/icons/vido-512.png');
+  const questions=byPath.get('/questions-v37.js');
+  const lessons=byPath.get('/lessons-v37.js');
+  const curriculum=byPath.get('/diagram-curriculum-v38.js');
+  const engine=byPath.get('/diagram-engine-v38.js');
+  const trainer=byPath.get('/diagram-trainer.js');
+  const styles=byPath.get('/diagram-trainer.css');
+  assert.match(manifest.headers.get('content-type')||'',/application\/manifest\+json/i);
+  assert.match(iconSvg.headers.get('content-type')||'',/image\/svg\+xml/i);
+  assert.match(icon192.headers.get('content-type')||'',/image\/png/i);
+  assert.match(icon512.headers.get('content-type')||'',/image\/png/i);
+  assert((await manifest.json()).icons.some(icon=>icon.src==='icons/vido-512.png'),'512px install icon missing from served manifest');
+  assert((await iconSvg.text()).includes('<svg'),'SVG install icon payload missing');
+  assert((await icon192.arrayBuffer()).byteLength>1000,'192px icon image appears empty');
+  assert((await icon512.arrayBuffer()).byteLength>1000,'512px icon image appears empty');
   for(const response of [questions,lessons,curriculum,engine,trainer]){
     assert.match(response.headers.get('content-type')||'',/application\/javascript/i);
     assert.match(response.headers.get('cache-control')||'',/no-cache/i);

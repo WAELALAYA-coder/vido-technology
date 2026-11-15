@@ -1,0 +1,48 @@
+VIDO Technology — V39
+Date: 15 November 2026
+
+Authentication and session security
+- Added HttpOnly cookie-based authentication.
+- Added a session-bound HMAC-SHA256 CSRF cookie and X-CSRF-Token validation.
+- Enforced same-origin checks for unsafe requests in production.
+- Removed JWT exposure from authentication JSON responses and browser storage.
+- Added account-wide session revocation on logout.
+- Kept public self-registration disabled in the local deployment.
+
+Application and local runtime
+- Kept the local V39 app on 127.0.0.1:3001 and PostgreSQL on 127.0.0.1:5433.
+- Added an HTTP Docker healthcheck for the app container.
+- Declared the existing V39 PostgreSQL and Node modules volumes as external to preserve them across the project-folder migration.
+- Moved the maintained working copy to Documents\VIDO-Technology-V39.
+- Updated the start/stop batch files and added a desktop shortcut.
+
+Operations and backups
+- Added scripts\backup-v39.ps1 for local database and source backups.
+- Registered the VIDO V39 Daily Backup task for 20:00, with StartWhenAvailable and 14-backup retention.
+- The backup process verifies the PostgreSQL dump and source archive and performs no Git push.
+- Disabled the legacy VIDO V33 Daily Backup task.
+- Stopped the unused V33 app/database containers without deleting their volumes.
+- Enabled Windows Defender Firewall on Domain, Private and Public profiles with inbound blocking and outbound allowance.
+- Restricted access to the local .env file and desktop credentials file to the account, SYSTEM and Administrators.
+
+Verification
+- npm test passed.
+- PostgreSQL authentication integration tests passed.
+- Live Owner and Quick Admin login/session/logout checks passed.
+- npm audit --omit=dev --audit-level=high reported zero vulnerabilities.
+- Production Compose configuration validation passed.
+- A local PostgreSQL backup was restored successfully into a temporary database and verified.
+
+Limitations
+- AI Tutor remains disabled until provider credentials are configured.
+- Local backups are not off-site backups.
+- V39 remains a local deployment, not a public production release.
+- No Git commit, push or merge was performed.
+
+V39.1 — Responsive and installable app polish (15 November 2026)
+- Fixed narrow-screen authentication layout: the login card and password field now size to the available safe-area width, including the password visibility control.
+- Added VIDO-branded SVG, 192px and 512px PNG app icons; configured standard and maskable PWA icons plus the iOS home-screen icon.
+- Expanded the web app manifest with scope, app ID, standalone display preferences and orientation support.
+- Advanced the service-worker cache version and precached the manifest/icon assets so installed clients refresh to the updated UI.
+- Extended the automated content/security audit to verify the PWA icon files and responsive login patch.
+- Local Windows Docker remains loopback-only by design. Access from another phone/tablet requires a trusted HTTPS endpoint; no insecure LAN exposure or cookie weakening was introduced.
