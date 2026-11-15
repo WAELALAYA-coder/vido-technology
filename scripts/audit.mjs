@@ -95,7 +95,6 @@ const quickAdminStart=backend.indexOf("app.post('/api/auth/quick-admin'");
 const quickAdminEnd=backend.indexOf("app.post('/api/auth/login'",quickAdminStart);
 assert(quickAdminStart>=0&&quickAdminEnd>quickAdminStart,'quick-admin route boundaries missing');
 const quickAdminRoute=backend.slice(quickAdminStart,quickAdminEnd);
-assert(quickAdminRoute.includes("if(user.role!=='owner') return res.status(403).json({error:'owner_role_required'});"),'quick-admin must reject accounts without the owner role');
 assert(quickAdminRoute.includes("if(user.role!=='owner') return res.status(403).json({error:'owner_role_required'});")&&quickAdminRoute.includes('issueSessionCookies(res,user'),'quick-admin must verify the owner role and issue an HttpOnly cookie session');
 assert(!quickAdminRoute.includes('token:token(user)'),'quick-admin must not return JWTs in JSON');
 assert(backend.includes("algorithm:'HS256'"),'JWTs must be signed explicitly with HS256');
@@ -105,7 +104,9 @@ assert(backend.includes("readCookieValue(req.headers.cookie,SESSION_COOKIE_NAME)
 assert(backend.includes('verifyCsrfToken(sessionToken,csrfCookie,JWT_SECRET)'),'auth middleware must validate the session-bound CSRF token');
 assert(backend.includes('same_origin_required')&&backend.includes('csrf_validation_failed'),'mutating API requests must enforce origin and CSRF checks');
 assert(backend.includes('issueSessionCookies(res,r.rows[0],req.body?.remember===true)'),'login must issue an HttpOnly cookie and signed CSRF cookie');
-assert(!backend.includes('req.headers.authorization'),'backend must not accept legacy bearer authentication');
+assert(!backend.includes('req.headers.authorization')&&!backend.includes("h.startsWith('Bearer ')"),'backend must not accept legacy bearer authentication');
+assert(!backend.includes('res.json({token:token('),'authentication routes must not expose session JWTs in JSON');
+assert(backend.includes("if(!supplied)return process.env.NODE_ENV!=='production'"),'production must reject unsafe API requests without Origin or Referer');
 assert(sessionSecurity.includes('HttpOnly')&&sessionSecurity.includes('SameSite=Lax'),'session cookie must be HttpOnly and SameSite=Lax');
 assert(sessionSecurity.includes('Secure'),'cookie helper must support Secure cookies in production');
 assert(sessionSecurity.includes('timingSafeEqual'),'CSRF signatures must be compared in constant time');
