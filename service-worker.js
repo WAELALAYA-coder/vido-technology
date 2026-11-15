@@ -1,4 +1,4 @@
-const CACHE='vido-ui-20261114-v38-diagram-academy';
+const CACHE='vido-ui-20261115-v39-cookie-sessions';
 const STATIC=['./','./index.html','./manifest.webmanifest','./questions-v37.js','./lessons-v37.js','./diagram-curriculum-v38.js','./diagram-engine-v38.js','./diagram-trainer.js','./diagram-trainer.css'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(STATIC)));self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
