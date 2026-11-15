@@ -58,12 +58,16 @@ jobs:
           node --check diagram-trainer.js
           node --check scripts/diagram-audit.mjs
           node --check scripts/session-security-test.mjs
+          node --check scripts/auth-postgres-test.mjs
           node --check scripts/audit.mjs
           node --check scripts/smoke-assets.mjs
           node --check scripts/auth-integration-test.mjs
 
       - name: Run application audit
         run: npm test
+
+      - name: Run PostgreSQL-backed authentication integration tests
+        run: npm run test:auth-postgres
 
       - name: Smoke-test public learning assets and private paths
         run: node scripts/smoke-assets.mjs
