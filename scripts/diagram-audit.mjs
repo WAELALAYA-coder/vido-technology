@@ -112,3 +112,7 @@ assert(trainer.includes('model.nodes.length<=100')&&trainer.includes('model.link
 assert(trainer.includes('if(isPreviewSafe(model))renderDiagram(canvas,model);else canvas.textContent=t(\'previewUnsafe\')'),'saved diagram drafts must be checked before preview rendering');
 assert(trainer.includes('if(!isPreviewSafe(model))'),'SVG export must reject unsafe diagram structures');
 assert(trainer.includes('r.draft.length<=MAX_MODEL_JSON_CHARS'),'oversized saved drafts must be discarded when loaded');
+
+const diagramEngine = fs.readFileSync('diagram-engine-v38.js','utf8');
+assert(diagramEngine.includes('if (nodes.length > 100 || links.length > 200)'),'diagram validator must stop before processing oversized arrays');
+assert(diagramEngine.includes('return { errors, warnings, score:0, valid:false };'),'oversized diagram models must fail closed');
