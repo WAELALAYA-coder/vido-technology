@@ -59,7 +59,7 @@ This is a hardened local deployment, not a public production service.
 1. HTTPS/TLS is not active locally. The production Caddy configuration is prepared for automatic HTTPS, but no public domain or server has been connected.
 2. Proxy trust is disabled locally. The production template trusts only the exact Caddy IPv4 address 172.29.250.2.
 3. Content Security Policy is not enabled because the current frontend includes inline scripts and styles. A strong CSP requires refactoring these assets and testing the full UI.
-4. Browser tokens are bearer tokens stored in browser session storage; the optional keep-me-signed-in feature uses local storage. A future public release should consider HttpOnly, Secure, SameSite cookie sessions and CSRF protections.
+4. Browser sessions use an HttpOnly, SameSite=Lax session cookie; the cookie is Secure in production. The JWT is no longer returned to JavaScript or stored in sessionStorage/localStorage. Legacy browser bearer-token copies are cleared when the new UI loads.
 5. MFA, email verification, and self-service password recovery are not configured. Registration remains closed.
 6. Backups currently reside on the Windows device. The scheduled task and private GitHub source synchronization do not provide off-site PostgreSQL backups. Production needs encrypted off-site backups and regular restore drills.
 7. The AI tutor is disabled in the running container because the runtime has no provider URL or API key configured.
@@ -83,7 +83,7 @@ The production configuration was validated and the app image was built. The prod
 - Create the real .env.production file on the hosting server using a password manager. Never commit it.
 - Keep registration disabled for the initial private launch.
 - Configure provider-encrypted storage, encrypted off-site PostgreSQL backups, and tested recovery.
-- Review CSP and browser token storage before opening registration.
+- Review CSP and complete browser-based HTTPS authentication tests before opening registration.
 - Configure monitoring for application health, database availability, disk space, certificates, and backup failures.
 
 Important: GitHub Pages can host only a static frontend. It cannot run this Express API and PostgreSQL database, so it is not a complete VIDO hosting target.
@@ -119,3 +119,10 @@ Important: GitHub Pages can host only a static frontend. It cannot run this Expr
 - Logout increments the account's database-backed `token_version` and clears both cookies. This invalidates sessions on all devices, not just the current browser.
 - Automated tests cover CSRF token binding/tampering, cookie parsing/flags/lifetime/clearing, frontend wiring, cookie-only authentication, legacy Bearer rejection, and same-origin mutation guards. CI smoke tests intentionally run without PostgreSQL; they do not prove a real database-backed login/logout or exercise real browser Safari flows.
 - This is a breaking authentication behavior change on the open maintenance branch. Merge and production rollout require explicit maintainer approval and coordinated release; no deployment has occurred.
+
+
+## Cookie authentication test scope
+
+- CI uses a production-mode Express smoke server without PostgreSQL. It verifies rejection of missing/foreign Origin headers, legacy Bearer tokens, missing/tampered CSRF headers, and confirms valid cookie+CSRF reaches the database availability check.
+- Pure unit tests cover HMAC binding, tamper rejection, cookie parsing and Secure/HttpOnly/SameSite/Max-Age attributes.
+- This is not a substitute for a live PostgreSQL login/logout integration test or browser tests over the real HTTPS Caddy endpoint.
