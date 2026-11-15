@@ -132,3 +132,11 @@ Important: GitHub Pages can host only a static frontend. It cannot run this Expr
 
 - When a database-backed session service is configured, startup now fails if JWT_SECRET is shorter than 32 characters; production still requires at least 32 characters and the hardened production profile requires 48.
 - A failed CSRF validation clears the browser's session and CSRF cookies before returning HTTP 403. The browser UI must authenticate again rather than silently reusing a stale cookie pair.
+
+
+## PostgreSQL authentication integration tests in CI
+
+- GitHub Actions provisions a digest-pinned PostgreSQL 16 service named `vido_test`, isolated to the ephemeral CI job.
+- Both integration test scripts reject non-local database hosts and database names that do not include `test` or `ci`. They must never be pointed at an actual production database.
+- The tests initialize the repository schema and use generated CI-only accounts, passwords and JWT secrets. They cover real database-backed login, cookie issuance, CSRF validation, account-wide logout revocation and quick-admin owner authorization.
+- These tests exercise Express and PostgreSQL together, but they do not verify the reverse-proxy TLS configuration or browser cookie behavior on a real domain.
