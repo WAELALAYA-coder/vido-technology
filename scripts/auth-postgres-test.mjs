@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { readFile } from 'node:fs/promises';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import pg from 'pg';
 
 const { Pool } = pg;
@@ -154,6 +154,22 @@ try {
   });
   assert(registration.status === 403, `Registration returned HTTP ${registration.status}, expected 403.`);
 
+  // Recovery status is public and never exposes account existence.
+  const recoveryStatus = await api('/api/auth/recovery-status');
+  assert(recoveryStatus.status === 200, `Recovery status returned HTTP ${recoveryStatus.status}.`);
+  assert((await json(recoveryStatus)).emailEnabled === false, 'Recovery email must remain disabled without a configured sender.');
+  const forgot = await api('/api/auth/forgot-password', {
+    method: 'POST',
+    json: { email: ownerEmail }
+  });
+  assert(forgot.status === 503, `Forgot-password returned HTTP ${forgot.status}, expected 503 without a mail sender.`);
+  assert((await json(forgot)).error === 'password_reset_email_not_configured', 'Forgot-password did not report the missing email sender.');
+  const invalidReset = await api('/api/auth/reset-password', {
+    method: 'POST',
+    json: { token: 'invalid', password: randomBytes(24).toString('base64url') }
+  });
+  assert(invalidReset.status === 400, `Invalid reset request returned HTTP ${invalidReset.status}, expected 400.`);
+
   // Legacy Bearer authentication is no longer accepted.
   const bearerOnly = await api('/api/auth/me', { authorization: 'Bearer legacy.invalid.token' });
   assert(bearerOnly.status === 401, `Bearer-only request returned HTTP ${bearerOnly.status}, expected 401.`);
@@ -199,7 +215,7 @@ try {
   // Quick-admin must authenticate against the database owner role, then permit owner-only API access.
   const quickAdmin = await api('/api/auth/quick-admin', {
     method: 'POST',
-    json: { username: adminUsername, password: adminPassword, remember: true }
+    json: { username: adminUsername.toLowerCase(), password: adminPassword, remember: true }
   });
   assert(quickAdmin.status === 200, `Quick-admin login returned HTTP ${quickAdmin.status}.`);
   const adminBody = await json(quickAdmin);
@@ -210,9 +226,36 @@ try {
   assert(overview.status === 200, `Owner admin overview returned HTTP ${overview.status}.`);
   assert((await json(overview)).role === 'owner', 'Admin overview did not recognize the database owner role.');
 
+  // A valid one-time reset token changes the password and revokes all old sessions.
+  const resetToken = randomBytes(32).toString('base64url');
+  const resetTokenHash = createHash('sha256').update(resetToken).digest('hex');
+  await database.query(
+    "INSERT INTO password_reset_tokens(user_id,token_hash,expires_at) SELECT id,$2,NOW()+INTERVAL '30 minutes' FROM users WHERE email=$1",
+    [ownerEmail, resetTokenHash]
+  );
+  const replacementPassword = randomBytes(24).toString('base64url');
+  const reset = await api('/api/auth/reset-password', {
+    method: 'POST',
+    json: { token: resetToken, password: replacementPassword }
+  });
+  assert(reset.status === 200, `Valid password reset returned HTTP ${reset.status}.`);
+  assert((await json(reset)).email === ownerEmail, 'Password reset returned the wrong account.');
+  const oldAdminSession = await api('/api/auth/me', { cookie: adminCookies.cookie });
+  assert(oldAdminSession.status === 401, 'Password reset did not revoke existing sessions.');
+  const replacementLogin = await api('/api/auth/login', {
+    method: 'POST',
+    json: { email: ownerEmail, password: replacementPassword }
+  });
+  assert(replacementLogin.status === 200, 'The new password did not work after a reset.');
+  const reusedReset = await api('/api/auth/reset-password', {
+    method: 'POST',
+    json: { token: resetToken, password: randomBytes(24).toString('base64url') }
+  });
+  assert(reusedReset.status === 400, 'The password reset token was reusable.');
+
   ownerCreated = true;
   console.log('PASS: PostgreSQL-backed authentication integration tests');
-  console.log('PASS: same-origin enforcement, disabled registration, cookie-only auth, CSRF validation, account-wide logout revocation, quick-admin owner role, and owner API access.');
+  console.log('PASS: same-origin enforcement, disabled-by-default registration, cookie-only auth, CSRF validation, session revocation, quick-admin owner role, single-use password reset, and owner API access.');
 } catch (error) {
   console.error(`FAIL: ${error.message}`);
   if (stdout) console.error('Backend stdout:', stdout);
