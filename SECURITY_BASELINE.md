@@ -1,6 +1,6 @@
 # VIDO Technology — Security Baseline
 
-Review date: 14 November 2026
+Review date: 15 November 2026
 Build: VIDO Technology V38 (V35 application foundation + V37 learning library + V38 Diagram Academy)
 Current deployment: Local Windows 11 host with Docker Compose
 Public release status: Not deployed. Public self-registration is disabled.
@@ -122,3 +122,4 @@ Important: GitHub Pages can host only a static frontend. It cannot run this Expr
 - This invalidates every JWT currently issued for that account, including a remembered browser token and tokens on other devices. The endpoint reports `scope: all_sessions` so the behavior is explicit.
 - The browser requests revocation before clearing its local session. If the request fails, local sign-out still completes and the login screen displays a warning that server-side revocation could not be confirmed.
 - This does not replace the planned HttpOnly cookie migration or CSRF protection.
+- This is an authentication behavior change separate from the V38 learning-content feature. It is present on the open maintenance branch and requires explicit maintainer approval before merge; no production deployment is implied.
