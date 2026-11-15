@@ -126,3 +126,9 @@ Important: GitHub Pages can host only a static frontend. It cannot run this Expr
 - CI uses a production-mode Express smoke server without PostgreSQL. It verifies rejection of missing/foreign Origin headers, legacy Bearer tokens, missing/tampered CSRF headers, and confirms valid cookie+CSRF reaches the database availability check.
 - Pure unit tests cover HMAC binding, tamper rejection, cookie parsing and Secure/HttpOnly/SameSite/Max-Age attributes.
 - This is not a substitute for a live PostgreSQL login/logout integration test or browser tests over the real HTTPS Caddy endpoint.
+
+
+## Session startup and CSRF failure behavior
+
+- When a database-backed session service is configured, startup now fails if JWT_SECRET is shorter than 32 characters; production still requires at least 32 characters and the hardened production profile requires 48.
+- A failed CSRF validation clears the browser's session and CSRF cookies before returning HTTP 403. The browser UI must authenticate again rather than silently reusing a stale cookie pair.
