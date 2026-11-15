@@ -124,7 +124,7 @@ window.vidoTrack = function(eventName, props) {
 <div class="vidoPasswordRow" id="gatePasswordConfirmRow" hidden><input id="gatePasswordConfirm" type="password" hidden autocomplete="new-password" placeholder="Passwort bestätigen"><button type="button" class="vidoPasswordToggle" id="gatePasswordConfirmToggle" aria-label="Passwort anzeigen" title="Passwort anzeigen">👁</button></div>
 <label class="vidoRemember" id="gateRememberRow"><input id="gateRemember" type="checkbox"><span id="gateRememberLabel">Angemeldet bleiben</span></label>
 <div class="actions" id="gateLoginActions"><button class="primary" id="gateLogin">Anmelden</button><button class="secondary" id="gateAdmin">Admin Schnelllogin</button></div>
-<div class="actions" id="gateAccountActions"><button class="secondary" id="gateRegister">Konto erstellen</button><button class="secondary" id="gateForgot">Passwort vergessen?</button></div>
+<div class="actions" id="gateAccountActions"><button class="secondary" id="gateRegister">Konto erstellen</button><button class="secondary" id="gateForgot">Passwort vergessen?</button><button class="secondary" id="gateRegisterBack" hidden>Zurück</button></div>
 <div class="actions" id="gateForgotActions" hidden><button class="primary" id="gateForgotSubmit">Reset-Link senden</button><button class="secondary" id="gateBackLoginForgot">Zurück</button></div>
 <div class="actions" id="gateResetActions" hidden><button class="primary" id="gateResetSubmit">Passwort speichern</button><button class="secondary" id="gateBackLoginReset">Zurück</button></div>
 <div class="authGateMsg" id="gateMsg" aria-live="polite"></div>
@@ -807,7 +807,8 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
     $('gatePasswordConfirm').placeholder=m.confirm;
     $('gateLogin').textContent=m.login;
     $('gateAdmin').textContent=m.admin;
-    $('gateRegister').textContent=mode==='register'?m.back:m.register;
+    $('gateRegister').textContent=m.register;
+    $('gateRegisterBack').textContent=m.back; $('gateRegisterBack').hidden=mode!=='register';
     $('gateForgot').textContent=m.forgot;
     $('gateForgotSubmit').textContent=m.forgotSubmit;
     $('gateResetSubmit').textContent=m.resetSubmit;
@@ -832,7 +833,7 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
   async function logout(){let revokeFailed=false;if(authenticated){try{const r=await api('/auth/logout',{method:'POST'});if(!r.ok)revokeFailed=true;}catch{revokeFailed=true}}authenticated=false;delete engineState.token;engineState.role=null;engineState.email=null;engineState.review={};engineState.sessionEvents=[];engineState.lastRecorded=null;sessionStorage.removeItem('vidoEngineV2');document.body.classList.add('authLocked');if(authGate)authGate.hidden=false;showAdminButton(false);setLogoutVisible(false);if($('gatePassword'))$('gatePassword').value='';if($('gateMsg'))$('gateMsg').textContent='';if($('gateEmail'))$('gateEmail').value='';if($('gatePasswordConfirm'))$('gatePasswordConfirm').value='';authResetToken='';setAuthMode('login');if(revokeFailed)gateStatus(getLang()==='ar'?'تم الخروج من هذا الجهاز، لكن تعذّر إبطال الجلسات على الخادم.':getLang()==='en'?'Signed out locally, but server-side session revocation failed.':'Lokal abgemeldet, aber die serverseitige Sitzungswiderrufung ist fehlgeschlagen.');else gateStatus('');setRoute('home',false);}
   async function validateStoredSession(){try{const r=await api('/auth/me');if(!r.ok)throw new Error();const d=await r.json();unlockApp(d.user);return true}catch{authenticated=false;delete engineState.token;engineState.role=null;engineState.email=null;persist();setLogoutVisible(false);return false}}
   function describeAuthError(code,kind){
-    const ar={invalid_credentials:'بيانات الدخول غير صحيحة. تحقق من البريد وكلمة المرور.',too_many_login_attempts:'محاولات كثيرة. انتظر 15 دقيقة ثم حاول مجدداً.',owner_account_not_initialized:'حساب المسؤول غير مهيأ. تواصل مع دعم VIDO.',registration_disabled:'إنشاء الحسابات غير مفعّل حالياً.',email_already_registered:'هذا البريد مسجل مسبقاً.',password_reset_email_not_configured:'استعادة كلمة المرور بالبريد لم تُفعّل بعد. يجب إعداد خدمة البريد أولاً.',password_reset_delivery_failed:'تعذر إرسال رسالة الاستعادة. تحقق من إعداد البريد وحاول لاحقاً.',reset_link_invalid_or_expired:'رابط الاستعادة غير صالح أو انتهت صلاحيته.'};
+    code=String(code||'').replaceAll(' ','_');
     const de={invalid_credentials:'E-Mail oder Passwort ist falsch.',too_many_login_attempts:'Zu viele Versuche. Bitte 15 Minuten warten.',owner_account_not_initialized:'Das Admin-Konto ist nicht eingerichtet. Bitte VIDO-Support kontaktieren.',registration_disabled:'Die Registrierung ist derzeit deaktiviert.',email_already_registered:'Diese E-Mail-Adresse ist bereits registriert.',password_reset_email_not_configured:'Der E-Mail-Versand für die Wiederherstellung ist noch nicht eingerichtet.',password_reset_delivery_failed:'Die Wiederherstellungs-E-Mail konnte nicht gesendet werden.',reset_link_invalid_or_expired:'Der Reset-Link ist ungültig oder abgelaufen.'};
     const en={invalid_credentials:'The email or password is incorrect.',too_many_login_attempts:'Too many attempts. Please wait 15 minutes.',owner_account_not_initialized:'The administrator account is not initialized. Contact VIDO support.',registration_disabled:'Registration is currently disabled.',email_already_registered:'This email address is already registered.',password_reset_email_not_configured:'Password recovery email delivery is not configured yet.',password_reset_delivery_failed:'The reset email could not be sent.',reset_link_invalid_or_expired:'The reset link is invalid or has expired.'};
     const table=getLang()==='ar'?ar:getLang()==='en'?en:de;
@@ -852,7 +853,7 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
   }
   async function gateRegister(){
     const email=$('gateEmail').value.trim(),password=$('gatePassword').value,confirm=$('gatePasswordConfirm').value;
-    if(!/^\\S+@\\S+\\.\\S+$/.test(email)||password.length<12||password!==confirm)return gateStatus(t('auth_register_failed'));
+    if(!/^\S+@\S+\.\S+$/.test(email)||password.length<12||password!==confirm)return gateStatus(t('auth_register_failed'));
     gateStatus('');
     try{
       const r=await api('/auth/register',{method:'POST',body:JSON.stringify({email,password,remember:!!$('gateRemember')?.checked})});
@@ -875,7 +876,7 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
   }
   async function gateForgotPassword(){
     const email=$('gateEmail').value.trim();
-    if(!/^\\S+@\\S+\\.\\S+$/.test(email))return gateStatus(getLang()==='ar'?'أدخل بريدك الإلكتروني الصحيح.':getLang()==='en'?'Enter a valid email address.':'Bitte eine gültige E-Mail-Adresse eingeben.');
+    if(!/^\S+@\S+\.\S+$/.test(email))return gateStatus(getLang()==='ar'?'أدخل بريدك الإلكتروني الصحيح.':getLang()==='en'?'Enter a valid email address.':'Bitte eine gültige E-Mail-Adresse eingeben.');
     gateStatus('');
     try{
       const r=await api('/auth/forgot-password',{method:'POST',body:JSON.stringify({email})});
@@ -898,12 +899,14 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
   }
   $('gateLogin')?.addEventListener('click',gateLogin);
   $('gateAdmin')?.addEventListener('click',gateAdminLogin);
-  $('gateRegister')?.addEventListener('click',()=>authMode==='register'?setAuthMode('login'):toggleAuthRegister());
+  $('gateRegister')?.addEventListener('click',()=>authMode==='register'?gateRegister():toggleAuthRegister());
+  $('gateRegisterBack')?.addEventListener('click',()=>setAuthMode('login'));
   $('gateForgot')?.addEventListener('click',()=>setAuthMode('forgot'));
   $('gateForgotSubmit')?.addEventListener('click',gateForgotPassword);
   $('gateResetSubmit')?.addEventListener('click',gateResetPassword);
   $('gateBackLoginForgot')?.addEventListener('click',()=>setAuthMode('login'));
   $('gateBackLoginReset')?.addEventListener('click',()=>setAuthMode('login'));
+  $('langSelect')?.addEventListener('change',()=>setTimeout(applyAuthGateText,0));
   $('logoutBtn')?.addEventListener('click',logout);
   $('gatePassword')?.addEventListener('keydown',e=>{if(e.key==='Enter'){if(authMode==='register')gateRegister();else if(authMode==='reset')gateResetPassword();else if(authMode==='login')gateLogin();}});
   $('gatePasswordConfirm')?.addEventListener('keydown',e=>{if(e.key==='Enter'){if(authMode==='register')gateRegister();else if(authMode==='reset')gateResetPassword();}});
