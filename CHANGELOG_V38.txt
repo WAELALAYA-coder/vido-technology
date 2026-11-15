@@ -115,3 +115,11 @@ Final V39 verification — 15 November 2026
 - Added a database-backed startup check for the JWT/CSRF signing secret minimum and cookie clearing on CSRF validation failure.
 - CI smoke tests intentionally use no PostgreSQL or real user accounts. A real database-backed authentication test, Caddy HTTPS cookie inspection and desktop/iOS browser testing remain pre-production tasks.
 - The maintenance PR remains open and unmerged; no production deployment was performed.
+
+
+## V39 — PostgreSQL authentication integration coverage (15 November 2026)
+
+- Added a PostgreSQL-backed authentication integration test using a disposable local/CI database only. The test refuses remote database hosts and database names without a `test` or `ci` marker.
+- CI now starts a digest-pinned PostgreSQL 16 service and tests same-origin enforcement, disabled registration, cookie-only login, CSRF rejection, account-wide logout revocation, quick-admin role checks and owner API access.
+- Added a repository README with Windows/Docker local startup and study instructions.
+- Corrected the deployment guide to describe the V39 HttpOnly cookie and CSRF design rather than the retired browser Bearer-token storage.
