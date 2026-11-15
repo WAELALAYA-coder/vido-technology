@@ -17,6 +17,7 @@ Public release status: Not deployed. Public self-registration is disabled.
 - Arbitrary client-supplied X-Forwarded-For values are not trusted. Proxy trust is disabled locally. The production template configures trust for one exact IPv4 address assigned to Caddy; invalid or non-IPv4 values stop the server from starting.
 - Authenticated API requests validate the JWT, account status, and a database-backed token version. Password resets, role changes, and status changes increment the version and invalidate earlier tokens.
 - Owner bootstrap creates the owner only if the account does not already exist. It no longer overwrites an existing owner password on every restart.
+- Quick-admin login is restricted to the account configured by `OWNER_EMAIL` only while that database account still has the `owner` role. The JWT uses the verified database role; demoting the account prevents quick-admin from minting an owner token.
 - The owner cannot suspend their own account or remove their own owner role through the administration API. The API also prevents deleting the currently authenticated owner.
 - New account creation and password resets require at least 12 characters. Password hashes use bcrypt with cost 12.
 - Security headers include X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, and Cross-Origin-Resource-Policy. The Express identification header is disabled. API responses are marked no-store.
