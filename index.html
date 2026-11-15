@@ -693,10 +693,17 @@ window.vidoCore={
   const renderProgress=core.renderProgress;
   const setRoute=core.setRoute;
   const API_BASE=window.VIDO_API_BASE||'/api';
+  window.VIDO_API_CLIENT=window.VIDO_API_CLIENT||function(path,opts={},tokenOverride){
+    let token=tokenOverride;
+    if(!token){try{token=JSON.parse(sessionStorage.getItem('vidoEngineV2')||'{}').token||null;}catch{}}
+    const headers=Object.assign({'content-type':'application/json'},opts?.headers||{});
+    if(token)headers.authorization='Bearer '+token;
+    return fetch(API_BASE+path,Object.assign({},opts||{},{headers}));
+  };
   const engineState=JSON.parse(sessionStorage.getItem('vidoEngineV2')||'{}');
   engineState.review=engineState.review||{};engineState.answerStartedAt=engineState.answerStartedAt||Date.now();engineState.sessionEvents=engineState.sessionEvents||[];engineState.token=engineState.token||null;engineState.sim=engineState.sim||{devices:[],links:[],arp:{},mac:{},routes:[{network:'192.168.10.0/24',nextHop:'connected',interface:'G0/0'},{network:'0.0.0.0/0',nextHop:'192.168.10.254',interface:'G0/0'}]};
   const persist=()=>sessionStorage.setItem('vidoEngineV2',JSON.stringify(engineState));
-  const api=(path,opts={})=>fetch(API_BASE+path,{...opts,headers:{'content-type':'application/json',...(opts.headers||{}),...(engineState.token?{authorization:'Bearer '+engineState.token}:{})}});
+  const api=(path,opts={})=>window.VIDO_API_CLIENT(path,opts,engineState.token);
   const grade=(q,a)=>{const norm=s=>String(s??'').trim().toLowerCase().replace(/\s+/g,'').replace(/[−–—]/g,'-');const x=norm(a);const candidates=Array.isArray(q.answer)?q.answer:[q.answer];return candidates.some(v=>{const y=norm(v);return x===y||(y.includes('-')&&x===y.replace(/\s+/g,''));});};
   const simLog=msg=>{const el=$('simEvents');if(!el)return;const d=document.createElement('div');d.className='row';d.textContent=`${new Date().toLocaleTimeString()} · ${msg}`;el.prepend(d)};
   const dueDate=d=>new Date(Date.now()+d*86400000).toISOString();
@@ -808,12 +815,7 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
 (function(){
   function el(id){return document.getElementById(id)}
   function status(msg){const e=el('accountStatus'); if(e)e.textContent=msg}
-  function api(path,opts){
-    const st=JSON.parse(sessionStorage.getItem('vidoEngineV2')||'{}');
-    const headers=Object.assign({'content-type':'application/json'},(opts&&opts.headers)||{});
-    if(st.token) headers.authorization='Bearer '+st.token;
-    return fetch('/api'+path,Object.assign({},opts||{}, {headers}));
-  }
+  function api(path,opts){return window.VIDO_API_CLIENT(path,opts);}
   async function read(r){let d={}; try{d=await r.json()}catch{} return {r,d}}
   async function login(){
     const email=el('accountEmail')?.value.trim()||'', password=el('accountPassword')?.value||'';
@@ -856,12 +858,7 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
   function getState(){
     try{return JSON.parse(sessionStorage.getItem('vidoEngineV2')||'{}')}catch{return {}}
   }
-  function api(path,opts){
-    const st=getState();
-    const headers=Object.assign({'content-type':'application/json'},(opts&&opts.headers)||{});
-    if(st.token) headers.authorization='Bearer '+st.token;
-    return fetch('/api'+path,Object.assign({},opts||{},{headers}));
-  }
+  function api(path,opts){return window.VIDO_API_CLIENT(path,opts);}
   function status(msg){
     const e=document.getElementById('accountStatus');
     if(e)e.textContent=msg;
@@ -967,7 +964,7 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
     const existing=readJSON(sessionStorage,'vidoEngineV2'); if(existing?.token)return;
     const saved=readJSON(localStorage,REMEMBER_KEY); if(!saved?.token)return;
     try{
-      const r=await fetch('/api/auth/me',{headers:{authorization:'Bearer '+saved.token}});
+      const r=await window.VIDO_API_CLIENT('/auth/me',{},saved.token);
       if(!r.ok){clearRemembered();return}
       const d=await r.json();
       writeSession({...(existing||{}),token:saved.token,role:d.user?.role||null,email:d.user?.email||null});
