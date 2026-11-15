@@ -152,11 +152,12 @@ app.post('/api/auth/quick-admin', async (req,res)=>{
   if(!r.rowCount) return res.status(503).json({error:'owner account is not initialized'});
   const user=r.rows[0];
   if(user.status!=='active') return res.status(403).json({error:'account_suspended'});
+  if(user.role!=='owner') return res.status(403).json({error:'owner_role_required'});
   await pool.query('UPDATE users SET last_login_at=NOW(),last_ip=$2,last_user_agent=$3 WHERE id=$1',[user.id,clientIp(req),ua(req)]);
   await clearLoginFailures(req,username);
   await logSecurity({userId:user.id,email:user.email,eventType:'quick_admin_login_success',req});
   await logActivity({userId:user.id,eventType:'quick_admin_login',route:'/login',req});
-  res.json({token:token({...user,role:'owner'}),user:{...user,role:'owner'}});
+  res.json({token:token(user),user});
 });
 
 app.post('/api/auth/login', async (req,res)=>{
