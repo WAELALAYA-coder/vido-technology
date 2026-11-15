@@ -147,7 +147,7 @@ assert(backend.includes("app.get('/lessons-v37.js'"),'lesson data route missing 
 assert(backend.includes("'Content-Type':'application/javascript; charset=utf-8'"),'learning data routes must declare JavaScript content type');
 
 const sw=fs.readFileSync('service-worker.js','utf8');
-assert(sw.includes('vido-ui-20261115-v39.1-pwa-responsive'),'service worker cache version is stale');
+assert(sw.includes('vido-ui-20261115-v39.2-auth-recovery'),'service worker cache version is stale');
 const manifest=JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));
 for(const [src,size] of [['icons/vido-192.png','192x192'],['icons/vido-512.png','512x512']]){
   assert(manifest.icons.some(icon=>icon.src===src&&icon.sizes===size&&icon.type==='image/png'),'missing installable PWA icon: '+src);
