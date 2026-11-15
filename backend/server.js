@@ -22,8 +22,11 @@ function isSameOriginUnsafeRequest(req){
   }
   if(!supplied)return process.env.NODE_ENV!=='production';
   try{
-    const expected=new URL(req.protocol+'://'+req.get('host')).origin;
-    return new URL(supplied).origin===expected;
+    const forwardedProto=String(req.get('x-forwarded-proto')||'').split(',')[0].trim().toLowerCase();
+    const expectedProtocol=forwardedProto||req.protocol;
+    const parsed=new URL(supplied);
+    return parsed.host.toLowerCase()===String(req.get('host')||'').toLowerCase()
+      && parsed.protocol===expectedProtocol+':';
   }catch{return false;}
 }
 app.use('/api',(req,res,next)=>{
