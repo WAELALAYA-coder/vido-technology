@@ -29,7 +29,7 @@ assert.match(persistent[0],new RegExp('^'+SESSION_COOKIE_NAME+'='));
 assert.match(persistent[0],/; HttpOnly/);
 assert.match(persistent[0],/; Secure/);
 assert.match(persistent[0],/; SameSite=Lax/);
-assert.match(persistent[0],/; Path=\//);
+assert.ok(persistent[0].includes('; Path=/'),'session cookie must be scoped to the site root');
 assert.match(persistent[0],new RegExp('; Max-Age='+SESSION_MAX_AGE_SECONDS));
 assert.doesNotMatch(persistent[1],/; HttpOnly/,'CSRF cookie must be readable by same-origin JavaScript');
 assert.match(persistent[1],/; Secure/);
