@@ -99,6 +99,12 @@ assert(quickAdminRoute.includes("if(user.role!=='owner') return res.status(403).
 assert(quickAdminRoute.includes('token:token(user)')&&!quickAdminRoute.includes("role:'owner'"),'quick-admin must use the database-verified owner role');
 assert(backend.includes("algorithm:'HS256'"),'JWTs must be signed explicitly with HS256');
 assert(backend.includes("jwt.verify(h.slice(7),JWT_SECRET,{algorithms:['HS256']})"),'JWT verification must reject algorithms other than HS256');
+assert(html.includes('window.VIDO_API_CLIENT=window.VIDO_API_CLIENT||function(path,opts={},tokenOverride)'),'central API client missing');
+assert(html.includes('const api=(path,opts={})=>window.VIDO_API_CLIENT(path,opts,engineState.token)'),'main application must use central API client');
+assert.equal((html.match(/return window\.VIDO_API_CLIENT\(path,opts\)/g)||[]).length,2,'account and button helpers must delegate to central API client');
+assert(html.includes("window.VIDO_API_CLIENT('/auth/me',{},saved.token)"),'remember-me session validation must use central API client');
+assert(!html.includes("return fetch('/api'+path"),'legacy independent API fetch wrapper remains');
+
 const tutorStart=backend.indexOf("app.post('/api/tutor'");
 const tutorRoute=backend.slice(tutorStart);
 assert(tutorStart>=0&&!tutorRoute.includes('detail:data'),'AI provider error responses must not expose raw upstream details');
