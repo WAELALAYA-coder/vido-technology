@@ -99,6 +99,9 @@ assert(quickAdminRoute.includes("if(user.role!=='owner') return res.status(403).
 assert(quickAdminRoute.includes('token:token(user)')&&!quickAdminRoute.includes("role:'owner'"),'quick-admin must use the database-verified owner role');
 assert(backend.includes("algorithm:'HS256'"),'JWTs must be signed explicitly with HS256');
 assert(backend.includes("jwt.verify(h.slice(7),JWT_SECRET,{algorithms:['HS256']})"),'JWT verification must reject algorithms other than HS256');
+const tutorStart=backend.indexOf("app.post('/api/tutor'");
+const tutorRoute=backend.slice(tutorStart);
+assert(tutorStart>=0&&!tutorRoute.includes('detail:data'),'AI provider error responses must not expose raw upstream details');
 assert(backend.includes("app.get('/questions-v37.js'"),'question data route missing from Express');
 assert(backend.includes("app.get('/lessons-v37.js'"),'lesson data route missing from Express');
 assert(backend.includes("'Content-Type':'application/javascript; charset=utf-8'"),'learning data routes must declare JavaScript content type');
