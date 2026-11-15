@@ -120,10 +120,13 @@ window.vidoTrack = function(eventName, props) {
 <div class="authGateTitle" id="authGateTitle">Anmelden</div>
 <div class="authGateSub" id="authGateSub">Bitte anmelden, um die IT Learning Platform zu öffnen.</div>
 <input id="gateEmail" type="email" autocomplete="username" placeholder="E-Mail / Admin">
-<div class="vidoPasswordRow"><input id="gatePassword" type="password" autocomplete="current-password" placeholder="Passwort"><button type="button" class="vidoPasswordToggle" id="gatePasswordToggle" aria-label="Passwort anzeigen" title="Passwort anzeigen">👁</button></div>
+<div class="vidoPasswordRow" id="gatePasswordRow"><input id="gatePassword" type="password" autocomplete="current-password" placeholder="Passwort"><button type="button" class="vidoPasswordToggle" id="gatePasswordToggle" aria-label="Passwort anzeigen" title="Passwort anzeigen">👁</button></div>
 <div class="vidoPasswordRow" id="gatePasswordConfirmRow" hidden><input id="gatePasswordConfirm" type="password" hidden autocomplete="new-password" placeholder="Passwort bestätigen"><button type="button" class="vidoPasswordToggle" id="gatePasswordConfirmToggle" aria-label="Passwort anzeigen" title="Passwort anzeigen">👁</button></div>
-<label class="vidoRemember"><input id="gateRemember" type="checkbox"><span id="gateRememberLabel">Angemeldet bleiben</span></label><div class="actions"><button class="primary" id="gateLogin">Anmelden</button><button class="secondary" id="gateAdmin">Admin Schnelllogin</button></div>
-<div class="actions"><button class="secondary" id="gateRegister" hidden>Konto erstellen</button></div>
+<label class="vidoRemember" id="gateRememberRow"><input id="gateRemember" type="checkbox"><span id="gateRememberLabel">Angemeldet bleiben</span></label>
+<div class="actions" id="gateLoginActions"><button class="primary" id="gateLogin">Anmelden</button><button class="secondary" id="gateAdmin">Admin Schnelllogin</button></div>
+<div class="actions" id="gateAccountActions"><button class="secondary" id="gateRegister">Konto erstellen</button><button class="secondary" id="gateForgot">Passwort vergessen?</button></div>
+<div class="actions" id="gateForgotActions" hidden><button class="primary" id="gateForgotSubmit">Reset-Link senden</button><button class="secondary" id="gateBackLoginForgot">Zurück</button></div>
+<div class="actions" id="gateResetActions" hidden><button class="primary" id="gateResetSubmit">Passwort speichern</button><button class="secondary" id="gateBackLoginReset">Zurück</button></div>
 <div class="authGateMsg" id="gateMsg" aria-live="polite"></div>
 <div class="authGateHint" id="gateHint">Der Admin-Schnelllogin verwendet serverseitige Zugangsdaten aus der .env-Konfiguration.</div>
 </div></div><div class="mobileOverlay" hidden="hidden" id="mobileOverlay"></div>
@@ -693,9 +696,9 @@ window.vidoCore={
 (function(){
   const getLang=()=>{const v=localStorage.getItem('vidoLang');return v==='ar'||v==='en'||v==='de'?v:'de'};
   const AUTH_T={
-    de:{auth_title:'Anmelden',auth_sub:'Bitte anmelden, um die IT Learning Platform zu öffnen.',auth_email:'E-Mail / Admin',auth_password:'Passwort',auth_login:'Anmelden',auth_admin:'Admin Schnelllogin',auth_hint:'Der Admin-Schnelllogin verwendet serverseitige Zugangsdaten aus der .env-Konfiguration.',auth_register:'Konto erstellen',auth_register_confirm:'Passwort bestätigen',auth_register_mode:'Neues Konto erstellen',auth_back_login:'Zurück zur Anmeldung',auth_register_failed:'Registrierung fehlgeschlagen.',auth_register_success:'Konto erstellt und angemeldet.',auth_failed:'Anmeldung fehlgeschlagen.',auth_admin_failed:'Admin-Anmeldung fehlgeschlagen.'},
-    en:{auth_title:'Sign in',auth_sub:'Sign in to open the IT Learning Platform.',auth_email:'Email / Admin',auth_password:'Password',auth_login:'Sign in',auth_admin:'Quick Admin Login',auth_hint:'Quick Admin Login uses server-side credentials from the .env configuration.',auth_register:'Create account',auth_register_confirm:'Confirm password',auth_register_mode:'Create a new account',auth_back_login:'Back to sign in',auth_register_failed:'Registration failed.',auth_register_success:'Account created and signed in.',auth_failed:'Sign-in failed.',auth_admin_failed:'Admin sign-in failed.'},
-    ar:{auth_title:'تسجيل الدخول',auth_sub:'سجّل الدخول لفتح منصة VIDO التعليمية.',auth_email:'البريد الإلكتروني / Admin',auth_password:'كلمة المرور',auth_login:'تسجيل الدخول',auth_admin:'دخول Admin سريع',auth_hint:'دخول Admin السريع يستخدم بيانات دخول محفوظة على الخادم داخل إعدادات .env.',auth_register:'إنشاء حساب',auth_register_confirm:'تأكيد كلمة المرور',auth_register_mode:'إنشاء حساب جديد',auth_back_login:'العودة لتسجيل الدخول',auth_register_failed:'فشل إنشاء الحساب.',auth_register_success:'تم إنشاء الحساب وتسجيل الدخول.',auth_failed:'فشل تسجيل الدخول.',auth_admin_failed:'فشل تسجيل دخول Admin.'}
+    de:{auth_title:'Anmelden',auth_sub:'Bitte anmelden, um die IT Learning Platform zu öffnen.',auth_email:'E-Mail / Admin',auth_password:'Passwort',auth_login:'Anmelden',auth_admin:'Admin Schnelllogin',auth_forgot:'Passwort vergessen?',auth_forgot_submit:'Reset-Link senden',auth_reset_title:'Neues Passwort festlegen',auth_reset_submit:'Passwort speichern',auth_back:'Zurück',auth_hint:'Der Admin-Schnelllogin verwendet serverseitige Zugangsdaten aus der .env-Konfiguration.',auth_register:'Konto erstellen',auth_register_confirm:'Passwort bestätigen',auth_register_mode:'Neues Konto erstellen',auth_back_login:'Zurück zur Anmeldung',auth_register_failed:'Registrierung fehlgeschlagen.',auth_register_success:'Konto erstellt und angemeldet.',auth_failed:'Anmeldung fehlgeschlagen.',auth_admin_failed:'Admin-Anmeldung fehlgeschlagen.'},
+    en:{auth_title:'Sign in',auth_sub:'Sign in to open the IT Learning Platform.',auth_email:'Email / Admin',auth_password:'Password',auth_login:'Sign in',auth_admin:'Quick Admin Login',auth_forgot:'Forgot password?',auth_forgot_submit:'Send reset link',auth_reset_title:'Set a new password',auth_reset_submit:'Save password',auth_back:'Back',auth_hint:'Quick Admin Login uses server-side credentials from the .env configuration.',auth_register:'Create account',auth_register_confirm:'Confirm password',auth_register_mode:'Create a new account',auth_back_login:'Back to sign in',auth_register_failed:'Registration failed.',auth_register_success:'Account created and signed in.',auth_failed:'Sign-in failed.',auth_admin_failed:'Admin sign-in failed.'},
+    ar:{auth_title:'تسجيل الدخول',auth_sub:'سجّل الدخول لفتح منصة VIDO التعليمية.',auth_email:'البريد الإلكتروني / Admin',auth_password:'كلمة المرور',auth_login:'تسجيل الدخول',auth_admin:'دخول Admin سريع',auth_forgot:'نسيت كلمة المرور؟',auth_forgot_submit:'إرسال رابط الاستعادة',auth_reset_title:'تعيين كلمة مرور جديدة',auth_reset_submit:'حفظ كلمة المرور',auth_back:'رجوع',auth_hint:'دخول Admin السريع يستخدم بيانات دخول محفوظة على الخادم داخل إعدادات .env.',auth_register:'إنشاء حساب',auth_register_confirm:'تأكيد كلمة المرور',auth_register_mode:'إنشاء حساب جديد',auth_back_login:'العودة لتسجيل الدخول',auth_register_failed:'فشل إنشاء الحساب.',auth_register_success:'تم إنشاء الحساب وتسجيل الدخول.',auth_failed:'فشل تسجيل الدخول.',auth_admin_failed:'فشل تسجيل دخول Admin.'}
   };
   const t=k=>AUTH_T[getLang()]?.[k]||AUTH_T.de[k]||k;
   const core=window.vidoCore;
@@ -790,18 +793,124 @@ if($('cliOut')&&$('cliOut').textContent.includes('Type: show ip interface brief'
 if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
 
   const authGate=$('authGate');
-  let authRegisterMode=false;
+  let authMode='login';
+  let authResetToken='';
   function gateStatus(msg){if($('gateMsg'))$('gateMsg').textContent=msg||''}
-  function applyAuthGateText(){if(!$('authGate'))return;const m={title:t('auth_title'),sub:t('auth_sub'),email:t('auth_email'),password:t('auth_password'),login:t('auth_login'),admin:t('auth_admin'),hint:t('auth_hint'),register:t('auth_register'),registerMode:t('auth_register_mode'),confirm:t('auth_register_confirm'),back:t('auth_back_login')};$('authGateTitle').textContent=authRegisterMode?m.registerMode:m.title;$('authGateSub').textContent=authRegisterMode?m.registerMode:m.sub;$('gateEmail').placeholder=m.email;$('gatePassword').placeholder=m.password;$('gatePasswordConfirm').placeholder=m.confirm;$('gateLogin').textContent=m.login;$('gateAdmin').textContent=m.admin;$('gateRegister').textContent=authRegisterMode?m.back:m.register;$('gateHint').textContent=m.hint}
+  function applyAuthGateText(){
+    if(!$('authGate'))return;
+    const m={title:t('auth_title'),sub:t('auth_sub'),email:t('auth_email'),password:t('auth_password'),login:t('auth_login'),admin:t('auth_admin'),hint:t('auth_hint'),register:t('auth_register'),registerMode:t('auth_register_mode'),confirm:t('auth_register_confirm'),forgot:t('auth_forgot'),forgotSubmit:t('auth_forgot_submit'),resetTitle:t('auth_reset_title'),resetSubmit:t('auth_reset_submit'),back:t('auth_back')};
+    const mode=authMode;
+    $('authGateTitle').textContent=mode==='register'?m.registerMode:mode==='forgot'?(getLang()==='ar'?'استعادة كلمة المرور':getLang()==='en'?'Password recovery':'Passwort vergessen'):mode==='reset'?m.resetTitle:m.title;
+    $('authGateSub').textContent=mode==='register'?m.registerMode:mode==='forgot'?(getLang()==='ar'?'أدخل بريدك الإلكتروني لإرسال رابط استعادة آمن.':getLang()==='en'?'Enter your email to receive a secure reset link.':'Gib deine E-Mail-Adresse ein, um einen sicheren Reset-Link zu erhalten.'):mode==='reset'?(getLang()==='ar'?'أدخل كلمة مرور جديدة (12 حرفاً على الأقل).':getLang()==='en'?'Enter a new password (at least 12 characters).':'Gib ein neues Passwort ein (mindestens 12 Zeichen).'):m.sub;
+    $('gateEmail').placeholder=m.email;
+    $('gatePassword').placeholder=mode==='reset'?(getLang()==='ar'?'كلمة المرور الجديدة':getLang()==='en'?'New password':'Neues Passwort'):m.password;
+    $('gatePasswordConfirm').placeholder=m.confirm;
+    $('gateLogin').textContent=m.login;
+    $('gateAdmin').textContent=m.admin;
+    $('gateRegister').textContent=mode==='register'?m.back:m.register;
+    $('gateForgot').textContent=m.forgot;
+    $('gateForgotSubmit').textContent=m.forgotSubmit;
+    $('gateResetSubmit').textContent=m.resetSubmit;
+    $('gateBackLoginForgot').textContent=m.back;
+    $('gateBackLoginReset').textContent=m.back;
+    $('gateEmail').hidden=mode==='reset';
+    $('gatePasswordRow').hidden=mode==='forgot';
+    $('gatePasswordConfirmRow').hidden=!(mode==='register'||mode==='reset');
+    $('gatePasswordConfirm').hidden=!(mode==='register'||mode==='reset');
+    $('gateRememberRow').hidden=mode==='forgot'||mode==='reset';
+    $('gateLoginActions').hidden=mode!=='login';
+    $('gateAccountActions').hidden=mode==='forgot'||mode==='reset';
+    $('gateForgot').hidden=mode!=='login';
+    $('gateForgotActions').hidden=mode!=='forgot';
+    $('gateResetActions').hidden=mode!=='reset';
+    $('gateHint').hidden=mode==='forgot'||mode==='reset'||mode==='register';
+    $('gatePassword').autocomplete=mode==='login'?'current-password':'new-password';
+  }
+  function setAuthMode(mode){authMode=mode;gateStatus('');applyAuthGateText();}
   function setLogoutVisible(show){const b=$('logoutBtn');if(b)b.classList.toggle('visible',!!show)}
   function unlockApp(user){authenticated=true;delete engineState.token;engineState.role=user?.role||null;engineState.email=user?.email||null;persist();document.body.classList.remove('authLocked');if(authGate)authGate.hidden=true;setLogoutVisible(true);checkAdminAccess();}
-  async function logout(){let revokeFailed=false;if(authenticated){try{const r=await api('/auth/logout',{method:'POST'});if(!r.ok)revokeFailed=true;}catch{revokeFailed=true}}authenticated=false;delete engineState.token;engineState.role=null;engineState.email=null;engineState.review={};engineState.sessionEvents=[];engineState.lastRecorded=null;sessionStorage.removeItem('vidoEngineV2');document.body.classList.add('authLocked');if(authGate)authGate.hidden=false;showAdminButton(false);setLogoutVisible(false);if($('gatePassword'))$('gatePassword').value='';if($('gateMsg'))$('gateMsg').textContent='';if($('gateEmail'))$('gateEmail').value='';if($('gatePasswordConfirm')){$('gatePasswordConfirm').value='';$('gatePasswordConfirm').hidden=true;}if($('gatePasswordConfirmRow'))$('gatePasswordConfirmRow').hidden=true;authRegisterMode=false;applyAuthGateText();if(revokeFailed)gateStatus(getLang()==='ar'?'تم الخروج من هذا الجهاز، لكن تعذّر إبطال الجلسات على الخادم.':getLang()==='en'?'Signed out locally, but server-side session revocation failed.':'Lokal abgemeldet, aber die serverseitige Sitzungswiderrufung ist fehlgeschlagen.');else gateStatus('');setRoute('home',false);}
+  async function logout(){let revokeFailed=false;if(authenticated){try{const r=await api('/auth/logout',{method:'POST'});if(!r.ok)revokeFailed=true;}catch{revokeFailed=true}}authenticated=false;delete engineState.token;engineState.role=null;engineState.email=null;engineState.review={};engineState.sessionEvents=[];engineState.lastRecorded=null;sessionStorage.removeItem('vidoEngineV2');document.body.classList.add('authLocked');if(authGate)authGate.hidden=false;showAdminButton(false);setLogoutVisible(false);if($('gatePassword'))$('gatePassword').value='';if($('gateMsg'))$('gateMsg').textContent='';if($('gateEmail'))$('gateEmail').value='';if($('gatePasswordConfirm'))$('gatePasswordConfirm').value='';authResetToken='';setAuthMode('login');if(revokeFailed)gateStatus(getLang()==='ar'?'تم الخروج من هذا الجهاز، لكن تعذّر إبطال الجلسات على الخادم.':getLang()==='en'?'Signed out locally, but server-side session revocation failed.':'Lokal abgemeldet, aber die serverseitige Sitzungswiderrufung ist fehlgeschlagen.');else gateStatus('');setRoute('home',false);}
   async function validateStoredSession(){try{const r=await api('/auth/me');if(!r.ok)throw new Error();const d=await r.json();unlockApp(d.user);return true}catch{authenticated=false;delete engineState.token;engineState.role=null;engineState.email=null;persist();setLogoutVisible(false);return false}}
-  async function gateLogin(){const email=$('gateEmail').value.trim(),password=$('gatePassword').value;if(!email||!password)return gateStatus(t('auth_failed'));gateStatus('');try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password,remember:!!$('gateRemember')?.checked})});const d=await r.json();if(!r.ok)throw new Error(d.error||'login');engineState.role=d.user?.role||null;engineState.email=d.user?.email||email;unlockApp(d.user);accountStatus(getLang()==='ar'?'تم تسجيل الدخول.':getLang()==='en'?'Signed in.':'Angemeldet.');sync()}catch(e){gateStatus(t('auth_failed'))}}
-  async function gateRegister(){const email=$('gateEmail').value.trim(),password=$('gatePassword').value,confirm=$('gatePasswordConfirm').value;if(!/^\S+@\S+\.\S+$/.test(email)||password.length<12||password!==confirm)return gateStatus(t('auth_register_failed'));gateStatus('');try{const r=await api('/auth/register',{method:'POST',body:JSON.stringify({email,password,remember:!!$('gateRemember')?.checked})});const d=await r.json();if(!r.ok)throw new Error(d.error||'register');engineState.role=d.user?.role||'user';engineState.email=d.user?.email||email;unlockApp(d.user);accountStatus(t('auth_register_success'));sync()}catch(e){gateStatus(e.message==='email already registered'?(getLang()==='ar'?'البريد الإلكتروني مستخدم مسبقًا.':getLang()==='en'?'Email is already registered.':'E-Mail ist bereits registriert.'):t('auth_register_failed'))}}
-  function toggleAuthRegister(){authRegisterMode=!authRegisterMode;const confirmInput=$('gatePasswordConfirm'),confirmRow=$('gatePasswordConfirmRow');if(confirmInput)confirmInput.hidden=!authRegisterMode;if(confirmRow)confirmRow.hidden=!authRegisterMode;$('gateAdmin').hidden=authRegisterMode;$('gateLogin').hidden=authRegisterMode;$('gateRegister').textContent=authRegisterMode?t('auth_back_login'):t('auth_register');if(authRegisterMode){$('authGateTitle').textContent=t('auth_register_mode');$('authGateSub').textContent=t('auth_register_mode')}else{applyAuthGateText()}gateStatus('')}
-  async function gateAdminLogin(){const password=$('gatePassword').value;if(!password)return gateStatus(t('auth_admin_failed'));gateStatus('');try{const r=await api('/auth/quick-admin',{method:'POST',body:JSON.stringify({username:($('gateEmail').value.trim()||'Admin'),password,remember:!!$('gateRemember')?.checked})});const d=await r.json();if(!r.ok)throw new Error(d.error||'admin');engineState.role='owner';engineState.email=d.user?.email||'admin';unlockApp(d.user);accountStatus(getLang()==='ar'?'تم تسجيل دخول Admin.':getLang()==='en'?'Admin signed in.':'Admin angemeldet.');sync()}catch(e){gateStatus(t('auth_admin_failed'))}}
-  $('gateLogin')?.addEventListener('click',gateLogin);$('gateAdmin')?.addEventListener('click',gateAdminLogin);$('gateRegister')?.addEventListener('click',()=>authRegisterMode?gateRegister():toggleAuthRegister());$('logoutBtn')?.addEventListener('click',logout);$('gatePassword')?.addEventListener('keydown',e=>{if(e.key==='Enter')authRegisterMode?gateRegister():gateLogin()});$('gatePasswordConfirm')?.addEventListener('keydown',e=>{if(e.key==='Enter')gateRegister()});
+  function describeAuthError(code,kind){
+    const ar={invalid_credentials:'بيانات الدخول غير صحيحة. تحقق من البريد وكلمة المرور.',too_many_login_attempts:'محاولات كثيرة. انتظر 15 دقيقة ثم حاول مجدداً.',owner_account_not_initialized:'حساب المسؤول غير مهيأ. تواصل مع دعم VIDO.',registration_disabled:'إنشاء الحسابات غير مفعّل حالياً.',email_already_registered:'هذا البريد مسجل مسبقاً.',password_reset_email_not_configured:'استعادة كلمة المرور بالبريد لم تُفعّل بعد. يجب إعداد خدمة البريد أولاً.',password_reset_delivery_failed:'تعذر إرسال رسالة الاستعادة. تحقق من إعداد البريد وحاول لاحقاً.',reset_link_invalid_or_expired:'رابط الاستعادة غير صالح أو انتهت صلاحيته.'};
+    const de={invalid_credentials:'E-Mail oder Passwort ist falsch.',too_many_login_attempts:'Zu viele Versuche. Bitte 15 Minuten warten.',owner_account_not_initialized:'Das Admin-Konto ist nicht eingerichtet. Bitte VIDO-Support kontaktieren.',registration_disabled:'Die Registrierung ist derzeit deaktiviert.',email_already_registered:'Diese E-Mail-Adresse ist bereits registriert.',password_reset_email_not_configured:'Der E-Mail-Versand für die Wiederherstellung ist noch nicht eingerichtet.',password_reset_delivery_failed:'Die Wiederherstellungs-E-Mail konnte nicht gesendet werden.',reset_link_invalid_or_expired:'Der Reset-Link ist ungültig oder abgelaufen.'};
+    const en={invalid_credentials:'The email or password is incorrect.',too_many_login_attempts:'Too many attempts. Please wait 15 minutes.',owner_account_not_initialized:'The administrator account is not initialized. Contact VIDO support.',registration_disabled:'Registration is currently disabled.',email_already_registered:'This email address is already registered.',password_reset_email_not_configured:'Password recovery email delivery is not configured yet.',password_reset_delivery_failed:'The reset email could not be sent.',reset_link_invalid_or_expired:'The reset link is invalid or has expired.'};
+    const table=getLang()==='ar'?ar:getLang()==='en'?en:de;
+    return table[code]|| (kind==='admin'?t('auth_admin_failed'):kind==='register'?t('auth_register_failed'):t('auth_failed'));
+  }
+  async function gateLogin(){
+    const email=$('gateEmail').value.trim(),password=$('gatePassword').value;
+    if(!email||!password)return gateStatus(t('auth_failed'));
+    gateStatus('');
+    try{
+      const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password,remember:!!$('gateRemember')?.checked})});
+      const d=await r.json();
+      if(!r.ok)throw new Error(d.error||'login_failed');
+      engineState.role=d.user?.role||null;engineState.email=d.user?.email||email;unlockApp(d.user);
+      accountStatus(getLang()==='ar'?'تم تسجيل الدخول.':getLang()==='en'?'Signed in.':'Angemeldet.');sync();
+    }catch(e){gateStatus(describeAuthError(e.message,'login'))}
+  }
+  async function gateRegister(){
+    const email=$('gateEmail').value.trim(),password=$('gatePassword').value,confirm=$('gatePasswordConfirm').value;
+    if(!/^\\S+@\\S+\\.\\S+$/.test(email)||password.length<12||password!==confirm)return gateStatus(t('auth_register_failed'));
+    gateStatus('');
+    try{
+      const r=await api('/auth/register',{method:'POST',body:JSON.stringify({email,password,remember:!!$('gateRemember')?.checked})});
+      const d=await r.json();if(!r.ok)throw new Error(d.error||'register_failed');
+      engineState.role=d.user?.role||'user';engineState.email=d.user?.email||email;unlockApp(d.user);
+      accountStatus(t('auth_register_success'));sync();
+    }catch(e){gateStatus(describeAuthError(e.message,'register'))}
+  }
+  function toggleAuthRegister(){if(authMode==='register'){setAuthMode('login');return;}if($('gatePassword'))$('gatePassword').value='';if($('gatePasswordConfirm'))$('gatePasswordConfirm').value='';setAuthMode('register');}
+  async function gateAdminLogin(){
+    const password=$('gatePassword').value;
+    if(!password)return gateStatus(t('auth_admin_failed'));
+    gateStatus('');
+    try{
+      const r=await api('/auth/quick-admin',{method:'POST',body:JSON.stringify({username:($('gateEmail').value.trim()||'Admin'),password,remember:!!$('gateRemember')?.checked})});
+      const d=await r.json();if(!r.ok)throw new Error(d.error||'admin_login_failed');
+      engineState.role=d.user?.role||'owner';engineState.email=d.user?.email||'admin';unlockApp(d.user);
+      accountStatus(getLang()==='ar'?'تم تسجيل دخول Admin.':getLang()==='en'?'Admin signed in.':'Admin angemeldet.');sync();
+    }catch(e){gateStatus(describeAuthError(e.message,'admin'))}
+  }
+  async function gateForgotPassword(){
+    const email=$('gateEmail').value.trim();
+    if(!/^\\S+@\\S+\\.\\S+$/.test(email))return gateStatus(getLang()==='ar'?'أدخل بريدك الإلكتروني الصحيح.':getLang()==='en'?'Enter a valid email address.':'Bitte eine gültige E-Mail-Adresse eingeben.');
+    gateStatus('');
+    try{
+      const r=await api('/auth/forgot-password',{method:'POST',body:JSON.stringify({email})});
+      const d=await r.json();if(!r.ok)throw new Error(d.error||'password_reset_unavailable');
+      gateStatus(getLang()==='ar'?'إذا كان الحساب موجوداً، فسيصلك رابط استعادة على البريد الإلكتروني.':getLang()==='en'?'If the account exists, a reset link will be sent to its email address.':'Falls das Konto existiert, wird ein Reset-Link per E-Mail gesendet.');
+    }catch(e){gateStatus(describeAuthError(e.message,'forgot'))}
+  }
+  async function gateResetPassword(){
+    const password=$('gatePassword').value,confirm=$('gatePasswordConfirm').value;
+    if(password.length<12||password!==confirm)return gateStatus(getLang()==='ar'?'كلمة المرور يجب أن تكون 12 حرفاً على الأقل وأن تتطابق في الحقلين.':getLang()==='en'?'Use at least 12 characters and make both passwords match.':'Mindestens 12 Zeichen verwenden und beide Passwörter gleich eingeben.');
+    gateStatus('');
+    try{
+      const r=await api('/auth/reset-password',{method:'POST',body:JSON.stringify({token:authResetToken,password})});
+      const d=await r.json();if(!r.ok)throw new Error(d.error||'reset_link_invalid_or_expired');
+      authResetToken='';$('gateEmail').value=d.email||'';$('gatePassword').value='';$('gatePasswordConfirm').value='';
+      try{history.replaceState({},'',location.pathname+location.hash)}catch{}
+      setAuthMode('login');
+      gateStatus(getLang()==='ar'?'تم تغيير كلمة المرور. سجّل الدخول الآن.':getLang()==='en'?'Password changed. You can now sign in.':'Passwort geändert. Du kannst dich jetzt anmelden.');
+    }catch(e){gateStatus(describeAuthError(e.message,'reset'))}
+  }
+  $('gateLogin')?.addEventListener('click',gateLogin);
+  $('gateAdmin')?.addEventListener('click',gateAdminLogin);
+  $('gateRegister')?.addEventListener('click',()=>authMode==='register'?setAuthMode('login'):toggleAuthRegister());
+  $('gateForgot')?.addEventListener('click',()=>setAuthMode('forgot'));
+  $('gateForgotSubmit')?.addEventListener('click',gateForgotPassword);
+  $('gateResetSubmit')?.addEventListener('click',gateResetPassword);
+  $('gateBackLoginForgot')?.addEventListener('click',()=>setAuthMode('login'));
+  $('gateBackLoginReset')?.addEventListener('click',()=>setAuthMode('login'));
+  $('logoutBtn')?.addEventListener('click',logout);
+  $('gatePassword')?.addEventListener('keydown',e=>{if(e.key==='Enter'){if(authMode==='register')gateRegister();else if(authMode==='reset')gateResetPassword();else if(authMode==='login')gateLogin();}});
+  $('gatePasswordConfirm')?.addEventListener('keydown',e=>{if(e.key==='Enter'){if(authMode==='register')gateRegister();else if(authMode==='reset')gateResetPassword();}});
+  if(window.location.search.includes('reset=')){
+    try{authResetToken=new URLSearchParams(window.location.search).get('reset')||'';}catch{}
+    if(authResetToken)setAuthMode('reset');
+  }else{applyAuthGateText();}
   function accountStatus(msg){if($('accountStatus'))$('accountStatus').textContent=msg}
   async function register(){const email=$('accountEmail').value.trim(),password=$('accountPassword').value;if(!/^\S+@\S+\.\S+$/.test(email)||password.length<12)return accountStatus(getLang()==='ar'?'أدخل بريدًا صحيحًا وكلمة مرور من 8 أحرف على الأقل.':getLang()==='en'?'Enter a valid email and a password of at least 12 characters.':'Gültige E-Mail und Passwort mit mindestens 8 Zeichen eingeben.');try{const r=await api('/auth/register',{method:'POST',body:JSON.stringify({email,password})});const d=await r.json();if(!r.ok)return accountStatus(d.error||'Registration failed');delete engineState.token;engineState.role=d.user?.role||null;engineState.email=d.user?.email||email;persist();location.reload();return}catch{accountStatus(getLang()==='ar'?'تعذر الاتصال بالخادم.':getLang()==='en'?'Could not connect to the backend.':'Verbindung zum Backend fehlgeschlagen.')}}
   async function login(){const email=$('accountEmail').value.trim(),password=$('accountPassword').value;if(!email||!password)return accountStatus(getLang()==='ar'?'أدخل البريد الإلكتروني وكلمة المرور.':getLang()==='en'?'Enter email and password.':'E-Mail und Passwort eingeben.');try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});const d=await r.json();if(!r.ok)return accountStatus(d.error||'Login failed');delete engineState.token;engineState.role=d.user?.role||null;engineState.email=d.user?.email||email;persist();location.reload();return}catch{accountStatus(getLang()==='ar'?'تعذر الاتصال بالخادم.':getLang()==='en'?'Could not connect to the backend.':'Verbindung zum Backend fehlgeschlagen.')}}
