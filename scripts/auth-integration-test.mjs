@@ -6,6 +6,12 @@ import pg from 'pg';
 const { Pool } = pg;
 const databaseUrl = process.env.VIDO_TEST_DATABASE_URL;
 if (!databaseUrl) throw new Error('VIDO_TEST_DATABASE_URL is required for the isolated PostgreSQL integration test');
+const parsedDatabaseUrl = new URL(databaseUrl);
+const databaseName = decodeURIComponent(parsedDatabaseUrl.pathname.replace(/^\\//, ''));
+if (!['127.0.0.1','localhost','::1'].includes(parsedDatabaseUrl.hostname) ||
+    !/(?:^|[_-])(?:test|ci)(?:$|[_-])/i.test(databaseName)) {
+  throw new Error('Refusing to run: integration tests require a local database whose name contains test or ci.');
+}
 
 const port = 37000 + (process.pid % 10000);
 const base = 'http://127.0.0.1:' + port;
