@@ -95,5 +95,5 @@ Maintenance authentication migration — V39 — 15 November 2026
 - Added production Secure/SameSite cookie attributes, same-origin Origin/Referer checks, browser-session cookies by default and seven-day persistence only when the user selects “Keep me signed in”.
 - Removed legacy remembered JWT storage and added client-side cleanup of old sessionStorage/localStorage tokens. Existing users must sign in again after this breaking change.
 - Logout clears both cookies and increments `token_version`, revoking all account sessions across devices.
-- Added isolated tests for CSRF binding/tampering and cookie parsing/flags/lifetime/clearing. CI currently caught a stale Diagram Academy cache-version assertion; it has been updated to the V39 cache key and must be rerun.
+- Added isolated tests for CSRF binding/tampering and cookie parsing/flags/lifetime/clearing, plus HTTP smoke checks for cookie-only authentication, legacy Bearer rejection and same-origin mutation guards. CI caught a stale Diagram Academy cache-version assertion; it has been updated to the V39 cache key and must be rerun.
 - This migration is limited to the maintenance branch. It has not been merged or deployed. A real PostgreSQL-backed authentication integration test and browser-level test remain necessary before production rollout.
