@@ -103,3 +103,8 @@ Authentication migration verification — 15 November 2026
 - Extended HTTP smoke tests to reject production mutating requests without Origin/Referer, reject legacy Bearer authentication, and validate the CSRF cookie/header pair for cookie-authenticated mutations.
 - Smoke tests use a short-lived CI-only JWT and intentionally no PostgreSQL; a valid cookie+CSRF request is expected to pass authentication checks and stop at the database configuration check with HTTP 503.
 - Added a regression check that browser account login handlers no longer depend on, or return to, JavaScript-readable JWT storage.
+
+
+Cookie session hardening — 15 November 2026
+- Added a startup guard requiring a 32-character minimum JWT/CSRF signing secret whenever DATABASE_URL is configured.
+- Failed CSRF checks now clear the browser session and CSRF cookies before returning HTTP 403, preventing reuse of a stale cookie pair.
