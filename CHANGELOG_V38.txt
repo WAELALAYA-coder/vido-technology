@@ -81,3 +81,9 @@ Maintenance session security follow-up — 15 November 2026
 - Updated the browser logout action to request server-side revocation before clearing local session state; it still signs out locally if the backend is unavailable and displays a warning.
 - Documented that this is account-wide logout (all sessions/devices), not single-device revocation.
 - Added regression assertions for the logout endpoint and browser integration.
+
+
+Maintenance scope review — 15 November 2026
+- Clarified that the V38 learning-content update is separate from the account-wide logout/token-revocation change now present on the open maintenance branch.
+- Flagged the logout change as an authentication behavior change requiring explicit maintainer approval before merge.
+- This documentation update does not alter authentication code, database schema/data, secrets, production configuration, or deployment state.
