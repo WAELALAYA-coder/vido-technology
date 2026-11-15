@@ -91,6 +91,12 @@ assert(html.includes('Adaptive Learning')||html.includes('Adaptives Lernen'),'ad
 assert(html.includes('Spaced Repetition'),'spaced repetition missing');
 
 const backend=fs.readFileSync('backend/server.js','utf8');
+const quickAdminStart=backend.indexOf("app.post('/api/auth/quick-admin'");
+const quickAdminEnd=backend.indexOf("app.post('/api/auth/login'",quickAdminStart);
+assert(quickAdminStart>=0&&quickAdminEnd>quickAdminStart,'quick-admin route boundaries missing');
+const quickAdminRoute=backend.slice(quickAdminStart,quickAdminEnd);
+assert(quickAdminRoute.includes("if(user.role!=='owner') return res.status(403).json({error:'owner_role_required'});"),'quick-admin must reject accounts without the owner role');
+assert(quickAdminRoute.includes('token:token(user)')&&!quickAdminRoute.includes("role:'owner'"),'quick-admin must use the database-verified owner role');
 assert(backend.includes("app.get('/questions-v37.js'"),'question data route missing from Express');
 assert(backend.includes("app.get('/lessons-v37.js'"),'lesson data route missing from Express');
 assert(backend.includes("'Content-Type':'application/javascript; charset=utf-8'"),'learning data routes must declare JavaScript content type');
