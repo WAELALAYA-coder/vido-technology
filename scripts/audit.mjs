@@ -102,6 +102,8 @@ assert(backend.includes("jwt.verify(sessionToken,JWT_SECRET,{algorithms:['HS256'
 const sessionSecurity=fs.readFileSync('backend/session-security.js','utf8');
 assert(backend.includes("readCookieValue(req.headers.cookie,SESSION_COOKIE_NAME)"),'auth middleware must read the HttpOnly session cookie');
 assert(backend.includes('verifyCsrfToken(sessionToken,csrfCookie,JWT_SECRET)'),'auth middleware must validate the session-bound CSRF token');
+assert(backend.includes("if (pool && JWT_SECRET.length < 32) throw new Error('JWT_SECRET must be at least 32 characters when database-backed sessions are enabled')"),'database-backed cookie sessions must fail startup with a weak JWT/CSRF secret');
+assert(backend.includes("clearAuthCookies(res);\n      return res.status(403).json({error:'csrf_validation_failed'})"),'failed CSRF validation must clear the local session cookies');
 assert(backend.includes('same_origin_required')&&backend.includes('csrf_validation_failed'),'mutating API requests must enforce origin and CSRF checks');
 assert(backend.includes('issueSessionCookies(res,r.rows[0],req.body?.remember===true)'),'login must issue an HttpOnly cookie and signed CSRF cookie');
 assert(!backend.includes('req.headers.authorization')&&!backend.includes("h.startsWith('Bearer ')"),'backend must not accept legacy bearer authentication');
