@@ -60,3 +60,10 @@ Maintenance security follow-up — 15 November 2026
 - Added a 30-second timeout to outbound AI provider requests.
 - Kept upstream provider error payloads out of browser responses and added static regression checks for the request controls.
 - These changes are on the maintenance branch only; production deployment and PR merge were not performed.
+
+
+Maintenance quality follow-up — 15 November 2026
+- Bounded Diagram Academy JSON models to 64 KiB and capped preview structures at 100 nodes and 200 links before SVG rendering.
+- Invalid or oversized structures are no longer passed to the preview/export renderer; saved oversized drafts are discarded on load.
+- Added German, English and Arabic feedback for model-size and preview safety limits, plus regression assertions in the diagram audit.
+- This protects the browser from oversized or malformed local drafts; it is not a server-side upload validation feature.
