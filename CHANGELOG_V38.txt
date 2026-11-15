@@ -43,3 +43,10 @@ Maintenance follow-up — 14 November 2026
 - Hardened the HTTP smoke-test harness: its child server now receives only an explicit minimal environment allowlist instead of inheriting every CI environment variable, reducing accidental exposure of unrelated secrets to test processes.
 - Hardened quick-admin authentication: the configured quick-admin credentials now work only when the account resolved from `OWNER_EMAIL` still has the database role `owner`; the issued JWT uses the verified database role rather than forcing `owner` into the token.
 - Added an application-audit regression guard for the quick-admin owner-role requirement.
+
+
+Maintenance follow-up — 15 November 2026
+- Migrated GitHub Actions checkout to actions/checkout v7.0.1 and setup-node to v7.0.0, both pinned to verified immutable commit SHAs. These action releases use the Node.js 24 runtime, removing the workflow's dependency on the deprecated Node.js 20 action runtime.
+- Kept the project test/runtime target at Node.js 22 to match the production Docker image; only the JavaScript runtime used internally by the GitHub Actions themselves was upgraded.
+- Disabled checkout credential persistence because this read-only CI workflow does not need authenticated Git operations.
+- CI must complete successfully on the updated workflow before this migration is considered verified.
