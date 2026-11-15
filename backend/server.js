@@ -70,7 +70,7 @@ if (REQUIRE_STRONG_CREDENTIALS) {
   if (ADMIN_PASSWORD.length < 12 || /^REPLACE_/i.test(ADMIN_PASSWORD)) throw new Error('Production ADMIN_PASSWORD must be replaced and contain at least 12 characters');
   if (OWNER_PASSWORD === ADMIN_PASSWORD) throw new Error('Production owner and quick-admin passwords must be different');
   if (!DB_URL || DB_URL.includes('REPLACE_WITH')) throw new Error('Production DATABASE_URL still contains a placeholder');
-  if (REGISTRATION_ENABLED) throw new Error('Public registration is disabled in the initial private production profile');
+  if (REGISTRATION_ENABLED && process.env.VIDO_ALLOW_PUBLIC_REGISTRATION !== 'true') throw new Error('Public registration requires VIDO_ALLOW_PUBLIC_REGISTRATION=true');
 }
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 10;
