@@ -1,0 +1,21 @@
+VIDO Technology V36 — Maintenance Release
+Date: 13 November 2026
+Base: V35 (bb6f43ae5731b81f2a6d4eca88abde9d0f6378ab)
+
+Automation and quality gates
+- Added a GitHub Actions workflow for pushes to main and pull requests targeting main.
+- CI installs the exact dependency versions from package-lock.json with npm ci.
+- CI runs the existing application/content audit through npm test.
+- CI checks production dependency advisories at high severity and above.
+- CI builds the production Docker image to catch container build regressions.
+- Workflow permissions are read-only for repository contents, and duplicate runs for the same ref are cancelled.
+
+Documentation
+- Refreshed README_DEPLOYMENT.md from the outdated V33 description to the current V35 application build.
+- Corrected the content-audit description: 300 questions are checked; HTML IDs are checked for uniqueness rather than against an obsolete fixed count.
+- Clarified the difference between the tracked loopback Compose defaults and any host-local LAN-only adjustments.
+
+Scope and limitations
+- No application runtime code, database schema, user data, secrets, authentication logic, payment logic, or deployment settings were changed.
+- CI results must be checked after GitHub starts the workflow for this pull request. Creating the workflow file alone is not proof that the checks passed.
+- This is a maintenance/quality-gate release; the application feature build remains V35.

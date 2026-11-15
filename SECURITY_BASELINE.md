@@ -1,14 +1,15 @@
 # VIDO Technology — Security Baseline
 
-Review date: 13 November 2026
-Build: VIDO Technology V35 (V34 feature set + authentication/mobile hotfix)
+Review date: 15 November 2026
+Build: VIDO Technology V39 (V35 application foundation + V37 learning library + V38 Diagram Academy + V39 cookie-based sessions)
 Current deployment: Local Windows 11 host with Docker Compose
 Public release status: Not deployed. Public self-registration is disabled.
 
 ## Implemented controls
 
-- Express serves only the public frontend routes: /, /index.html, /manifest.webmanifest, and /service-worker.js. Backend source, SQL schema, package files, Compose configuration, Git metadata, and environment files are not served.
-- The local Docker deployment publishes the app on TCP 3000 for trusted home-LAN access. Windows Firewall has an inbound allow rule for TCP 3000 restricted to RemoteAddress LocalSubnet. PostgreSQL remains bound to 127.0.0.1:5432. The app transport is plain HTTP; use this LAN access only on a trusted private network.
+- Express serves the public frontend routes: `/`, `/index.html`, `/manifest.webmanifest`, `/service-worker.js`, `/questions-v37.js`, `/lessons-v37.js`, `/diagram-curriculum-v38.js`, `/diagram-engine-v38.js`, `/diagram-trainer.js`, and `/diagram-trainer.css`. The six learning-asset routes expose only browser content and use explicit content types with no-cache headers. Backend source, SQL schema, package files, Compose configuration, Git metadata, and environment files are not served.
+- The V39 local Docker deployment publishes the app on `127.0.0.1:3001` and PostgreSQL on `127.0.0.1:5433`; both are loopback-only and use plain HTTP locally.
+- The unused legacy V33 app and PostgreSQL containers have been stopped, not removed. Their Docker volumes and original project files are preserved for rollback. The legacy TCP 3000 listener is no longer active.
 - Public self-registration is disabled by default. The API returns HTTP 403 while disabled. New accounts can be created by the owner through the authenticated administration API.
 - Failed-login counters are stored in PostgreSQL. The table contains SHA-256 bucket identifiers rather than raw email addresses or IP values.
 - Rate-limit checks and counter reservations run in a single PostgreSQL transaction protected by transaction-scoped advisory locks. Concurrent attempts cannot race through the same limit.
@@ -17,11 +18,13 @@ Public release status: Not deployed. Public self-registration is disabled.
 - Arbitrary client-supplied X-Forwarded-For values are not trusted. Proxy trust is disabled locally. The production template configures trust for one exact IPv4 address assigned to Caddy; invalid or non-IPv4 values stop the server from starting.
 - Authenticated API requests validate the JWT, account status, and a database-backed token version. Password resets, role changes, and status changes increment the version and invalidate earlier tokens.
 - Owner bootstrap creates the owner only if the account does not already exist. It no longer overwrites an existing owner password on every restart.
+- Quick-admin login is restricted to the account configured by `OWNER_EMAIL` only while that database account still has the `owner` role. The JWT uses the verified database role; demoting the account prevents quick-admin from minting an owner token.
 - The owner cannot suspend their own account or remove their own owner role through the administration API. The API also prevents deleting the currently authenticated owner.
 - New account creation and password resets require at least 12 characters. Password hashes use bcrypt with cost 12.
 - Security headers include X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, and Cross-Origin-Resource-Policy. The Express identification header is disabled. API responses are marked no-store.
 - The production Dockerfile uses npm ci --omit=dev, runs as the non-root node user, and has a read-only runtime filesystem in the production Compose configuration.
 - Node, PostgreSQL, and Caddy production images are pinned by digest in the production templates.
+- The GitHub Actions workflow grants only `contents: read` and pins its third-party actions to immutable full commit SHAs.
 - npm audit reports zero known vulnerabilities in the checked dependency tree.
 
 ## Verification performed
@@ -39,8 +42,16 @@ Public release status: Not deployed. Public self-registration is disabled.
 - Production Compose configuration passed docker compose config --quiet using the example environment file.
 - Caddyfile passed caddy validate and was formatted.
 - Production app image built successfully from the pinned Node base image. It runs as UID 1000 and contains no .env, .env.production, .git, backup directory, or temporary test scripts.
-- The content audit passed: 300 questions. The current HTML audit also verifies that all element IDs are unique.
+- The automated content audits check 440 questions across 44 skills, fourteen structured lessons in German/English/Arabic, ten question mappings per lesson, eleven trilingual diagram modules, eight example models, twenty original diagram questions, official source links, negative validator cases, PWA asset loading and unique HTML IDs.
+- The HTTP smoke tests verify all six public learning assets and confirm that backend/configuration paths remain unavailable (HTTP 404).
 - Host and container dependency audits reported zero known vulnerabilities.
+
+## Learning content expansion (V37)
+
+- The front end loads the additional question and lesson datasets as two dedicated read-only JavaScript assets.
+- Express exposes only those two exact asset paths; it does not enable a broad static directory listing or expose server-side source/configuration files.
+- Lesson content is original instructional material with links to official or specialist documentation. User-specific learning progress remains in the existing local/browser and optional authenticated sync mechanisms.
+- This content update does not modify authentication, authorization, payment, database schema, or existing user records.
 
 ## Current environment and limitations
 
@@ -49,7 +60,7 @@ This is a hardened local deployment, not a public production service.
 1. HTTPS/TLS is not active locally. The production Caddy configuration is prepared for automatic HTTPS, but no public domain or server has been connected.
 2. Proxy trust is disabled locally. The production template trusts only the exact Caddy IPv4 address 172.29.250.2.
 3. Content Security Policy is not enabled because the current frontend includes inline scripts and styles. A strong CSP requires refactoring these assets and testing the full UI.
-4. Browser tokens are bearer tokens stored in browser session storage; the optional keep-me-signed-in feature uses local storage. A future public release should consider HttpOnly, Secure, SameSite cookie sessions and CSRF protections.
+4. Browser sessions use an HttpOnly, SameSite=Lax session cookie; the cookie is Secure in production. The JWT is no longer returned to JavaScript or stored in sessionStorage/localStorage. Legacy browser bearer-token copies are cleared when the new UI loads.
 5. MFA, email verification, and self-service password recovery are not configured. Registration remains closed.
 6. Backups currently reside on the Windows device. The scheduled task and private GitHub source synchronization do not provide off-site PostgreSQL backups. Production needs encrypted off-site backups and regular restore drills.
 7. The AI tutor is disabled in the running container because the runtime has no provider URL or API key configured.
@@ -73,9 +84,77 @@ The production configuration was validated and the app image was built. The prod
 - Create the real .env.production file on the hosting server using a password manager. Never commit it.
 - Keep registration disabled for the initial private launch.
 - Configure provider-encrypted storage, encrypted off-site PostgreSQL backups, and tested recovery.
-- Review CSP and browser token storage before opening registration.
+- Review CSP and complete browser-based HTTPS authentication tests before opening registration.
 - Configure monitoring for application health, database availability, disk space, certificates, and backup failures.
 
 Important: GitHub Pages can host only a static frontend. It cannot run this Express API and PostgreSQL database, so it is not a complete VIDO hosting target.
 
 - The production-only credential gate requires a unique JWT secret of at least 48 characters, owner and quick-admin passwords of at least 12 characters, different owner/admin passwords, a real database URL, and disabled public registration. It rejects the example placeholders before the public service can start. The local development Compose profile does not enable this gate.
+
+
+## V38 diagram learning assets
+
+- Public learning assets: `diagram-curriculum-v38.js`, `diagram-engine-v38.js`, `diagram-trainer.js`, and `diagram-trainer.css`, served only through explicit Express routes.
+- These assets contain instructional material and example models; they do not contain credentials, user records, production configuration or secrets.
+- Diagram drafts and completion progress are stored locally in the user's browser. No new database schema, authentication, payment or production deployment settings were changed for V38.
+- The semantic validator is a learning-time consistency checker, not proof that a real network or system configuration is correct. Validate network diagrams against the actual device configuration and approved documentation.
+- The diagram audit checks the 11 modules, eight example templates, 20 trilingual quizzes, source links and negative validator cases; this is structural validation, not formal standards certification.
+
+
+## AI tutor request controls
+
+- The authenticated AI tutor endpoint validates input types/lengths and accepts only the supported German, English, and Arabic locale codes.
+- Each authenticated user is limited to 10 AI tutor requests per 60-second database window. The counter reuses the persistent auth_rate_limits table and stores a SHA-256-derived user key rather than a raw user identifier.
+- Counter updates use a single PostgreSQL upsert, so simultaneous requests for one account cannot bypass the limit. Counters are capped at 11 while blocked and are removed by the existing one-day cleanup.
+- Outbound AI provider requests have a 30-second timeout. Upstream non-success response bodies are not returned to the browser.
+- These controls reduce accidental or abusive provider usage; they do not replace provider-side spending limits, monitoring, or account-level billing alerts.
+
+
+## HttpOnly cookie sessions and CSRF protection (V39 maintenance)
+
+- Authentication is now cookie-based. The backend issues a `vido_session` cookie with `HttpOnly; Path=/; SameSite=Lax`; production also adds `Secure`. The browser does not receive the JWT in login/register/quick-admin JSON responses.
+- A separate `vido_csrf` cookie is readable by same-origin JavaScript. Its value contains a random nonce and an HMAC-SHA256 signature bound to the current session JWT. The browser API client sends this value in `X-CSRF-Token` for POST/PUT/PATCH/DELETE requests.
+- The backend verifies the CSRF cookie/header match and the session-bound signature using constant-time signature comparison. Unsafe API methods also require a matching Origin (or Referer fallback) in production.
+- Session JWTs remain seven-day tokens. The `remember` request flag controls whether the session cookie gets a seven-day Max-Age; without it, the cookie is a browser-session cookie. The CSRF cookie follows the same lifetime.
+- Existing legacy JWTs in sessionStorage and the `vidoRememberedSessionV32` localStorage entry are removed client-side. Users with an old browser token must sign in again after this release; no server-side legacy bearer compatibility is retained.
+- Logout increments the account's database-backed `token_version` and clears both cookies. This invalidates sessions on all devices, not just the current browser.
+- Automated tests cover CSRF token binding/tampering, cookie parsing/flags/lifetime/clearing, frontend wiring, cookie-only authentication, legacy Bearer rejection and same-origin mutation guards. CI also runs two integration suites against a disposable, digest-pinned PostgreSQL 16 service to verify real database-backed login, session validation, state sync, CSRF, account-wide logout revocation and quick-admin role checks. These do not replace browser testing through the real HTTPS Caddy endpoint or Safari/iOS.
+- This is a breaking authentication behavior change on the open maintenance branch. Merge and production rollout require explicit maintainer approval and coordinated release; no deployment has occurred.
+
+
+## Cookie authentication test scope
+
+- CI uses a production-mode Express smoke server without PostgreSQL. It verifies rejection of missing/foreign Origin headers, legacy Bearer tokens, missing/tampered CSRF headers, and confirms valid cookie+CSRF reaches the database availability check.
+- Pure unit tests cover HMAC binding, tamper rejection, cookie parsing and Secure/HttpOnly/SameSite/Max-Age attributes.
+- The PostgreSQL integration suite is now part of CI. Browser tests over the real HTTPS Caddy endpoint (including desktop and iOS Safari) remain outstanding.
+
+
+## Session startup and CSRF failure behavior
+
+- When a database-backed session service is configured, startup now fails if JWT_SECRET is shorter than 32 characters; production still requires at least 32 characters and the hardened production profile requires 48.
+- A failed CSRF validation clears the browser's session and CSRF cookies before returning HTTP 403. The browser UI must authenticate again rather than silently reusing a stale cookie pair.
+
+
+## PostgreSQL authentication integration tests in CI
+
+- GitHub Actions provisions a digest-pinned PostgreSQL 16 service named `vido_test`, isolated to the ephemeral CI job.
+- Both integration test scripts reject non-local database hosts and database names that do not include `test` or `ci`. They must never be pointed at an actual production database.
+- The tests initialize the repository schema and use generated CI-only accounts, passwords and JWT secrets. They cover real database-backed login, cookie issuance, CSRF validation, account-wide logout revocation and quick-admin owner authorization.
+- These tests exercise Express and PostgreSQL together, but they do not verify the reverse-proxy TLS configuration or browser cookie behavior on a real domain.
+
+
+## V39 host audit results — 15 November 2026
+
+- V39 app container: running on `127.0.0.1:3001`. PostgreSQL container: healthy on `127.0.0.1:5433`. Both host bindings are loopback-only.
+- Live health endpoint returned `{"ok":true,"backend":true,"database":true,"ai":false}`; home page and all six learning assets returned HTTP 200.
+- Backend source, SQL schema, package manifest, Compose file, `.env`, and `.git/config` returned HTTP 404 from the V39 web server.
+- Registration remained disabled and returned HTTP 403.
+- Live Owner and Quick Admin login, cookie session validation, owner API access, logout, and cookie clearing all passed.
+- `npm test` passed: session-security tests, 11 trilingual diagram modules, eight templates, 20 diagram quizzes, and the content audit (440 questions, 44 skills, 14 lessons in DE/EN/AR, 237 unique HTML IDs).
+- PostgreSQL authentication integration tests passed for registration, login, HttpOnly cookies, CSRF, user-state persistence, remember-me, all-device logout, and quick-admin role enforcement. The isolated test database was dropped after testing.
+- `npm audit --omit=dev --audit-level=high` reported zero vulnerabilities. Production Compose validation and `git diff --check` passed.
+- The V39 app container has a Docker HTTP healthcheck (30-second interval, 5-second timeout, three retries, 20-second start period); the app and PostgreSQL containers both report `healthy`.
+- Verified V39 backups are stored locally under `C:\\Users\\waela\\Documents\\VIDO_Backups`. The manual backup `V39_MANUAL_20261115_110407` contains a PostgreSQL custom-format dump, source archive, and working-tree changes; its dump was restored into a separate temporary database and verified (`users=1`, `owners=1`). A daily backup script was added and the scheduled task `VIDO V39 Daily Backup` is enabled for 20:00; the scheduled task completed successfully with result `0` in repeated manual runs, including verified daily archives `V39_DAILY_20261115_113941` and `V39_DAILY_20261115_114345`. The script excludes `.env`, does not push to Git, verifies the dump and source ZIP, and keeps the latest 14 daily backups. Backups remain on this device; there is no off-site copy.
+- The old scheduled task `VIDO V33 Daily Backup` was disabled because it targets the retired V33 project and its script attempts to push `main` automatically. The V39 scheduled task replaces it and performs local backups only.
+- Windows Defender Firewall is enabled for Domain, Private, and Public profiles. Default inbound traffic is blocked and outbound traffic is allowed. The active WLAN profile is Public. The unused V33 app and database containers are stopped; their persistent volumes remain intact. V39 host bindings remain loopback-only.
+- The active V39 project was moved to `C:\\Users\\waela\\Documents\\VIDO-Technology-V39`; it runs from that location and reuses the existing named V39 volumes. The duplicate contents under `C:\\Windows\\System32\\vido-technology` were removed after verifying the new bind mount; an empty directory remains because Windows reports it is temporarily in use, but it contains no project files or `.env`. A desktop shortcut named `VIDO Technology V39` opens the start script. The working tree contains local changes to `docker-compose.yml`, `scripts/audit.mjs`, `scripts/backup-v39.ps1`, `start-vido.bat`, `stop-vido.bat`, `README_DEPLOYMENT.md`, `CHANGELOG_V39.txt`, and this security baseline. No commit, push, merge, or production deployment was performed.

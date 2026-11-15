@@ -1,0 +1,139 @@
+VIDO Technology V38 — Diagram Academy
+Date: 14 November 2026
+Base: V37 learning expansion on maintenance/v36-ci-and-docs
+
+Diagram learning
+- Added 11 progressive modules in German, English and Arabic, from diagram basics to professional review.
+- Topics: flowcharts/PAP, UML use-case/activity, UML classes/components, UML sequence/state, ERD, physical/logical network diagrams, BPMN, C4 architecture, DFD and review practice.
+- Added eight editable example templates: Flowchart, Network, UML Class, ERD, Sequence, BPMN, C4 and DFD.
+- Added 20 original trilingual practice questions. These are not official IHK exam questions.
+- Added browser-based JSON model editor, live SVG preview, SVG export, local draft/progress storage and an 8-point handover checklist.
+
+Validation and quality
+- Added a dedicated diagram validation engine for model metadata, unique IDs, valid connections, disconnected nodes, type-specific notation constraints and relationship checks.
+- Added diagram-audit.mjs to test all 11 trilingual modules, all eight example models, 20 questions, official source links and negative validator cases.
+- Extended the existing application audit and CI JavaScript syntax checks.
+- Extended Express smoke tests for all four diagram learning assets and their content types/cache headers.
+- Updated service-worker cache name and precached diagram assets.
+- Updated learning source references, deployment notes, security baseline and this changelog.
+
+Official references
+- ISO 5807 flowchart conventions
+- OMG UML 2.5.1 and BPMN 2.0.2
+- C4 model official documentation
+- Cisco network topology guidance
+- PostgreSQL relational database tutorial
+- Mermaid flowchart and sequence diagram references
+- BIBB occupational profile for Fachinformatiker/in Systemintegration
+
+Scope and limitations
+- No database schema/data, authentication, authorization, payment logic, secrets, production deployment or sensitive network settings changed.
+- Diagram drafts and learning completion remain in browser local storage; no new API storage was added.
+- The validator detects structural and common notation issues. It is not a formal standards certification and cannot prove that a real network matches the diagram.
+- Local Windows/iPhone end-to-end testing and production deployment are not claimed.
+- Release remains on the existing open pull request and has not been merged into main.
+
+
+Maintenance follow-up — 14 November 2026
+- Corrected deployment and security documentation to identify V38 and the exact V37 learning-library counts (440 questions across 44 skills and 14 lessons).
+- Documented all six explicit learning-asset routes and the Diagram Academy audit coverage.
+- Pinned the existing checkout and setup-node workflow actions to verified immutable v4 release commit SHAs.
+- No application runtime, database schema/data, authentication, authorization, payment logic, secrets, or production deployment configuration changed.
+- Recorded the remaining Node.js 20 deprecation warning from the pinned v4 actions; migration to a newer major is deferred to avoid an unreviewed breaking change.
+- Hardened the HTTP smoke-test harness: its child server now receives only an explicit minimal environment allowlist instead of inheriting every CI environment variable, reducing accidental exposure of unrelated secrets to test processes.
+- Hardened quick-admin authentication: the configured quick-admin credentials now work only when the account resolved from `OWNER_EMAIL` still has the database role `owner`; the issued JWT uses the verified database role rather than forcing `owner` into the token.
+- Added an application-audit regression guard for the quick-admin owner-role requirement.
+
+
+Maintenance follow-up — 15 November 2026
+- Migrated GitHub Actions checkout to actions/checkout v7.0.1 and setup-node to v7.0.0, both pinned to verified immutable commit SHAs. These action releases use the Node.js 24 runtime, removing the workflow's dependency on the deprecated Node.js 20 action runtime.
+- Kept the project test/runtime target at Node.js 22 to match the production Docker image; only the JavaScript runtime used internally by the GitHub Actions themselves was upgraded.
+- Disabled checkout credential persistence because this read-only CI workflow does not need authenticated Git operations.
+- CI must complete successfully on the updated workflow before this migration is considered verified.
+
+- Restricted JWT signing and verification to HS256 explicitly, preventing tokens signed with any other accepted algorithm from passing authentication. Added a regression guard to the application audit.
+
+
+Maintenance security follow-up — 15 November 2026
+- Restricted AI tutor inputs to bounded field lengths and the supported German, English, and Arabic locales.
+- Added a PostgreSQL-backed per-account limit of 10 AI tutor requests per 60-second window, with atomic counter updates and bounded blocked counters.
+- Added a 30-second timeout to outbound AI provider requests.
+- Kept upstream provider error payloads out of browser responses and added static regression checks for the request controls.
+- These changes are on the maintenance branch only; production deployment and PR merge were not performed.
+
+
+Maintenance quality follow-up — 15 November 2026
+- Bounded Diagram Academy JSON models to 64 KiB and capped preview structures at 100 nodes and 200 links before SVG rendering.
+- Invalid or oversized structures are no longer passed to the preview/export renderer; saved oversized drafts are discarded on load.
+- Added German, English and Arabic feedback for model-size and preview safety limits, plus regression assertions in the diagram audit.
+- This protects the browser from oversized or malformed local drafts; it is not a server-side upload validation feature.
+
+
+Maintenance architecture follow-up — 15 November 2026
+- Consolidated the main application, account helper, button reliability helper and remember-me session check onto one browser API client.
+- Preserved the current JWT bearer behavior and endpoint paths to avoid changing authentication semantics in this refactor.
+- This prepares the frontend for a later HttpOnly cookie migration. Browser JWTs are still stored in sessionStorage and the optional persistent copy remains in localStorage until that migration and its CSRF/session tests are implemented.
+- Added static regression assertions to ensure the helper call sites remain centralized.
+
+
+Maintenance session security follow-up — 15 November 2026
+- Added authenticated POST /api/auth/logout to increment the account token_version and revoke all currently issued JWTs for that account.
+- Updated the browser logout action to request server-side revocation before clearing local session state; it still signs out locally if the backend is unavailable and displays a warning.
+- Documented that this is account-wide logout (all sessions/devices), not single-device revocation.
+- Added regression assertions for the logout endpoint and browser integration.
+
+
+Maintenance scope review — 15 November 2026
+- Clarified that the V38 learning-content update is separate from the account-wide logout/token-revocation change now present on the open maintenance branch.
+- Flagged the logout change as an authentication behavior change requiring explicit maintainer approval before merge.
+- This documentation update does not alter authentication code, database schema/data, secrets, production configuration, or deployment state.
+
+
+Maintenance authentication migration — V39 — 15 November 2026
+- Replaced browser-stored Bearer JWT authentication with a server-issued HttpOnly `vido_session` cookie; login, registration and quick-admin no longer return JWTs in JSON.
+- Added a separate session-bound HMAC-SHA256 CSRF token cookie and automatic `X-CSRF-Token` header for unsafe API requests.
+- Added production Secure/SameSite cookie attributes, same-origin Origin/Referer checks, browser-session cookies by default and seven-day persistence only when the user selects “Keep me signed in”.
+- Removed legacy remembered JWT storage and added client-side cleanup of old sessionStorage/localStorage tokens. Existing users must sign in again after this breaking change.
+- Logout clears both cookies and increments `token_version`, revoking all account sessions across devices.
+- Added isolated tests for CSRF binding/tampering and cookie parsing/flags/lifetime/clearing, plus HTTP smoke checks for cookie-only authentication, legacy Bearer rejection and same-origin mutation guards. The stale Diagram Academy cache-version assertion was updated to the V39 key and the complete workflow passed in CI run #82.
+- This migration is limited to the maintenance branch. It has not been merged or deployed. A real PostgreSQL-backed authentication integration test and browser-level test remain necessary before production rollout.
+
+
+Authentication migration verification — 15 November 2026
+- Extended HTTP smoke tests to reject production mutating requests without Origin/Referer, reject legacy Bearer authentication, and validate the CSRF cookie/header pair for cookie-authenticated mutations.
+- Smoke tests use a short-lived CI-only JWT and intentionally no PostgreSQL; a valid cookie+CSRF request is expected to pass authentication checks and stop at the database configuration check with HTTP 503.
+- Added a regression check that browser account login handlers no longer depend on, or return to, JavaScript-readable JWT storage.
+
+
+Cookie session hardening — 15 November 2026
+- Added a startup guard requiring a 32-character minimum JWT/CSRF signing secret whenever DATABASE_URL is configured.
+- Failed CSRF checks now clear the browser session and CSRF cookies before returning HTTP 403, preventing reuse of a stale cookie pair.
+
+
+Final V39 verification — 15 November 2026
+- CI run #82 passed on commit d11962f5c03d85ed09fe2c271ba92939c45d8899. Syntax checks, session security unit tests, application and diagram audits, production-mode HTTP smoke tests, dependency advisories and production Docker build all passed.
+- Added a database-backed startup check for the JWT/CSRF signing secret minimum and cookie clearing on CSRF validation failure.
+- CI smoke tests intentionally use no PostgreSQL or real user accounts. A real database-backed authentication test, Caddy HTTPS cookie inspection and desktop/iOS browser testing remain pre-production tasks.
+- The maintenance PR remains open and unmerged; no production deployment was performed.
+
+
+## V39 — PostgreSQL authentication integration coverage (15 November 2026)
+
+- Added a PostgreSQL-backed authentication integration test using a disposable local/CI database only. The test refuses remote database hosts and database names without a `test` or `ci` marker.
+- CI now starts a digest-pinned PostgreSQL 16 service and tests same-origin enforcement, disabled registration, cookie-only login, CSRF rejection, account-wide logout revocation, quick-admin role checks and owner API access.
+- Added a repository README with Windows/Docker local startup and study instructions.
+- Corrected the deployment guide to describe the V39 HttpOnly cookie and CSRF design rather than the retired browser Bearer-token storage.
+
+
+CI PostgreSQL integration follow-up — 15 November 2026
+- Fixed the first PostgreSQL authentication test step to receive the CI-only VIDO_TEST_DATABASE_URL.
+- Added a local-host and test/ci database-name guard to the second PostgreSQL integration script so it refuses to run against remote or production-looking databases.
+- Both integration scripts use the ephemeral, digest-pinned PostgreSQL service created for the GitHub Actions job.
+
+
+PostgreSQL integration verification — 15 November 2026
+- CI run #92 passed on commit 80af6cb02c95c97e1d43b215dc5b2b3aee5fd97d with the digest-pinned PostgreSQL 16 service healthy.
+- Both database-backed suites passed: cookie-only owner login, same-origin policy, disabled registration, CSRF rejection and acceptance, user-state persistence, seven-day remember-me cookies, logout revoking all sessions, quick-admin owner-role enforcement and owner-only admin API access.
+- CI also passed JavaScript syntax, application/diagram audits, production-mode smoke tests, production dependency advisories and Docker image build.
+- The PostgreSQL service uses an ephemeral vido_test database and CI-only random/generated credentials. Both test scripts reject non-local database hosts or database names without a test/ci marker.
+- Remaining pre-production validation: verify cookie behavior through the actual Caddy HTTPS endpoint and conduct browser E2E testing, including iOS Safari. No merge or production deployment occurred.

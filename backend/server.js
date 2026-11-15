@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
 import { isIP } from 'node:net';
+import { SESSION_COOKIE_NAME, CSRF_COOKIE_NAME, readCookieValue, createCsrfToken, verifyCsrfToken, buildSessionCookies, clearSessionCookies } from './session-security.js';
 
 const { Pool } = pg;
 const app = express();
@@ -13,15 +14,44 @@ app.set('trust proxy', TRUSTED_PROXY_IP || false);
 app.disable('x-powered-by');
 app.use((_req,res,next)=>{ res.setHeader('X-Content-Type-Options','nosniff'); res.setHeader('X-Frame-Options','DENY'); res.setHeader('Referrer-Policy','strict-origin-when-cross-origin'); res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()'); res.setHeader('Cross-Origin-Resource-Policy','same-origin'); next(); });
 app.use('/api',(_req,res,next)=>{ res.setHeader('Cache-Control','no-store, max-age=0'); res.setHeader('Pragma','no-cache'); next(); });
+const UNSAFE_METHODS=new Set(['POST','PUT','PATCH','DELETE']);
+function isSameOriginUnsafeRequest(req){
+  let supplied=req.get('origin');
+  if(!supplied&&req.get('referer')){
+    try{supplied=new URL(req.get('referer')).origin;}catch{return false;}
+  }
+  if(!supplied)return process.env.NODE_ENV!=='production';
+  try{
+    const expected=new URL(req.protocol+'://'+req.get('host')).origin;
+    return new URL(supplied).origin===expected;
+  }catch{return false;}
+}
+app.use('/api',(req,res,next)=>{
+  if(!UNSAFE_METHODS.has(req.method))return next();
+  if(!isSameOriginUnsafeRequest(req))return res.status(403).json({error:'same_origin_required'});
+  next();
+});
+
 app.use(express.json({limit:'1mb'}));
 const PUBLIC_ROOT = process.cwd();
 app.get('/', (_req,res)=>res.sendFile('index.html',{root:PUBLIC_ROOT}));
 app.get('/index.html', (_req,res)=>res.sendFile('index.html',{root:PUBLIC_ROOT}));
 app.get('/manifest.webmanifest', (_req,res)=>res.sendFile('manifest.webmanifest',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/manifest+json'}}));
+app.get('/icons/vido-app-icon.svg', (_req,res)=>res.sendFile('icons/vido-app-icon.svg',{root:PUBLIC_ROOT,headers:{'Content-Type':'image/svg+xml; charset=utf-8','Cache-Control':'public, max-age=86400'}}));
+app.get('/icons/vido-192.png', (_req,res)=>res.sendFile('icons/vido-192.png',{root:PUBLIC_ROOT,headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=86400'}}));
+app.get('/icons/vido-512.png', (_req,res)=>res.sendFile('icons/vido-512.png',{root:PUBLIC_ROOT,headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=86400'}}));
 app.get('/service-worker.js', (_req,res)=>res.sendFile('service-worker.js',{root:PUBLIC_ROOT,headers:{'Service-Worker-Allowed':'/'}}));
+app.get('/questions-v37.js', (_req,res)=>res.sendFile('questions-v37.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
+app.get('/lessons-v37.js', (_req,res)=>res.sendFile('lessons-v37.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
+
+app.get('/diagram-curriculum-v38.js', (_req,res)=>res.sendFile('diagram-curriculum-v38.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
+app.get('/diagram-engine-v38.js', (_req,res)=>res.sendFile('diagram-engine-v38.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
+app.get('/diagram-trainer.js', (_req,res)=>res.sendFile('diagram-trainer.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
+app.get('/diagram-trainer.css', (_req,res)=>res.sendFile('diagram-trainer.css',{root:PUBLIC_ROOT,headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-cache'}}));
 const pool = process.env.DATABASE_URL ? new Pool({connectionString:process.env.DATABASE_URL, ssl:false}) : null;
 const JWT_SECRET = process.env.JWT_SECRET || '';
 if (process.env.NODE_ENV === 'production' && JWT_SECRET.length < 32) { throw new Error('JWT_SECRET must be at least 32 characters in production'); }
+if (pool && JWT_SECRET.length < 32) throw new Error('JWT_SECRET must be at least 32 characters when database-backed sessions are enabled');
 const AI_URL = process.env.AI_API_URL || '';
 const AI_KEY = process.env.AI_API_KEY || '';
 const AI_MODEL = process.env.AI_MODEL || 'gpt-4o-mini';
@@ -90,7 +120,29 @@ async function clearLoginFailures(req,identity){
     await pool.query('DELETE FROM auth_rate_limits WHERE bucket_key=$1',[identityKey]);
   }catch(e){ console.error('Authentication failure counter cleanup failed'); }
 }
-function token(user){ return jwt.sign({sub:user.id,email:user.email,role:user.role||'user',ver:Number(user.token_version||0)},JWT_SECRET,{expiresIn:'7d'}); }
+
+async function tutorRequestAllowed(userId){
+  const userKey='ai:'+crypto.createHash('sha256').update(String(userId)).digest('hex');
+  const r=await pool.query(
+    "INSERT INTO auth_rate_limits(bucket_key,window_started_at,attempts) VALUES($1,NOW(),1) ON CONFLICT(bucket_key) DO UPDATE SET attempts=CASE WHEN auth_rate_limits.window_started_at < NOW()-INTERVAL '1 minute' THEN 1 WHEN auth_rate_limits.attempts < 11 THEN auth_rate_limits.attempts+1 ELSE 11 END, window_started_at=CASE WHEN auth_rate_limits.window_started_at < NOW()-INTERVAL '1 minute' THEN NOW() ELSE auth_rate_limits.window_started_at END RETURNING attempts",
+    [userKey]
+  );
+  return Number(r.rows[0]?.attempts||0)<=10;
+}
+function token(user){ return jwt.sign({sub:user.id,email:user.email,role:user.role||'user',ver:Number(user.token_version||0)},JWT_SECRET,{algorithm:'HS256',expiresIn:'7d'}); }
+function issueSessionCookies(res,user,remember=false){
+  const sessionToken=token(user);
+  const csrfToken=createCsrfToken(sessionToken,JWT_SECRET);
+  res.append('Set-Cookie',buildSessionCookies({
+    sessionToken,csrfToken,
+    secure:process.env.NODE_ENV==='production',
+    remember:remember===true
+  }));
+}
+function clearAuthCookies(res){
+  res.append('Set-Cookie',clearSessionCookies({secure:process.env.NODE_ENV==='production'}));
+}
+
 
 function ua(req){ return req.headers['user-agent']||null; }
 async function logSecurity({userId=null,email=null,eventType,req,metadata={}}){ if(!pool)return; await pool.query('INSERT INTO security_log(user_id,email,event_type,ip,user_agent,metadata) VALUES($1,$2,$3,$4,$5,$6)',[userId,email,eventType,clientIp(req),ua(req),metadata]); }
@@ -98,19 +150,29 @@ async function logActivity({userId,eventType,route=null,req,metadata={}}){ if(!p
 async function adminUser(req,res,next){ if(!pool)return requireDb(res); try { const r=await pool.query('SELECT id,email,role,status FROM users WHERE id=$1',[req.user.sub]); if(!r.rowCount||r.rows[0].status!=='active'||!['owner','super_admin','analyst','content_manager','video_manager','lab_manager'].includes(r.rows[0].role)) return res.status(403).json({error:'admin_forbidden'}); req.admin=r.rows[0]; next(); } catch { res.status(500).json({error:'admin_check_failed'}); } }
 async function ownerOnly(req,res,next){ if(!req.admin||req.admin.role!=='owner') return res.status(403).json({error:'owner_only'}); next(); }
 async function auth(req,res,next){
-  const h=req.headers.authorization||'';
-  if(!h.startsWith('Bearer ')) return res.status(401).json({error:'unauthorized'});
+  const sessionToken=readCookieValue(req.headers.cookie,SESSION_COOKIE_NAME);
+  if(!sessionToken)return res.status(401).json({error:'unauthorized'});
   let payload;
-  try{ payload=jwt.verify(h.slice(7),JWT_SECRET); }
-  catch{ return res.status(401).json({error:'unauthorized'}); }
-  if(!requireDb(res)) return;
+  try{ payload=jwt.verify(sessionToken,JWT_SECRET,{algorithms:['HS256']}); }
+  catch{ clearAuthCookies(res); return res.status(401).json({error:'unauthorized'}); }
+  if(UNSAFE_METHODS.has(req.method)){
+    const csrfCookie=readCookieValue(req.headers.cookie,CSRF_COOKIE_NAME);
+    const csrfHeader=req.get('x-csrf-token')||'';
+    if(!csrfCookie||csrfHeader!==csrfCookie||!verifyCsrfToken(sessionToken,csrfCookie,JWT_SECRET)){
+      clearAuthCookies(res);
+      return res.status(403).json({error:'csrf_validation_failed'});
+    }
+  }
+  if(!requireDb(res))return;
   try{
     const r=await pool.query('SELECT status,token_version FROM users WHERE id=$1',[payload.sub]);
-    if(!r.rowCount || r.rows[0].status!=='active' || Number(payload.ver??0)!==Number(r.rows[0].token_version??0))
+    if(!r.rowCount||r.rows[0].status!=='active'||Number(payload.ver??0)!==Number(r.rows[0].token_version??0)){
+      clearAuthCookies(res);
       return res.status(401).json({error:'unauthorized'});
+    }
     req.user=payload;
     next();
-  }catch(e){ return res.status(503).json({error:'auth_check_unavailable'}); }
+  }catch(e){return res.status(503).json({error:'auth_check_unavailable'});}
 }
 function requireDb(res){ if(!pool){res.status(503).json({error:'DATABASE_URL is not configured'}); return false;} return true; }
 
@@ -120,7 +182,7 @@ app.post('/api/auth/register', async (req,res)=>{
   if(!requireDb(res)) return; const email=String(req.body?.email||'').toLowerCase().trim(); const password=String(req.body?.password||'');
   if(!/^\S+@\S+\.\S+$/.test(email)||password.length<12) return res.status(400).json({error:'email and password (12+ chars) required'});
   if(!(await loginAllowed(req,email))){ await logSecurity({email,eventType:'registration_rate_limited',req}); return res.status(429).json({error:'too_many_registration_attempts'}); }
-  try { const hash=await bcrypt.hash(password,12); const r=await pool.query('INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id,email,role,status,token_version',[email,hash]); await clearLoginFailures(req,email); await logSecurity({userId:r.rows[0].id,email:r.rows[0].email,eventType:'register',req}); await logActivity({userId:r.rows[0].id,eventType:'register',route:'/account',req}); res.status(201).json({token:token(r.rows[0]),user:r.rows[0]}); }
+  try { const hash=await bcrypt.hash(password,12); const r=await pool.query('INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id,email,role,status,token_version',[email,hash]); await clearLoginFailures(req,email); await logSecurity({userId:r.rows[0].id,email:r.rows[0].email,eventType:'register',req}); await logActivity({userId:r.rows[0].id,eventType:'register',route:'/account',req}); issueSessionCookies(res,r.rows[0],req.body?.remember===true); res.status(201).json({user:r.rows[0]}); }
   catch(e){ if(e.code==='23505'){ return res.status(409).json({error:'email already registered'});} res.status(500).json({error:'registration failed'}); }
 });
 app.get('/api/auth/me', auth, async (req,res)=>{
@@ -128,6 +190,18 @@ app.get('/api/auth/me', auth, async (req,res)=>{
   const r=await pool.query('SELECT id,email,role,status FROM users WHERE id=$1',[req.user.sub]);
   if(!r.rowCount || r.rows[0].status!=='active') return res.status(401).json({error:'unauthorized'});
   res.json({user:r.rows[0]});
+});
+
+app.post('/api/auth/logout', auth, async (req,res)=>{
+  try{
+    const result=await pool.query('UPDATE users SET token_version=token_version+1 WHERE id=$1 AND token_version=$2 RETURNING id',[req.user.sub,Number(req.user.ver??0)]);
+    if(!result.rowCount) return res.status(401).json({error:'unauthorized'});
+    logSecurity({userId:req.user.sub,eventType:'logout',req}).catch(()=>{});
+    clearAuthCookies(res);
+    return res.json({ok:true,scope:'all_sessions'});
+  }catch{
+    return res.status(503).json({error:'logout_failed'});
+  }
 });
 
 app.post('/api/auth/quick-admin', async (req,res)=>{
@@ -145,11 +219,13 @@ app.post('/api/auth/quick-admin', async (req,res)=>{
   if(!r.rowCount) return res.status(503).json({error:'owner account is not initialized'});
   const user=r.rows[0];
   if(user.status!=='active') return res.status(403).json({error:'account_suspended'});
+  if(user.role!=='owner') return res.status(403).json({error:'owner_role_required'});
   await pool.query('UPDATE users SET last_login_at=NOW(),last_ip=$2,last_user_agent=$3 WHERE id=$1',[user.id,clientIp(req),ua(req)]);
   await clearLoginFailures(req,username);
   await logSecurity({userId:user.id,email:user.email,eventType:'quick_admin_login_success',req});
   await logActivity({userId:user.id,eventType:'quick_admin_login',route:'/login',req});
-  res.json({token:token({...user,role:'owner'}),user:{...user,role:'owner'}});
+  issueSessionCookies(res,user,req.body?.remember===true);
+  res.json({user:{id:user.id,email:user.email,role:user.role,status:user.status}});
 });
 
 app.post('/api/auth/login', async (req,res)=>{
@@ -161,7 +237,8 @@ app.post('/api/auth/login', async (req,res)=>{
   if(r.rows[0].status!=='active'){ await logSecurity({userId:r.rows[0].id,email:cleanEmail,eventType:'login_blocked',req}); return res.status(403).json({error:'account_suspended'}); }
   await clearLoginFailures(req,cleanEmail);
   await pool.query('UPDATE users SET last_login_at=NOW(),last_ip=$2,last_user_agent=$3 WHERE id=$1',[r.rows[0].id,clientIp(req),ua(req)]); await logSecurity({userId:r.rows[0].id,email:cleanEmail,eventType:'login_success',req}); await logActivity({userId:r.rows[0].id,eventType:'login',route:'/account',req});
-  res.json({token:token(r.rows[0]),user:{id:r.rows[0].id,email:r.rows[0].email,role:r.rows[0].role,status:r.rows[0].status}});
+  issueSessionCookies(res,r.rows[0],req.body?.remember===true);
+  res.json({user:{id:r.rows[0].id,email:r.rows[0].email,role:r.rows[0].role,status:r.rows[0].status}});
 });
 
 app.post('/api/activity',auth,async(req,res)=>{if(!requireDb(res))return; const e=req.body||{}; await logActivity({userId:req.user.sub,eventType:String(e.eventType||'view'),route:e.route||null,req,metadata:e.metadata||{}});res.json({ok:true});});
@@ -186,8 +263,17 @@ app.get('/api/mastery',auth,async(req,res)=>{if(!requireDb(res))return; const r=
 app.post('/api/tutor',auth,async(req,res)=>{
   if(!AI_URL||!AI_KEY) return res.status(503).json({error:'AI integration is not configured. Set AI_API_URL and AI_API_KEY on the server.'});
   const {question,answer,skill,level,hintsUsed,language}=req.body||{};
-  const system=`You are VIDO Tutor for an IT/IHK learning platform. Respond in ${language||'de'}. Use Socratic guidance. Do not reveal the final answer unless explicitly requested. Explain the next reasoning step, rule, or diagnostic check. Keep technical terms precise.`;
-  try { const r=await fetch(AI_URL,{method:'POST',headers:{'content-type':'application/json','authorization':`Bearer ${AI_KEY}`},body:JSON.stringify({model:AI_MODEL,messages:[{role:'system',content:system},{role:'user',content:JSON.stringify({question,answer,skill,level,hintsUsed})}]})}); const data=await r.json(); if(!r.ok) return res.status(502).json({error:'AI provider error',detail:data}); res.json({reply:data.choices?.[0]?.message?.content||data.output_text||'No tutor response.'}); }
+  const skillText=String(skill??'');
+  const levelText=String(level??'');
+  const hintCount=hintsUsed??0;
+  if(typeof question!=='string'||!question.trim()||question.length>8000||typeof answer!=='string'||answer.length>8000||skillText.length>160||levelText.length>80||!['de','en','ar'].includes(language)||!Number.isSafeInteger(hintCount)||hintCount<0||hintCount>100)
+    return res.status(400).json({error:'invalid_tutor_request'});
+  let allowed=false;
+  try{ allowed=await tutorRequestAllowed(req.user.sub); }
+  catch{ return res.status(503).json({error:'AI tutor temporarily unavailable'}); }
+  if(!allowed) return res.status(429).json({error:'tutor_rate_limit_exceeded'});
+  const system=`You are VIDO Tutor for an IT/IHK learning platform. Respond in ${language}. Use Socratic guidance. Do not reveal the final answer unless explicitly requested. Explain the next reasoning step, rule, or diagnostic check. Keep technical terms precise.`;
+  try { const r=await fetch(AI_URL,{method:'POST',headers:{'content-type':'application/json','authorization':`Bearer ${AI_KEY}`},signal:AbortSignal.timeout(30_000),body:JSON.stringify({model:AI_MODEL,messages:[{role:'system',content:system},{role:'user',content:JSON.stringify({question,answer,skill:skillText,level:levelText,hintsUsed:hintCount})}]})}); const data=await r.json(); if(!r.ok) return res.status(502).json({error:'AI provider error'}); res.json({reply:data.choices?.[0]?.message?.content||data.output_text||'No tutor response.'}); }
   catch(e){res.status(502).json({error:'AI request failed'});}
 });
 

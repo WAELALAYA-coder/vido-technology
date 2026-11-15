@@ -1,5 +1,7 @@
 @echo off
 setlocal
+cd /d "%~dp0"
+
 if not exist .env (
   copy .env.example .env >nul
   echo.
@@ -8,6 +10,7 @@ if not exist .env (
   pause
   exit /b 1
 )
+
 where docker >nul 2>nul
 if errorlevel 1 (
   echo Docker Desktop wurde nicht gefunden.
@@ -15,7 +18,15 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-docker compose up -d --build
+
+docker compose --env-file .env up -d
+if errorlevel 1 (
+  echo VIDO konnte nicht gestartet werden.
+  pause
+  exit /b 1
+)
+
 echo.
-echo VIDO laeuft jetzt unter: http://localhost:3000
+echo VIDO Technology V39 laeuft unter: http://127.0.0.1:3001
+echo API Health: http://127.0.0.1:3001/api/health
 pause

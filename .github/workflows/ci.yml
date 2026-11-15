@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate application
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+        env:
+          POSTGRES_DB: vido_test
+          POSTGRES_USER: vido_test
+          POSTGRES_PASSWORD: vido_test_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vido_test -d vido_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check backend/server.js
+          node --check backend/session-security.js
+          node --check questions-v37.js
+          node --check lessons-v37.js
+          node --check diagram-curriculum-v38.js
+          node --check diagram-engine-v38.js
+          node --check diagram-trainer.js
+          node --check scripts/diagram-audit.mjs
+          node --check scripts/session-security-test.mjs
+          node --check scripts/auth-postgres-test.mjs
+          node --check scripts/audit.mjs
+          node --check scripts/smoke-assets.mjs
+          node --check scripts/auth-integration-test.mjs
+
+      - name: Run application audit
+        run: npm test
+
+      - name: Run PostgreSQL-backed authentication integration tests
+        run: npm run test:auth-postgres
+        env:
+          VIDO_TEST_DATABASE_URL: postgresql://vido_test:vido_test_ci_only@127.0.0.1:5432/vido_test
+
+      - name: Smoke-test public learning assets and private paths
+        run: node scripts/smoke-assets.mjs
+ 
+      - name: Integration-test cookie sessions with PostgreSQL
+        run: npm run test:auth-integration
+        env:
+          VIDO_TEST_DATABASE_URL: postgresql://vido_test:vido_test_ci_only@127.0.0.1:5432/vido_test
+
+      - name: Check production dependency advisories
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Build production container image
+        run: docker build --tag vido-technology-ci .
