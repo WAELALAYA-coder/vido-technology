@@ -114,3 +114,11 @@ Important: GitHub Pages can host only a static frontend. It cannot run this Expr
 - The main application, account helper, button reliability helper, and remember-me session validation now route requests through one `window.VIDO_API_CLIENT` function.
 - The client preserves existing same-origin API paths, JSON headers, and current bearer-token behavior. JWT storage remains in sessionStorage, with the optional remember-me copy still in localStorage.
 - This is a preparatory refactor only. It does not claim HttpOnly cookie sessions or CSRF protection; those require a separate coordinated backend/frontend migration and dedicated session tests.
+
+
+## Server-side logout and token revocation
+
+- The authenticated `POST /api/auth/logout` endpoint increments the account's database-backed `token_version`.
+- This invalidates every JWT currently issued for that account, including a remembered browser token and tokens on other devices. The endpoint reports `scope: all_sessions` so the behavior is explicit.
+- The browser requests revocation before clearing its local session. If the request fails, local sign-out still completes and the login screen displays a warning that server-side revocation could not be confirmed.
+- This does not replace the planned HttpOnly cookie migration or CSRF protection.
