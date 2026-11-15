@@ -117,7 +117,7 @@ Important: GitHub Pages can host only a static frontend. It cannot run this Expr
 - Session JWTs remain seven-day tokens. The `remember` request flag controls whether the session cookie gets a seven-day Max-Age; without it, the cookie is a browser-session cookie. The CSRF cookie follows the same lifetime.
 - Existing legacy JWTs in sessionStorage and the `vidoRememberedSessionV32` localStorage entry are removed client-side. Users with an old browser token must sign in again after this release; no server-side legacy bearer compatibility is retained.
 - Logout increments the account's database-backed `token_version` and clears both cookies. This invalidates sessions on all devices, not just the current browser.
-- Automated tests cover CSRF token binding/tampering, cookie parsing/flags/lifetime/clearing, frontend wiring, cookie-only authentication, legacy Bearer rejection, and same-origin mutation guards. CI smoke tests intentionally run without PostgreSQL; they do not prove a real database-backed login/logout or exercise real browser Safari flows.
+- Automated tests cover CSRF token binding/tampering, cookie parsing/flags/lifetime/clearing, frontend wiring, cookie-only authentication, legacy Bearer rejection and same-origin mutation guards. CI also runs two integration suites against a disposable, digest-pinned PostgreSQL 16 service to verify real database-backed login, session validation, state sync, CSRF, account-wide logout revocation and quick-admin role checks. These do not replace browser testing through the real HTTPS Caddy endpoint or Safari/iOS.
 - This is a breaking authentication behavior change on the open maintenance branch. Merge and production rollout require explicit maintainer approval and coordinated release; no deployment has occurred.
 
 
@@ -125,7 +125,7 @@ Important: GitHub Pages can host only a static frontend. It cannot run this Expr
 
 - CI uses a production-mode Express smoke server without PostgreSQL. It verifies rejection of missing/foreign Origin headers, legacy Bearer tokens, missing/tampered CSRF headers, and confirms valid cookie+CSRF reaches the database availability check.
 - Pure unit tests cover HMAC binding, tamper rejection, cookie parsing and Secure/HttpOnly/SameSite/Max-Age attributes.
-- This is not a substitute for a live PostgreSQL login/logout integration test or browser tests over the real HTTPS Caddy endpoint.
+- The PostgreSQL integration suite is now part of CI. Browser tests over the real HTTPS Caddy endpoint (including desktop and iOS Safari) remain outstanding.
 
 
 ## Session startup and CSRF failure behavior
