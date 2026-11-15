@@ -97,6 +97,8 @@ assert(quickAdminStart>=0&&quickAdminEnd>quickAdminStart,'quick-admin route boun
 const quickAdminRoute=backend.slice(quickAdminStart,quickAdminEnd);
 assert(quickAdminRoute.includes("if(user.role!=='owner') return res.status(403).json({error:'owner_role_required'});"),'quick-admin must reject accounts without the owner role');
 assert(quickAdminRoute.includes('token:token(user)')&&!quickAdminRoute.includes("role:'owner'"),'quick-admin must use the database-verified owner role');
+assert(backend.includes("algorithm:'HS256'"),'JWTs must be signed explicitly with HS256');
+assert(backend.includes("jwt.verify(h.slice(7),JWT_SECRET,{algorithms:['HS256']})"),'JWT verification must reject algorithms other than HS256');
 assert(backend.includes("app.get('/questions-v37.js'"),'question data route missing from Express');
 assert(backend.includes("app.get('/lessons-v37.js'"),'lesson data route missing from Express');
 assert(backend.includes("'Content-Type':'application/javascript; charset=utf-8'"),'learning data routes must declare JavaScript content type');
