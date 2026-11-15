@@ -41,11 +41,35 @@ try{
   assert((await trainer.text()).includes('window.VIDO_DIAGRAM_APP'),'diagram trainer app payload missing');
   assert((await styles.text()).includes('.diagramLayout'),'diagram stylesheet payload missing');
 
+  const evilOrigin=await fetch(base+'/api/auth/login',{
+    method:'POST',headers:{'content-type':'application/json',origin:'https://evil.example'},
+    body:JSON.stringify({email:'nobody@example.test',password:'not-a-real-password'})
+  });
+  assert.equal(evilOrigin.status,403,'cross-origin login must be rejected before authentication');
+  assert.equal((await evilOrigin.json()).error,'same_origin_required');
+
+  const sameOrigin=await fetch(base+'/api/auth/login',{
+    method:'POST',headers:{'content-type':'application/json',origin:base},
+    body:JSON.stringify({email:'nobody@example.test',password:'not-a-real-password'})
+  });
+  assert.equal(sameOrigin.status,503,'same-origin login must pass Origin validation and reach the missing test database');
+
+  const noCookie=await get('/api/auth/me');
+  assert.equal(noCookie.status,401,'API auth must reject requests without the HttpOnly session cookie');
+  const legacyBearer=await fetch(base+'/api/auth/me',{headers:{authorization:'Bearer legacy-token'}});
+  assert.equal(legacyBearer.status,401,'API auth must not accept legacy Bearer tokens');
+
+  const crossOriginMutation=await fetch(base+'/api/auth/logout',{
+    method:'POST',headers:{'content-type':'application/json',origin:'https://evil.example'},
+    body:'{}'
+  });
+  assert.equal(crossOriginMutation.status,403,'cross-origin unsafe API requests must be rejected');
+
   for(const privatePath of ['/backend/server.js','/backend/schema.sql','/.env.example','/docker-compose.yml','/package.json']){
     const response=await get(privatePath);
     assert.equal(response.status,404,`private path must not be served: ${privatePath}`);
   }
-  console.log('PASS: Express serves the home page, six learning assets and keeps backend/configuration paths private.');
+  console.log('PASS: public learning assets, private paths, cookie-only auth, legacy Bearer rejection and same-origin mutation guards.');
 } finally {
   if(child.exitCode===null&&child.signalCode===null){
     child.kill('SIGTERM');
