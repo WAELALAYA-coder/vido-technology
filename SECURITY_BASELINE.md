@@ -109,17 +109,13 @@ Important: GitHub Pages can host only a static frontend. It cannot run this Expr
 - These controls reduce accidental or abusive provider usage; they do not replace provider-side spending limits, monitoring, or account-level billing alerts.
 
 
-## Browser API client consolidation
+## HttpOnly cookie sessions and CSRF protection (V39 maintenance)
 
-- The main application, account helper, button reliability helper, and remember-me session validation now route requests through one `window.VIDO_API_CLIENT` function.
-- The client preserves existing same-origin API paths, JSON headers, and current bearer-token behavior. JWT storage remains in sessionStorage, with the optional remember-me copy still in localStorage.
-- This is a preparatory refactor only. It does not claim HttpOnly cookie sessions or CSRF protection; those require a separate coordinated backend/frontend migration and dedicated session tests.
-
-
-## Server-side logout and token revocation
-
-- The authenticated `POST /api/auth/logout` endpoint increments the account's database-backed `token_version`.
-- This invalidates every JWT currently issued for that account, including a remembered browser token and tokens on other devices. The endpoint reports `scope: all_sessions` so the behavior is explicit.
-- The browser requests revocation before clearing its local session. If the request fails, local sign-out still completes and the login screen displays a warning that server-side revocation could not be confirmed.
-- This does not replace the planned HttpOnly cookie migration or CSRF protection.
-- This is an authentication behavior change separate from the V38 learning-content feature. It is present on the open maintenance branch and requires explicit maintainer approval before merge; no production deployment is implied.
+- Authentication is now cookie-based. The backend issues a `vido_session` cookie with `HttpOnly; Path=/; SameSite=Lax`; production also adds `Secure`. The browser does not receive the JWT in login/register/quick-admin JSON responses.
+- A separate `vido_csrf` cookie is readable by same-origin JavaScript. Its value contains a random nonce and an HMAC-SHA256 signature bound to the current session JWT. The browser API client sends this value in `X-CSRF-Token` for POST/PUT/PATCH/DELETE requests.
+- The backend verifies the CSRF cookie/header match and the session-bound signature using constant-time signature comparison. Unsafe API methods also require a matching Origin (or Referer fallback) in production.
+- Session JWTs remain seven-day tokens. The `remember` request flag controls whether the session cookie gets a seven-day Max-Age; without it, the cookie is a browser-session cookie. The CSRF cookie follows the same lifetime.
+- Existing legacy JWTs in sessionStorage and the `vidoRememberedSessionV32` localStorage entry are removed client-side. Users with an old browser token must sign in again after this release; no server-side legacy bearer compatibility is retained.
+- Logout increments the account's database-backed `token_version` and clears both cookies. This invalidates sessions on all devices, not just the current browser.
+- The current tests cover CSRF token binding/tampering, cookie parsing/flags/lifetime/clearing, frontend wiring and backend route guards. CI smoke tests do not connect to a production PostgreSQL database or exercise real browser Safari flows.
+- This is a breaking authentication behavior change on the open maintenance branch. Merge and production rollout require explicit maintainer approval and coordinated release; no deployment has occurred.
