@@ -98,7 +98,7 @@ for(const pair of [
   assert(backend.includes("'"+pair[0]+"'"),'missing asset mapping: '+pair[0]);
 }
 const serviceWorker=fs.readFileSync('service-worker.js','utf8');
-assert(serviceWorker.includes('vido-ui-20261114-v38-diagram-academy'),'service worker cache version missing');
+assert(serviceWorker.includes('vido-ui-20261115-v39-cookie-sessions'),'service worker cache version missing');
 for(const asset of ['diagram-curriculum-v38.js','diagram-engine-v38.js','diagram-trainer.js','diagram-trainer.css']){
   assert(serviceWorker.includes('./'+asset),'service worker does not precache '+asset);
 }
