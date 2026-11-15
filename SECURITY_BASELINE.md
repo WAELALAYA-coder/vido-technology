@@ -98,3 +98,12 @@ Important: GitHub Pages can host only a static frontend. It cannot run this Expr
 - Diagram drafts and completion progress are stored locally in the user's browser. No new database schema, authentication, payment or production deployment settings were changed for V38.
 - The semantic validator is a learning-time consistency checker, not proof that a real network or system configuration is correct. Validate network diagrams against the actual device configuration and approved documentation.
 - The diagram audit checks the 11 modules, eight example templates, 20 trilingual quizzes, source links and negative validator cases; this is structural validation, not formal standards certification.
+
+
+## AI tutor request controls
+
+- The authenticated AI tutor endpoint validates input types/lengths and accepts only the supported German, English, and Arabic locale codes.
+- Each authenticated user is limited to 10 AI tutor requests per 60-second database window. The counter reuses the persistent auth_rate_limits table and stores a SHA-256-derived user key rather than a raw user identifier.
+- Counter updates use a single PostgreSQL upsert, so simultaneous requests for one account cannot bypass the limit. Counters are capped at 11 while blocked and are removed by the existing one-day cleanup.
+- Outbound AI provider requests have a 30-second timeout. Upstream non-success response bodies are not returned to the browser.
+- These controls reduce accidental or abusive provider usage; they do not replace provider-side spending limits, monitoring, or account-level billing alerts.
