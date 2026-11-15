@@ -96,9 +96,19 @@ const quickAdminEnd=backend.indexOf("app.post('/api/auth/login'",quickAdminStart
 assert(quickAdminStart>=0&&quickAdminEnd>quickAdminStart,'quick-admin route boundaries missing');
 const quickAdminRoute=backend.slice(quickAdminStart,quickAdminEnd);
 assert(quickAdminRoute.includes("if(user.role!=='owner') return res.status(403).json({error:'owner_role_required'});"),'quick-admin must reject accounts without the owner role');
-assert(quickAdminRoute.includes('token:token(user)')&&!quickAdminRoute.includes("role:'owner'"),'quick-admin must use the database-verified owner role');
+assert(quickAdminRoute.includes("if(user.role!=='owner') return res.status(403).json({error:'owner_role_required'});")&&quickAdminRoute.includes('issueSessionCookies(res,user'),'quick-admin must verify the owner role and issue an HttpOnly cookie session');
+assert(!quickAdminRoute.includes('token:token(user)'),'quick-admin must not return JWTs in JSON');
 assert(backend.includes("algorithm:'HS256'"),'JWTs must be signed explicitly with HS256');
-assert(backend.includes("jwt.verify(h.slice(7),JWT_SECRET,{algorithms:['HS256']})"),'JWT verification must reject algorithms other than HS256');
+assert(backend.includes("jwt.verify(sessionToken,JWT_SECRET,{algorithms:['HS256']})"),'cookie session JWT verification must allow only HS256');
+const sessionSecurity=fs.readFileSync('backend/session-security.js','utf8');
+assert(backend.includes("readCookieValue(req.headers.cookie,SESSION_COOKIE_NAME)"),'auth middleware must read the HttpOnly session cookie');
+assert(backend.includes('verifyCsrfToken(sessionToken,csrfCookie,JWT_SECRET)'),'auth middleware must validate the session-bound CSRF token');
+assert(backend.includes('same_origin_required')&&backend.includes('csrf_validation_failed'),'mutating API requests must enforce origin and CSRF checks');
+assert(backend.includes('issueSessionCookies(res,r.rows[0],req.body?.remember===true)'),'login must issue an HttpOnly cookie and signed CSRF cookie');
+assert(!backend.includes('req.headers.authorization'),'backend must not accept legacy bearer authentication');
+assert(sessionSecurity.includes('HttpOnly')&&sessionSecurity.includes('SameSite=Lax'),'session cookie must be HttpOnly and SameSite=Lax');
+assert(sessionSecurity.includes('Secure'),'cookie helper must support Secure cookies in production');
+assert(sessionSecurity.includes('timingSafeEqual'),'CSRF signatures must be compared in constant time');
 const logoutStart=backend.indexOf("app.post('/api/auth/logout'");
 const logoutEnd=backend.indexOf("app.post('/api/auth/quick-admin'",logoutStart);
 const logoutRoute=backend.slice(logoutStart,logoutEnd);
@@ -106,11 +116,14 @@ assert(logoutStart>=0&&logoutEnd>logoutStart,'server-side logout route missing')
 assert(logoutRoute.includes('token_version=token_version+1')&&logoutRoute.includes("scope:'all_sessions'"),'logout must revoke account sessions using token version');
 assert(html.includes("api('/auth/logout',{method:'POST'})")&&html.includes('async function logout()'),'browser logout must request server-side token revocation');
 
-assert(html.includes('window.VIDO_API_CLIENT=window.VIDO_API_CLIENT||function(path,opts={},tokenOverride)'),'central API client missing');
-assert(html.includes('const api=(path,opts={})=>window.VIDO_API_CLIENT(path,opts,engineState.token)'),'main application must use central API client');
+assert(html.includes('window.VIDO_API_CLIENT=function(path,opts={})'),'central cookie API client missing');
+assert(html.includes("headers['x-csrf-token']=csrf"),'central API client must attach the CSRF cookie to unsafe requests');
+assert(html.includes("credentials:'same-origin'"),'central API client must send same-origin cookies');
+assert(html.includes('const api=(path,opts={})=>window.VIDO_API_CLIENT(path,opts);'),'main application must use central cookie API client');
 assert.equal((html.match(/return window\.VIDO_API_CLIENT\(path,opts\)/g)||[]).length,2,'account and button helpers must delegate to central API client');
-assert(html.includes("window.VIDO_API_CLIENT('/auth/me',{},saved.token)"),'remember-me session validation must use central API client');
+assert(html.includes("const r=await api('/auth/me')"),'session restore must validate the server cookie');
 assert(!html.includes("return fetch('/api'+path"),'legacy independent API fetch wrapper remains');
+assert(!html.includes('authorization')&&!html.includes('Bearer '),'browser must not store or send bearer JWTs');
 
 const tutorStart=backend.indexOf("app.post('/api/tutor'");
 const tutorRoute=backend.slice(tutorStart);
@@ -126,7 +139,7 @@ assert(backend.includes("app.get('/lessons-v37.js'"),'lesson data route missing 
 assert(backend.includes("'Content-Type':'application/javascript; charset=utf-8'"),'learning data routes must declare JavaScript content type');
 
 const sw=fs.readFileSync('service-worker.js','utf8');
-assert(sw.includes('vido-ui-20261114-v38-diagram-academy'),'service worker cache version is stale');
+assert(sw.includes('vido-ui-20261115-v39-cookie-sessions'),'service worker cache version is stale');
 assert(sw.includes('./questions-v37.js')&&sw.includes('./lessons-v37.js'),'lesson data is not cached');
 for(const asset of ['./diagram-curriculum-v38.js','./diagram-engine-v38.js','./diagram-trainer.js','./diagram-trainer.css'])assert(sw.includes(asset),'diagram asset is not cached: '+asset);
 for(const route of ['/diagram-curriculum-v38.js','/diagram-engine-v38.js','/diagram-trainer.js','/diagram-trainer.css'])assert(backend.includes("app.get('"+route+"'"),'diagram route missing: '+route);
