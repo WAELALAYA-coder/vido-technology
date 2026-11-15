@@ -97,6 +97,15 @@ async function clearLoginFailures(req,identity){
     await pool.query('DELETE FROM auth_rate_limits WHERE bucket_key=$1',[identityKey]);
   }catch(e){ console.error('Authentication failure counter cleanup failed'); }
 }
+
+async function tutorRequestAllowed(userId){
+  const userKey='ai:'+crypto.createHash('sha256').update(String(userId)).digest('hex');
+  const r=await pool.query(
+    "INSERT INTO auth_rate_limits(bucket_key,window_started_at,attempts) VALUES($1,NOW(),1) ON CONFLICT(bucket_key) DO UPDATE SET attempts=CASE WHEN auth_rate_limits.window_started_at < NOW()-INTERVAL '1 minute' THEN 1 WHEN auth_rate_limits.attempts < 11 THEN auth_rate_limits.attempts+1 ELSE 11 END, window_started_at=CASE WHEN auth_rate_limits.window_started_at < NOW()-INTERVAL '1 minute' THEN NOW() ELSE auth_rate_limits.window_started_at END RETURNING attempts",
+    [userKey]
+  );
+  return Number(r.rows[0]?.attempts||0)<=10;
+}
 function token(user){ return jwt.sign({sub:user.id,email:user.email,role:user.role||'user',ver:Number(user.token_version||0)},JWT_SECRET,{algorithm:'HS256',expiresIn:'7d'}); }
 
 function ua(req){ return req.headers['user-agent']||null; }
@@ -194,8 +203,17 @@ app.get('/api/mastery',auth,async(req,res)=>{if(!requireDb(res))return; const r=
 app.post('/api/tutor',auth,async(req,res)=>{
   if(!AI_URL||!AI_KEY) return res.status(503).json({error:'AI integration is not configured. Set AI_API_URL and AI_API_KEY on the server.'});
   const {question,answer,skill,level,hintsUsed,language}=req.body||{};
-  const system=`You are VIDO Tutor for an IT/IHK learning platform. Respond in ${language||'de'}. Use Socratic guidance. Do not reveal the final answer unless explicitly requested. Explain the next reasoning step, rule, or diagnostic check. Keep technical terms precise.`;
-  try { const r=await fetch(AI_URL,{method:'POST',headers:{'content-type':'application/json','authorization':`Bearer ${AI_KEY}`},body:JSON.stringify({model:AI_MODEL,messages:[{role:'system',content:system},{role:'user',content:JSON.stringify({question,answer,skill,level,hintsUsed})}]})}); const data=await r.json(); if(!r.ok) return res.status(502).json({error:'AI provider error'}); res.json({reply:data.choices?.[0]?.message?.content||data.output_text||'No tutor response.'}); }
+  const skillText=String(skill??'');
+  const levelText=String(level??'');
+  const hintCount=hintsUsed??0;
+  if(typeof question!=='string'||!question.trim()||question.length>8000||typeof answer!=='string'||answer.length>8000||skillText.length>160||levelText.length>80||!['de','en','ar'].includes(language)||!Number.isSafeInteger(hintCount)||hintCount<0||hintCount>100)
+    return res.status(400).json({error:'invalid_tutor_request'});
+  let allowed=false;
+  try{ allowed=await tutorRequestAllowed(req.user.sub); }
+  catch{ return res.status(503).json({error:'AI tutor temporarily unavailable'}); }
+  if(!allowed) return res.status(429).json({error:'tutor_rate_limit_exceeded'});
+  const system=`You are VIDO Tutor for an IT/IHK learning platform. Respond in ${language}. Use Socratic guidance. Do not reveal the final answer unless explicitly requested. Explain the next reasoning step, rule, or diagnostic check. Keep technical terms precise.`;
+  try { const r=await fetch(AI_URL,{method:'POST',headers:{'content-type':'application/json','authorization':`Bearer ${AI_KEY}`},signal:AbortSignal.timeout(30_000),body:JSON.stringify({model:AI_MODEL,messages:[{role:'system',content:system},{role:'user',content:JSON.stringify({question,answer,skill:skillText,level:levelText,hintsUsed:hintCount})}]})}); const data=await r.json(); if(!r.ok) return res.status(502).json({error:'AI provider error'}); res.json({reply:data.choices?.[0]?.message?.content||data.output_text||'No tutor response.'}); }
   catch(e){res.status(502).json({error:'AI request failed'});}
 });
 
