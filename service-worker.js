@@ -1,4 +1,4 @@
-const CACHE='vido-ui-20261115-v39.1-pwa-responsive';
+const CACHE='vido-ui-20261115-v39.2-auth-recovery';
 const STATIC=['./','./index.html','./manifest.webmanifest','./icons/vido-app-icon.svg','./icons/vido-192.png','./icons/vido-512.png','./questions-v37.js','./lessons-v37.js','./diagram-curriculum-v38.js','./diagram-engine-v38.js','./diagram-trainer.js','./diagram-trainer.css'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(STATIC)));self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
