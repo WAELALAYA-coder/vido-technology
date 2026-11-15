@@ -67,3 +67,10 @@ Maintenance quality follow-up — 15 November 2026
 - Invalid or oversized structures are no longer passed to the preview/export renderer; saved oversized drafts are discarded on load.
 - Added German, English and Arabic feedback for model-size and preview safety limits, plus regression assertions in the diagram audit.
 - This protects the browser from oversized or malformed local drafts; it is not a server-side upload validation feature.
+
+
+Maintenance architecture follow-up — 15 November 2026
+- Consolidated the main application, account helper, button reliability helper and remember-me session check onto one browser API client.
+- Preserved the current JWT bearer behavior and endpoint paths to avoid changing authentication semantics in this refactor.
+- This prepares the frontend for a later HttpOnly cookie migration. Browser JWTs are still stored in sessionStorage and the optional persistent copy remains in localStorage until that migration and its CSRF/session tests are implemented.
+- Added static regression assertions to ensure the helper call sites remain centralized.
