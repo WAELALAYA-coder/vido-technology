@@ -10,7 +10,7 @@ const { Pool } = pg;
 const app = express();
 const TRUSTED_PROXY_IP = String(process.env.TRUSTED_PROXY_IP || '').trim();
 if (TRUSTED_PROXY_IP && isIP(TRUSTED_PROXY_IP) !== 4) throw new Error('TRUSTED_PROXY_IP must be one exact IPv4 address');
-app.set('trust proxy', TRUSTED_PROXY_IP || false);
+app.set('trust proxy', process.env.TRUST_PROXY_HOPS === '1' ? 1 : (TRUSTED_PROXY_IP || false));
 app.disable('x-powered-by');
 app.use((_req,res,next)=>{ res.setHeader('X-Content-Type-Options','nosniff'); res.setHeader('X-Frame-Options','DENY'); res.setHeader('Referrer-Policy','strict-origin-when-cross-origin'); res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()'); res.setHeader('Cross-Origin-Resource-Policy','same-origin'); next(); });
 app.use('/api',(_req,res,next)=>{ res.setHeader('Cache-Control','no-store, max-age=0'); res.setHeader('Pragma','no-cache'); next(); });
