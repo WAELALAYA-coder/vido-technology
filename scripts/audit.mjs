@@ -99,6 +99,13 @@ assert(quickAdminRoute.includes("if(user.role!=='owner') return res.status(403).
 assert(quickAdminRoute.includes('token:token(user)')&&!quickAdminRoute.includes("role:'owner'"),'quick-admin must use the database-verified owner role');
 assert(backend.includes("algorithm:'HS256'"),'JWTs must be signed explicitly with HS256');
 assert(backend.includes("jwt.verify(h.slice(7),JWT_SECRET,{algorithms:['HS256']})"),'JWT verification must reject algorithms other than HS256');
+const logoutStart=backend.indexOf("app.post('/api/auth/logout'");
+const logoutEnd=backend.indexOf("app.post('/api/auth/quick-admin'",logoutStart);
+const logoutRoute=backend.slice(logoutStart,logoutEnd);
+assert(logoutStart>=0&&logoutEnd>logoutStart,'server-side logout route missing');
+assert(logoutRoute.includes('token_version=token_version+1')&&logoutRoute.includes("scope:'all_sessions'"),'logout must revoke account sessions using token version');
+assert(html.includes("api('/auth/logout',{method:'POST'})")&&html.includes('async function logout()'),'browser logout must request server-side token revocation');
+
 assert(html.includes('window.VIDO_API_CLIENT=window.VIDO_API_CLIENT||function(path,opts={},tokenOverride)'),'central API client missing');
 assert(html.includes('const api=(path,opts={})=>window.VIDO_API_CLIENT(path,opts,engineState.token)'),'main application must use central API client');
 assert.equal((html.match(/return window\.VIDO_API_CLIENT\(path,opts\)/g)||[]).length,2,'account and button helpers must delegate to central API client');
