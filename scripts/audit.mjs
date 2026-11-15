@@ -106,6 +106,11 @@ assert(backend.includes("if (pool && JWT_SECRET.length < 32) throw new Error('JW
 assert(backend.includes("clearAuthCookies(res);\n      return res.status(403).json({error:'csrf_validation_failed'})"),'failed CSRF validation must clear the local session cookies');
 assert(backend.includes('same_origin_required')&&backend.includes('csrf_validation_failed'),'mutating API requests must enforce origin and CSRF checks');
 assert(backend.includes('issueSessionCookies(res,r.rows[0],req.body?.remember===true)'),'login must issue an HttpOnly cookie and signed CSRF cookie');
+const authIntegration=fs.readFileSync('scripts/auth-integration-test.mjs','utf8');
+assert(authIntegration.includes("await pool.query(fs.readFileSync('backend/schema.sql', 'utf8'))"),'PostgreSQL integration test must initialize its isolated schema');
+assert(authIntegration.includes("assert.equal(revokedOtherDevice.status, 401"),'PostgreSQL integration test must verify account-wide logout revocation');
+assert(authIntegration.includes("assert.equal(demotedQuickAdmin.status, 403"),'PostgreSQL integration test must verify quick-admin role enforcement');
+
 assert(!backend.includes('req.headers.authorization')&&!backend.includes("h.startsWith('Bearer ')"),'backend must not accept legacy bearer authentication');
 assert(!backend.includes('res.json({token:token('),'authentication routes must not expose session JWTs in JSON');
 assert(backend.includes("if(!supplied)return process.env.NODE_ENV!=='production'"),'production must reject unsafe API requests without Origin or Referer');
