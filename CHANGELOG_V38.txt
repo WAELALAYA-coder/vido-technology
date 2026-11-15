@@ -95,7 +95,7 @@ Maintenance authentication migration — V39 — 15 November 2026
 - Added production Secure/SameSite cookie attributes, same-origin Origin/Referer checks, browser-session cookies by default and seven-day persistence only when the user selects “Keep me signed in”.
 - Removed legacy remembered JWT storage and added client-side cleanup of old sessionStorage/localStorage tokens. Existing users must sign in again after this breaking change.
 - Logout clears both cookies and increments `token_version`, revoking all account sessions across devices.
-- Added isolated tests for CSRF binding/tampering and cookie parsing/flags/lifetime/clearing, plus HTTP smoke checks for cookie-only authentication, legacy Bearer rejection and same-origin mutation guards. CI caught a stale Diagram Academy cache-version assertion; it has been updated to the V39 cache key and must be rerun.
+- Added isolated tests for CSRF binding/tampering and cookie parsing/flags/lifetime/clearing, plus HTTP smoke checks for cookie-only authentication, legacy Bearer rejection and same-origin mutation guards. The stale Diagram Academy cache-version assertion was updated to the V39 key and the complete workflow passed in CI run #82.
 - This migration is limited to the maintenance branch. It has not been merged or deployed. A real PostgreSQL-backed authentication integration test and browser-level test remain necessary before production rollout.
 
 
@@ -108,3 +108,10 @@ Authentication migration verification — 15 November 2026
 Cookie session hardening — 15 November 2026
 - Added a startup guard requiring a 32-character minimum JWT/CSRF signing secret whenever DATABASE_URL is configured.
 - Failed CSRF checks now clear the browser session and CSRF cookies before returning HTTP 403, preventing reuse of a stale cookie pair.
+
+
+Final V39 verification — 15 November 2026
+- CI run #82 passed on commit d11962f5c03d85ed09fe2c271ba92939c45d8899. Syntax checks, session security unit tests, application and diagram audits, production-mode HTTP smoke tests, dependency advisories and production Docker build all passed.
+- Added a database-backed startup check for the JWT/CSRF signing secret minimum and cookie clearing on CSRF validation failure.
+- CI smoke tests intentionally use no PostgreSQL or real user accounts. A real database-backed authentication test, Caddy HTTPS cookie inspection and desktop/iOS browser testing remain pre-production tasks.
+- The maintenance PR remains open and unmerged; no production deployment was performed.
