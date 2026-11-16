@@ -339,8 +339,19 @@ app.post('/api/admin/users',auth,adminUser,ownerOnly,async(req,res)=>{ if(!requi
 app.post('/api/admin/users/:id/password',auth,adminUser,ownerOnly,async(req,res)=>{ if(!requireDb(res))return; const password=String(req.body?.password||''); if(password.length<12)return res.status(400).json({error:'password must be 12+ characters'}); const hash=await bcrypt.hash(password,12); const r=await pool.query('UPDATE users SET password_hash=$2,token_version=token_version+1 WHERE id=$1 RETURNING email',[req.params.id,hash]); if(!r.rowCount)return res.status(404).json({error:'user_not_found'}); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'reset_user_password','user',req.params.id,{}]); res.json({ok:true,email:r.rows[0].email}); });
 app.delete('/api/admin/users/:id',auth,adminUser,ownerOnly,async(req,res)=>{ if(!requireDb(res))return; if(req.params.id===req.user.sub)return res.status(400).json({error:'cannot_delete_current_owner'}); const r=await pool.query('DELETE FROM users WHERE id=$1 RETURNING email',[req.params.id]); if(!r.rowCount)return res.status(404).json({error:'user_not_found'}); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'delete_user','user',req.params.id,{email:r.rows[0].email}]); res.json({ok:true}); });
 
-app.get('/api/state',auth,async(req,res)=>{if(!requireDb(res))return; const r=await pool.query('SELECT state FROM app_state WHERE user_id=$1',[req.user.sub]);res.json(r.rowCount?r.rows[0].state:null);});
-app.put('/api/state',auth,async(req,res)=>{if(!requireDb(res))return; const state=req.body?.state; if(!state)return res.status(400).json({error:'state required'}); await pool.query(`INSERT INTO app_state(user_id,state) VALUES($1,$2) ON CONFLICT(user_id) DO UPDATE SET state=EXCLUDED.state,updated_at=NOW()`,[req.user.sub,state]);res.json({ok:true});});
+function requireMatchingStateAccount(req,res){
+  const expected=String(req.get('x-vido-account-id')||'').trim().toLowerCase();
+  if(!expected)return true;
+  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const authenticatedId=String(req.user?.sub||'').trim().toLowerCase();
+  if(!uuid.test(expected)||expected!==authenticatedId){
+    res.status(409).json({error:'account_session_changed'});
+    return false;
+  }
+  return true;
+}
+app.get('/api/state',auth,async(req,res)=>{if(!requireDb(res)||!requireMatchingStateAccount(req,res))return; const r=await pool.query('SELECT state FROM app_state WHERE user_id=$1',[req.user.sub]);res.json(r.rowCount?r.rows[0].state:null);});
+app.put('/api/state',auth,async(req,res)=>{if(!requireDb(res)||!requireMatchingStateAccount(req,res))return; const state=req.body?.state; if(!state)return res.status(400).json({error:'state required'}); await pool.query(`INSERT INTO app_state(user_id,state) VALUES($1,$2) ON CONFLICT(user_id) DO UPDATE SET state=EXCLUDED.state,updated_at=NOW()`,[req.user.sub,state]);res.json({ok:true});});
 app.post('/api/events',auth,async(req,res)=>{if(!requireDb(res))return; const e=req.body||{}; await pool.query('INSERT INTO learning_events(user_id,question_id,skill,correct,answer_time_ms,hints_used) VALUES($1,$2,$3,$4,$5,$6)',[req.user.sub,e.questionId,e.skill,!!e.correct,Number(e.answerTimeMs)||0,Number(e.hintsUsed)||0]);res.json({ok:true});});
 app.get('/api/mastery',auth,async(req,res)=>{if(!requireDb(res))return; const r=await pool.query('SELECT skill,score,next_review,interval_days,repetitions FROM mastery WHERE user_id=$1',[req.user.sub]);res.json(r.rows);});
 app.post('/api/tutor',auth,async(req,res)=>{
