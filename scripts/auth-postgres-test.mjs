@@ -174,7 +174,7 @@ try {
   const unknownForgotBody = await json(unknownForgot);
   const knownForgotBody = await json(knownForgot);
   assert(knownForgotBody.ok === unknownForgotBody.ok && knownForgotBody.message === unknownForgotBody.message, 'Known and unknown accounts must receive the same response body when delivery fails.');
-  assert.equal(knownForgotBody.message, 'If the account exists, a reset email will be sent.', 'Password recovery must use a generic response.');
+  assert(knownForgotBody.message === 'If the account exists, a reset email will be sent.', 'Password recovery must use a generic response.');
   // The test-only Resend stub always returns HTTP 500; failed delivery must remove the unusable token.
   for (let attempt = 0; attempt < 20; attempt++) {
     const pending = await database.query('SELECT COUNT(*)::int AS count FROM password_reset_tokens');
