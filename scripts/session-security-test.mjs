@@ -66,6 +66,8 @@ const registrationHandler = authHtml.slice(registrationStart, registrationEnd);
 assert.ok(registrationHandler.includes('من 12 حرفاً على الأقل.'), 'Arabic registration hint must match the 12-character rule');
 assert.ok(registrationHandler.includes('mindestens 12 Zeichen'), 'German registration hint must match the 12-character rule');
 assert.ok(!registrationHandler.includes('8 أحرف على الأقل') && !registrationHandler.includes('mindestens 8 Zeichen'), 'registration hint must not show the outdated 8-character rule');
+assert.ok(authHtml.includes("كلمة المرور (12 حرفاً على الأقل)"), 'Arabic account password placeholder must match the 12-character rule');
+assert.ok(!authHtml.includes("كلمة المرور (8 أحرف على الأقل)"), 'Arabic account password placeholder must not show the outdated 8-character rule');
 
 const authErrorStart = authHtml.indexOf('function describeAuthError');
 const authErrorEnd = authHtml.indexOf('async function gateLogin', authErrorStart);
