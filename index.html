@@ -156,6 +156,7 @@ window.vidoTrack = function(eventName, props) {
 <section class="view" data-view="ihk"><div class="viewInner"><div class="viewHead"><button class="back" data-back="">← Zurück</button><h1 id="ihkTitle">IHK Prüfung</h1></div><div class="card"><div class="eyebrow" id="ihkModeLabel">IHK-orientiert</div><h2 id="ihkModeTitle">Prüfungsmodus</h2><p class="muted" id="ihkModeText">Praxisnahe Aufgaben mit IPv4, Subnetting, Routing und Troubleshooting. Die Aufgaben sind original erstellt und keine kopierten IHK-Prüfungsfragen.</p><div class="actions"><button class="primary" data-i18n="ihk_start" id="startIhk">IHK-Training starten</button><button class="secondary" data-go="help" id="ihkHelpBtn">Hilfe</button></div></div></div></section>
 <section class="view" data-view="tutor"><div class="viewInner"><div class="viewHead"><button class="back" data-back="">← Zurück</button><h1 data-i18n="tutor_title">VIDO Tutor</h1><span class="muted" data-i18n="tutor_subtitle">Socratic IT learning assistant</span></div><div class="grid two"><div class="card"><h3 data-i18n="tutor_context">Aktuelle Aufgabe</h3><div class="muted" id="tutorQuestion">—</div><div class="tag" id="tutorSkill" style="margin-top:8px">—</div><textarea id="tutorInput" rows="5" style="width:100%;margin-top:12px;background:#07111f;color:#fff;border:1px solid #31506b;border-radius:10px;padding:12px" placeholder="Beschreibe deinen Denkweg oder Fehler..."></textarea><button class="primary" id="tutorAsk" style="margin-top:10px" data-i18n="tutor_ask">Tutor fragen</button></div><div class="card"><h3 data-i18n="tutor_response">Tutor-Antwort</h3><div id="tutorResponse" class="helpBox" aria-live="polite">—</div><div class="muted" id="tutorStatus" style="margin-top:8px"></div></div></div></div></section><section class="view" data-view="sim"><div class="viewInner"><div class="viewHead"><button class="back" data-back="">← Zurück</button><h1 id="simTitle">Cisco Simulator</h1><span class="muted" id="simSubtitle">VIDO Network Lab</span></div><div class="sim"><div class="simPanel left"><div class="simTitle" id="simDevices">Geräte</div><div class="simBody"><button class="deviceBtn" data-add="PC">＋ PC</button><button class="deviceBtn" data-add="Switch">＋ Switch</button><button class="deviceBtn" data-add="Router">＋ Router</button><button class="deviceBtn" data-add="Server">＋ Server</button><button class="deviceBtn" id="connectDevices">Connect selected devices</button><div class="muted" id="connectHint" style="font-size:11px;margin:2px 0 8px">Select two added devices, then connect.</div><hr style="border-color:#1d2d40"/><div class="form"><label class="muted" id="simIpLabel">IPv4</label><input id="simIp" value="192.168.10.10"/><label class="muted" id="simMaskLabel">Maske</label><input id="simMask" value="255.255.255.0"/><label class="muted" id="simGwLabel">Gateway</label><input id="simGw" value="192.168.10.1"/><label class="muted">Source device</label><select id="simSource" class="form"><option value="">Select source</option></select><label class="muted">Destination device</label><select id="simTarget" class="form"><option value="">Select destination</option></select><button class="secondary" id="simApply">Apply IPv4 to source</button><button class="secondary" id="simDhcp">Obtain IPv4 via DHCP</button><label class="muted">VLAN ID (1–4094)</label><input id="simVlan" type="number" min="1" max="4094" value="1"/><button class="secondary" id="simApplyVlan">Assign VLAN to source</button><hr style="border-color:#1d2d40"/><label class="muted">Switch link / Port</label><select id="simPortLink" class="form"><option value="">Select connection</option></select><label class="muted">Port mode</label><select id="simPortMode" class="form"><option value="access">Access</option><option value="trunk">Trunk (802.1Q)</option></select><label class="muted">Access VLAN</label><input id="simAccessVlan" type="number" min="1" max="4094" value="1"/><label class="muted">Allowed VLANs (Trunk, e.g. 10,20,30)</label><input id="simAllowedVlans" value="1,10,20"/><button class="secondary" id="simApplyPort">Apply port configuration</button><hr style="border-color:#1d2d40"/><label class="muted">Router</label><select id="simRouter" class="form"><option value="">Select router</option></select><label class="muted">Subinterface VLAN ID</label><input id="simSubVlan" type="number" min="1" max="4094" value="10"/><label class="muted">Gateway IPv4</label><input id="simSubIp" value="192.168.10.1"/><label class="muted">Subnet Mask</label><input id="simSubMask" value="255.255.255.0"/><button class="secondary" id="simApplySubif">Configure 802.1Q subinterface</button><button class="primary" data-i18n="sim_ping" id="simPing">Ping destination</button></div></div></div><div class="simPanel center"><div class="tabbar"><button class="tab active" data-tab="topo" id="topologyTab">Topology</button><button class="tab" data-tab="cli" id="cliTab">CLI</button><button class="tab" data-tab="packet" id="packetTab">Packet Flow</button><button class="tab" data-tab="task" id="taskTab">Task</button></div><div class="simBody" style="padding:0"><div class="canvas" id="topo"><div class="device" style="left:12%;top:20%"><b>PC1</b><small>192.168.10.10</small></div><div class="device" style="left:43%;top:42%"><b>Switch1</b><small>VLAN 1</small></div><div class="device" style="left:73%;top:65%"><b>Router1</b><small>G0/0</small></div></div><div hidden="" id="cli" style="padding:12px"><div class="cli" id="cliOut">Cisco-style VIDO CLI\nType: show ip interface brief\n</div><input class="cliInput" id="cliIn" placeholder="Router# show ip interface brief"/></div><div hidden="" id="packet" style="padding:14px"><div class="list"><div class="row"><span>1 · ARP</span><span class="tag" id="packetArp">Resolve MAC</span></div><div class="row"><span>2 · Ethernet</span><span class="tag" id="packetFrame">Frame</span></div><div class="row"><span>3 · IPv4</span><span class="tag" id="packetPacket">Packet</span></div><div class="row"><span>4 · Routing</span><span class="tag" id="packetNextHop">Next Hop</span></div></div></div><div hidden="" id="task" style="padding:14px"><h3 id="simChallengeLabel">Challenge</h3><p class="muted" id="simTaskText">Konfiguriere einen PC mit IPv4, Maske und Gateway und prüfe die Verbindung.</p><button class="primary" data-i18n="sim_task_check" id="taskCheck">Aufgabe prüfen</button><div class="feedback" hidden="" id="taskResult"></div></div></div></div><div class="simPanel right"><div class="simTitle" id="simLogsTitle">Device / Routing / Logs</div><div class="simBody"><h4 id="routingTitle">Routing Table</h4><div class="list"><div class="row"><span class="ltr">192.168.10.0/24</span><span>G0/0</span></div><div class="row"><span class="ltr">0.0.0.0/0</span><span id="routingNextHop">Next Hop</span></div></div><h4 id="arpTitle" style="margin-top:15px">ARP / MAC</h4><div class="list"><div class="list" id="simArpTable"><div class="muted">No ARP entries yet.</div></div><h4>Switch MAC Address Table</h4><div class="list" id="simMacTable"><div class="muted">No learned MAC addresses yet.</div></div></div><h4 id="eventsTitle" style="margin-top:15px">Events</h4><div class="muted" id="simEvents">Simulator bereit.</div></div></div></div></div></section>
 </main></div><footer class="bottom" data-i18n="footer">VIDO Technology · Learning Foundation · IPv4 / Subnetting / Cisco / IHK</footer></div>
+<script src="account-state-storage.js"></script>
 <script src="questions-v37.js"></script>
 <script src="lessons-v37.js"></script>
 
@@ -192,9 +193,9 @@ const levelLabel=(v)=>{const m={Easy:{de:'Leicht',en:'Easy',ar:'سهل'},Medium:
 const glossaryText={de:[['CIDR','Classless Inter-Domain Routing','Präfixnotation wie /24.'],['Subnet Mask','Subnetzmaske','Trennt Netz- und Hostanteil.'],['Network Address','Netzwerkadresse','Erste Adresse eines Subnetzes.'],['Broadcast','Broadcast-Adresse','Letzte Adresse eines Subnetzes.'],['Gateway','Default Gateway','Router-Adresse für andere Netze.'],['ARP','Address Resolution Protocol','Ordnet IPv4-Adressen MAC-Adressen zu.'],['VLSM','Variable Length Subnet Masking','Subnetze mit unterschiedlichen Größen.'],['ICMP','Internet Control Message Protocol','Wird u. a. für Ping verwendet.'],['Routing','Routing','Entscheidung über den nächsten Weg eines IP-Pakets.'],['MAC','Media Access Control','Hardware-Adresse auf Layer 2.']],en:[['CIDR','Classless Inter-Domain Routing','Prefix notation such as /24.'],['Subnet Mask','Subnet Mask','Separates network and host parts.'],['Network Address','Network Address','First address of a subnet.'],['Broadcast','Broadcast Address','Last address of a subnet.'],['Gateway','Default Gateway','Router address for other networks.'],['ARP','Address Resolution Protocol','Maps IPv4 addresses to MAC addresses.'],['VLSM','Variable Length Subnet Masking','Different subnet sizes.'],['ICMP','Internet Control Message Protocol','Used by Ping.'],['Routing','Routing','Chooses the next path for an IP packet.'],['MAC','Media Access Control','Layer-2 hardware address.']],ar:[['CIDR','Classless Inter-Domain Routing','صيغة Prefix مثل /24.'],['Subnet Mask','Subnet Mask','تفصل جزء الشبكة عن جزء الأجهزة.'],['Network Address','Network Address','أول عنوان في الشبكة الفرعية.'],['Broadcast','Broadcast Address','آخر عنوان في الشبكة الفرعية.'],['Gateway','Default Gateway','عنوان الراوتر للوصول إلى شبكات أخرى.'],['ARP','Address Resolution Protocol','يربط IPv4 بعنوان MAC داخل الشبكة المحلية.'],['VLSM','Variable Length Subnet Masking','يسمح بأحجام مختلفة للشبكات الفرعية.'],['ICMP','Internet Control Message Protocol','يستخدمه Ping.'],['Routing','Routing','يحدد المسار التالي لحزمة IP.'],['MAC','Media Access Control','عنوان العتاد في Layer 2.']]};
 let lang=localStorage.getItem('vidoLang')||'de';
 const DEFAULT_STATE={xp:0,streak:0,attempts:0,correct:0,notes:[],mistakes:[],mastery:{},current:0,lastRoute:'home',history:['home'],answers:{},hints:{},learningTopic:'all',daily:{date:'',progress:0,target:10}};
-function loadState(){
+function loadState(storageKey='vidoV10FinalState'){
  try{
-  const raw=localStorage.getItem('vidoV10FinalState');
+  const raw=localStorage.getItem(storageKey);
   const parsed=raw?JSON.parse(raw):null;
   if(!parsed||typeof parsed!=='object')return {...DEFAULT_STATE,history:['home']};
   const merged={...DEFAULT_STATE,...parsed};
@@ -212,8 +213,20 @@ function loadState(){
   return merged;
  }catch{return {...DEFAULT_STATE,history:['home']};}
 }
-let state=loadState();
+let stateStorageKey='vidoV10FinalState';
+let state=loadState(stateStorageKey);
 let route=state.lastRoute||'home';
+function activateAccountState(user){
+  const accountKey=window.VIDO_ACCOUNT_STATE_STORAGE?.selectAccountKey(localStorage,user?.id);
+  if(!accountKey)return false;
+  const nextState=loadState(accountKey);
+  Object.keys(state).forEach(key=>delete state[key]);
+  Object.assign(state,nextState);
+  stateStorageKey=accountKey;
+  route=state.lastRoute||'home';
+  setRoute(route,false);
+  return true;
+}
 const $=id=>document.getElementById(id); window.$=$;
 const t=k=>(T[lang]&&T[lang][k])||T.de[k]||k;
 function setDir(){document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';document.body.classList.toggle('rtl',lang==='ar');if($('langSelect'))$('langSelect').value=lang;}
@@ -272,7 +285,7 @@ function homeMetricLabels(){return [['homeXp','home_xp'],['homeStreak','home_str
 function renderHelpStatic(){const sec=document.querySelector('[data-view="help"]');if(!sec)return;const cards=sec.querySelectorAll('.card');if(cards.length){const h=cards[0].querySelector('h3');if(h)h.textContent=t('help_prog');const rows=cards[0].querySelectorAll('.helpStep');const vals=[['help1','help1t'],['help2','help2t'],['help3','help3t'],['help4','help4t'],['help5','help5t']];rows.forEach((r,i)=>{if(!vals[i])return;const b=r.querySelector('b');const sub=r.querySelector('.muted');if(b)b.textContent=t(vals[i][0]);if(sub)sub.textContent=t(vals[i][1])})}}
 function renderIhkStatic(){const sec=document.querySelector('[data-view="ihk"]');if(!sec)return;const p=sec.querySelector('p');if(p)p.textContent=t('ihk_desc');const b=$('startIhk');if(b)b.textContent=t('ihk_start')}
 
-function save(){try{localStorage.setItem('vidoV10FinalState',JSON.stringify(state));}catch{}renderStats();}
+function save(){try{localStorage.setItem(stateStorageKey,JSON.stringify(state));}catch{}renderStats();}
 function mastery(){return state.attempts?Math.round(state.correct/state.attempts*100):0}
 function renderStats(){let m=mastery();['xp','homeXp','pXp'].forEach(id=>$(id)&&(['homeXp'].includes(id)?null:$(id).textContent=state.xp));['streak','homeStreak','pStreak'].forEach(id=>$(id)&&(['homeStreak'].includes(id)?null:$(id).textContent=state.streak));if($('mastery'))$('mastery').textContent=m+'%';if($('progMastery'))$('progMastery').textContent=m+'%';if($('progBar'))$('progBar').style.width=m+'%';if($('pCorrect'))$('pCorrect').textContent=state.correct;if($('pAttempts'))$('pAttempts').textContent=state.attempts;if($('homeQ'))$('homeQ').textContent=state.attempts;if($('homeErr'))$('homeErr').textContent=state.mistakes.length;if($('homePct'))$('homePct').textContent=m+'%';if($('homeBar'))$('homeBar').style.width=m+'%';if($('homeXp'))$('homeXp').textContent=state.xp;if($('homeStreak'))$('homeStreak').textContent=state.streak}
 function renderHome(){
@@ -663,6 +676,7 @@ function setLogoutVisible(show){const b=$('logoutBtn');if(b)b.classList.toggle('
 setDir();setLogoutVisible(false);if($('langSelect'))$('langSelect').value=lang;setStatic();setRoute(route,false);renderStats();renderPath();renderPathDetail();renderDashboardV10();renderSoon();renderTopics();renderQuestion();renderLists();renderProgress();renderGlossary();renderVideos();renderSimLabels();
 // VIDO core bridge: keeps extension engines in later script tags connected to the main engine scope.
 window.vidoCore={
+  activateAccountState:activateAccountState,
   get Q(){return Q},
   get state(){return state},
   get lang(){return lang},
@@ -829,9 +843,70 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
   }
   function setAuthMode(mode){authMode=mode;gateStatus('');applyAuthGateText();}
   function setLogoutVisible(show){const b=$('logoutBtn');if(b)b.classList.toggle('visible',!!show)}
-  function unlockApp(user){authenticated=true;delete engineState.token;engineState.role=user?.role||null;engineState.email=user?.email||null;persist();document.body.classList.remove('authLocked');if(authGate)authGate.hidden=true;setLogoutVisible(true);checkAdminAccess();}
+  function unlockApp(user){
+    const nextId=String(user?.id||'').trim().toLowerCase();
+    const nextEmail=String(user?.email||'').trim().toLowerCase();
+    const previousId=String(engineState.userId||'').trim().toLowerCase();
+    const previousEmail=String(engineState.email||'').trim().toLowerCase();
+    const sameAccount=previousId?previousId===nextId:!!previousEmail&&previousEmail===nextEmail;
+    authenticated=false;
+    if(!nextId||!window.vidoCore?.activateAccountState(user))return false;
+    if(!sameAccount){
+      engineState.review={};
+      engineState.sessionEvents=[];
+      engineState.lastRecorded=null;
+      engineState.answerStartedAt=Date.now();
+      engineState.sim={devices:[],links:[],arp:{},mac:{},routes:[
+        {network:'192.168.10.0/24',nextHop:'connected',interface:'G0/0'},
+        {network:'0.0.0.0/0',nextHop:'192.168.10.254',interface:'G0/0'}
+      ]};
+    }
+    engineState.userId=nextId;
+    authenticated=true;
+    delete engineState.token;
+    engineState.role=user?.role||null;
+    engineState.email=user?.email||null;
+    persist();
+    document.body.classList.remove('authLocked');
+    if(authGate)authGate.hidden=true;
+    setLogoutVisible(true);
+    checkAdminAccess();
+    return true;
+  }
   async function logout(){let revokeFailed=false;if(authenticated){try{const r=await api('/auth/logout',{method:'POST'});if(!r.ok)revokeFailed=true;}catch{revokeFailed=true}}authenticated=false;delete engineState.token;engineState.role=null;engineState.email=null;engineState.review={};engineState.sessionEvents=[];engineState.lastRecorded=null;sessionStorage.removeItem('vidoEngineV2');document.body.classList.add('authLocked');if(authGate)authGate.hidden=false;showAdminButton(false);setLogoutVisible(false);if($('gatePassword'))$('gatePassword').value='';if($('gateMsg'))$('gateMsg').textContent='';if($('gateEmail'))$('gateEmail').value='';if($('gatePasswordConfirm'))$('gatePasswordConfirm').value='';authResetToken='';setAuthMode('login');if(revokeFailed)gateStatus(getLang()==='ar'?'تم الخروج من هذا الجهاز، لكن تعذّر إبطال الجلسات على الخادم.':getLang()==='en'?'Signed out locally, but server-side session revocation failed.':'Lokal abgemeldet, aber die serverseitige Sitzungswiderrufung ist fehlgeschlagen.');else gateStatus('');setRoute('home',false);}
-  async function validateStoredSession(){try{const r=await api('/auth/me');if(!r.ok)throw new Error();const d=await r.json();unlockApp(d.user);return true}catch{authenticated=false;delete engineState.token;engineState.role=null;engineState.email=null;persist();setLogoutVisible(false);return false}}
+  async function validateStoredSession(){try{const r=await api('/auth/me');if(!r.ok)throw new Error();const d=await r.json();if(!unlockApp(d.user))throw new Error('account_state_unavailable');return true}catch{authenticated=false;delete engineState.token;engineState.role=null;engineState.email=null;persist();setLogoutVisible(false);return false}}
+  let lastFocusSessionCheck=0;
+  async function validateFocusedSession(){
+    if(!authenticated||document.hidden||Date.now()-lastFocusSessionCheck<1500)return;
+    lastFocusSessionCheck=Date.now();
+    try{
+      const response=await api('/auth/me');
+      if(response.status===401){
+        authenticated=false;
+        engineState.role=null;
+        persist();
+        document.body.classList.add('authLocked');
+        if(authGate)authGate.hidden=false;
+        showAdminButton(false);
+        setLogoutVisible(false);
+        return;
+      }
+      if(!response.ok)return;
+      const data=await response.json();
+      const serverId=String(data.user?.id||'').trim().toLowerCase();
+      if(serverId&&serverId!==String(engineState.userId||'').toLowerCase()){
+        if(!unlockApp(data.user)){
+          authenticated=false;
+          document.body.classList.add('authLocked');
+          if(authGate)authGate.hidden=false;
+          showAdminButton(false);
+          setLogoutVisible(false);
+        }
+      }
+    }catch{}
+  }
+  window.addEventListener('focus',validateFocusedSession);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)validateFocusedSession()});
   function describeAuthError(code,kind){
     code=String(code||'').replaceAll(' ','_');
     const ar={invalid_credentials:'البريد الإلكتروني أو كلمة المرور غير صحيحة.',invalid_admin_credentials:'كلمة مرور Admin غير صحيحة.',too_many_login_attempts:'محاولات كثيرة. انتظر 15 دقيقة ثم حاول مجدداً.',owner_account_not_initialized:'حساب المسؤول غير مهيأ. تواصل مع دعم VIDO.',registration_disabled:'إنشاء الحسابات غير مفعّل حالياً.',email_already_registered:'هذا البريد مسجل مسبقاً.',password_reset_email_not_configured:'استعادة كلمة المرور بالبريد لم تُفعّل بعد. يجب إعداد خدمة البريد أولاً.',password_reset_delivery_failed:'تعذر إرسال رسالة الاستعادة. تحقق من إعداد البريد وحاول لاحقاً.',reset_link_invalid_or_expired:'رابط الاستعادة غير صالح أو انتهت صلاحيته.'};
@@ -848,7 +923,7 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
       const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password,remember:!!$('gateRemember')?.checked})});
       const d=await r.json();
       if(!r.ok)throw new Error(d.error||'login_failed');
-      engineState.role=d.user?.role||null;engineState.email=d.user?.email||email;unlockApp(d.user);
+      if(!unlockApp(d.user))throw new Error('account_state_unavailable');
       accountStatus(getLang()==='ar'?'تم تسجيل الدخول.':getLang()==='en'?'Signed in.':'Angemeldet.');sync();
     }catch(e){gateStatus(describeAuthError(e.message,'login'))}
   }
@@ -859,7 +934,7 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
     try{
       const r=await api('/auth/register',{method:'POST',body:JSON.stringify({email,password,remember:!!$('gateRemember')?.checked})});
       const d=await r.json();if(!r.ok)throw new Error(d.error||'register_failed');
-      engineState.role=d.user?.role||'user';engineState.email=d.user?.email||email;unlockApp(d.user);
+      if(!unlockApp(d.user))throw new Error('account_state_unavailable');
       accountStatus(t('auth_register_success'));sync();
     }catch(e){gateStatus(describeAuthError(e.message,'register'))}
   }
@@ -871,7 +946,7 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
     try{
       const r=await api('/auth/quick-admin',{method:'POST',body:JSON.stringify({username:'Admin',password,remember:!!$('gateRemember')?.checked})});
       const d=await r.json();if(!r.ok)throw new Error(d.error||'admin_login_failed');
-      engineState.role=d.user?.role||'owner';engineState.email=d.user?.email||'admin';unlockApp(d.user);
+      if(!unlockApp(d.user))throw new Error('account_state_unavailable');
       accountStatus(getLang()==='ar'?'تم تسجيل دخول Admin.':getLang()==='en'?'Admin signed in.':'Admin angemeldet.');sync();
     }catch(e){gateStatus(describeAuthError(e.message,'admin'))}
   }
@@ -919,7 +994,7 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
   async function register(){const email=$('accountEmail').value.trim(),password=$('accountPassword').value;if(!/^\S+@\S+\.\S+$/.test(email)||password.length<12)return accountStatus(getLang()==='ar'?'أدخل بريدًا صحيحًا وكلمة مرور من 8 أحرف على الأقل.':getLang()==='en'?'Enter a valid email and a password of at least 12 characters.':'Gültige E-Mail und Passwort mit mindestens 8 Zeichen eingeben.');try{const r=await api('/auth/register',{method:'POST',body:JSON.stringify({email,password})});const d=await r.json();if(!r.ok)return accountStatus(d.error||'Registration failed');delete engineState.token;engineState.role=d.user?.role||null;engineState.email=d.user?.email||email;persist();location.reload();return}catch{accountStatus(getLang()==='ar'?'تعذر الاتصال بالخادم.':getLang()==='en'?'Could not connect to the backend.':'Verbindung zum Backend fehlgeschlagen.')}}
   async function login(){const email=$('accountEmail').value.trim(),password=$('accountPassword').value;if(!email||!password)return accountStatus(getLang()==='ar'?'أدخل البريد الإلكتروني وكلمة المرور.':getLang()==='en'?'Enter email and password.':'E-Mail und Passwort eingeben.');try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});const d=await r.json();if(!r.ok)return accountStatus(d.error||'Login failed');delete engineState.token;engineState.role=d.user?.role||null;engineState.email=d.user?.email||email;persist();location.reload();return}catch{accountStatus(getLang()==='ar'?'تعذر الاتصال بالخادم.':getLang()==='en'?'Could not connect to the backend.':'Verbindung zum Backend fehlgeschlagen.')}}
   async function sync(){if(!authenticated)return accountStatus(getLang()==='ar'?'سجّل الدخول أولًا.':getLang()==='en'?'Sign in first.':'Bitte zuerst anmelden.');const r=await api('/state');if(r.ok){const remote=await r.json();if(remote){Object.assign(state,remote);save();renderStats();renderQuestion();renderLists();renderProgress()}}await api('/state',{method:'PUT',body:JSON.stringify({state})});accountStatus('Cloud sync completed.')}
-  $('accountRegister')?.addEventListener('click',register);$('accountLogin')?.addEventListener('click',login);$('accountSync')?.addEventListener('click',sync);
+  $('accountRegister')?.addEventListener('click',register);$('accountLogin')?.addEventListener('click',login);
 
   function showAdminButton(show){document.querySelectorAll('.adminOnly').forEach(b=>b.hidden=!show)}
   function escHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
