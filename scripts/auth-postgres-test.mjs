@@ -25,7 +25,7 @@ let stdout = '';
 let stderr = '';
 let baseUrl = '';
 let ownerCreated = false;
-const ownerGuardIds = [];
+const ownerGuardUsers = [];
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -232,23 +232,40 @@ try {
       "INSERT INTO users(email,password_hash,role,status) VALUES($1,$2,'owner','active') RETURNING id",
       [guardEmail, ownerHashResult.rows[0].password_hash]
     );
-    ownerGuardIds.push(guard.rows[0].id);
+    ownerGuardUsers.push({ id: guard.rows[0].id, email: guardEmail });
   }
-  const guardedStatus = await api(`/api/admin/users/${ownerGuardIds[0].toUpperCase()}/status`, {
-    method: 'POST', cookie: adminCookies.cookie, csrf: adminCookies.csrfToken, json: { status: 'suspended' }
+  const statusLogin = await api('/api/auth/login', {
+    method: 'POST', json: { email: ownerGuardUsers[0].email, password: ownerPassword, remember: true }
+  });
+  assert(statusLogin.status === 200, 'Status-guard owner login failed.');
+  const statusCookies = authCookieSet(statusLogin);
+  const guardedStatus = await api(`/api/admin/users/${ownerGuardUsers[0].id.toUpperCase()}/status`, {
+    method: 'POST', cookie: statusCookies.cookie, csrf: statusCookies.csrfToken, json: { status: 'suspended' }
   });
   assert(guardedStatus.status === 400, `Uppercase UUID bypassed owner self-suspension protection (HTTP ${guardedStatus.status}).`);
-  assert((await database.query('SELECT status FROM users WHERE id=$1', [ownerGuardIds[0]])).rows[0].status === 'active', 'Self-suspension changed owner status.');
-  const guardedRole = await api(`/api/admin/users/${ownerGuardIds[1].toUpperCase()}/role`, {
-    method: 'POST', cookie: adminCookies.cookie, csrf: adminCookies.csrfToken, json: { role: 'user' }
+  assert((await database.query('SELECT status FROM users WHERE id=$1', [ownerGuardUsers[0].id])).rows[0].status === 'active', 'Self-suspension changed owner status.');
+
+  const roleLogin = await api('/api/auth/login', {
+    method: 'POST', json: { email: ownerGuardUsers[1].email, password: ownerPassword, remember: true }
+  });
+  assert(roleLogin.status === 200, 'Role-guard owner login failed.');
+  const roleCookies = authCookieSet(roleLogin);
+  const guardedRole = await api(`/api/admin/users/${ownerGuardUsers[1].id.toUpperCase()}/role`, {
+    method: 'POST', cookie: roleCookies.cookie, csrf: roleCookies.csrfToken, json: { role: 'user' }
   });
   assert(guardedRole.status === 400, `Uppercase UUID bypassed owner self-demotion protection (HTTP ${guardedRole.status}).`);
-  assert((await database.query('SELECT role FROM users WHERE id=$1', [ownerGuardIds[1]])).rows[0].role === 'owner', 'Self-demotion changed owner role.');
-  const guardedDelete = await api(`/api/admin/users/${ownerGuardIds[2].toUpperCase()}`, {
-    method: 'DELETE', cookie: adminCookies.cookie, csrf: adminCookies.csrfToken, json: {}
+  assert((await database.query('SELECT role FROM users WHERE id=$1', [ownerGuardUsers[1].id])).rows[0].role === 'owner', 'Self-demotion changed owner role.');
+
+  const deleteLogin = await api('/api/auth/login', {
+    method: 'POST', json: { email: ownerGuardUsers[2].email, password: ownerPassword, remember: true }
+  });
+  assert(deleteLogin.status === 200, 'Delete-guard owner login failed.');
+  const deleteCookies = authCookieSet(deleteLogin);
+  const guardedDelete = await api(`/api/admin/users/${ownerGuardUsers[2].id.toUpperCase()}`, {
+    method: 'DELETE', cookie: deleteCookies.cookie, csrf: deleteCookies.csrfToken, json: {}
   });
   assert(guardedDelete.status === 400, `Uppercase UUID bypassed owner self-deletion protection (HTTP ${guardedDelete.status}).`);
-  assert((await database.query('SELECT id FROM users WHERE id=$1', [ownerGuardIds[2]])).rowCount === 1, 'Self-deletion removed the owner account.');
+  assert((await database.query('SELECT id FROM users WHERE id=$1', [ownerGuardUsers[2].id])).rowCount === 1, 'Self-deletion removed the owner account.');
 
   for (const [method, path, body] of [
     ['POST', '/api/admin/users/not-a-uuid/status', { status: 'suspended' }],
@@ -310,7 +327,7 @@ try {
       child.kill('SIGTERM');
     });
   }
-  if (ownerGuardIds.length) await database.query('DELETE FROM users WHERE id=ANY($1::uuid[])', [ownerGuardIds]).catch(() => {});
+  if (ownerGuardUsers.length) await database.query('DELETE FROM users WHERE id=ANY($1::uuid[])', [ownerGuardUsers.map(user => user.id)]).catch(() => {});
   if (ownerCreated) await database.query('DELETE FROM users WHERE email=$1', [ownerEmail]).catch(() => {});
   await database.end().catch(() => {});
 }
