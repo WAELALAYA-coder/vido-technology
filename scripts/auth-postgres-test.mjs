@@ -147,6 +147,18 @@ try {
   });
   assert(crossOrigin.status === 403, `Cross-origin login returned HTTP ${crossOrigin.status}, expected 403.`);
 
+  // Unknown accounts and wrong passwords for existing accounts return the same login failure.
+  const knownFailure = await api('/api/auth/login', {
+    method: 'POST',
+    json: { email: ownerEmail, password: randomBytes(24).toString('base64url') }
+  });
+  const unknownFailure = await api('/api/auth/login', {
+    method: 'POST',
+    json: { email: `missing-${randomUUID()}@example.invalid`, password: randomBytes(24).toString('base64url') }
+  });
+  assert(knownFailure.status === 401 && unknownFailure.status === 401, 'Known and unknown login failures must both return HTTP 401.');
+  assert(JSON.stringify(await json(knownFailure)) === JSON.stringify(await json(unknownFailure)), 'Known and unknown login failures exposed different response bodies.');
+
   // Public registration remains disabled in the initial deployment.
   const registration = await api('/api/auth/register', {
     method: 'POST',
