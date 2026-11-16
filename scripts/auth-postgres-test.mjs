@@ -70,6 +70,7 @@ async function api(path, options = {}) {
   if (options.cookie) headers.cookie = options.cookie;
   if (options.csrf !== undefined) headers['x-csrf-token'] = options.csrf;
   if (options.authorization) headers.authorization = options.authorization;
+  if (options.accountId) headers['x-vido-account-id'] = options.accountId;
   return fetch(`${baseUrl}${path}`, {
     method: options.method || 'GET',
     headers,
@@ -184,7 +185,33 @@ try {
 
   const me = await api('/api/auth/me', { cookie: first.cookie });
   assert(me.status === 200, `Cookie-authenticated /me returned HTTP ${me.status}.`);
-  assert((await json(me)).user?.email === ownerEmail, 'Cookie-authenticated /me returned the wrong account.');
+  const meBody = await json(me);
+  assert(meBody.user?.email === ownerEmail, 'Cookie-authenticated /me returned the wrong account.');
+  const ownerId = meBody.user.id;
+
+  // A sync request is bound to the account identity that started it. This prevents
+  // a second browser tab changing the shared cookie between GET and PUT.
+  const initialState = { marker: 'state-context-check', owner: ownerId };
+  const stateWrite = await api('/api/state', {
+    method: 'PUT', cookie: first.cookie, csrf: first.csrfToken, accountId: ownerId, json: { state: initialState }
+  });
+  assert(stateWrite.status === 200, `Account-bound state write returned HTTP ${stateWrite.status}.`);
+  const stateRead = await api('/api/state', { cookie: first.cookie, accountId: ownerId });
+  assert(stateRead.status === 200, `Account-bound state read returned HTTP ${stateRead.status}.`);
+  assert.deepEqual(await json(stateRead), initialState, 'Account-bound state read returned the wrong data.');
+
+  const staleAccountId = randomUUID();
+  const staleRead = await api('/api/state', { cookie: first.cookie, accountId: staleAccountId });
+  assert(staleRead.status === 409, `Mismatched account context GET returned HTTP ${staleRead.status}, expected 409.`);
+  assert((await json(staleRead)).error === 'account_session_changed', 'Mismatched GET returned the wrong error.');
+  const staleWrite = await api('/api/state', {
+    method: 'PUT', cookie: first.cookie, csrf: first.csrfToken, accountId: staleAccountId,
+    json: { state: { marker: 'must-not-overwrite', owner: staleAccountId } }
+  });
+  assert(staleWrite.status === 409, `Mismatched account context PUT returned HTTP ${staleWrite.status}, expected 409.`);
+  assert((await json(staleWrite)).error === 'account_session_changed', 'Mismatched PUT returned the wrong error.');
+  const stateAfterStaleWrite = await api('/api/state', { cookie: first.cookie, accountId: ownerId });
+  assert.deepEqual(await json(stateAfterStaleWrite), initialState, 'A stale account sync overwrote the owner state.');
 
   // A missing/incorrect CSRF header must block an authenticated mutation.
   const csrfBlocked = await api('/api/auth/logout', {
