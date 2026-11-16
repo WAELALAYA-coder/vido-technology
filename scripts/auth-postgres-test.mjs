@@ -114,7 +114,11 @@ try {
     OWNER_PASSWORD: ownerPassword,
     ADMIN_USERNAME: adminUsername,
     ADMIN_PASSWORD: adminPassword,
-    REGISTRATION_ENABLED: 'false'
+    REGISTRATION_ENABLED: 'false',
+    RESEND_API_KEY: 'test-resend-key',
+    RESEND_FROM_EMAIL: 'noreply@example.invalid',
+    PUBLIC_APP_URL: 'https://vido.example.invalid',
+    NODE_OPTIONS: '--import=./scripts/mock-resend-fetch.mjs'
   };
 
   child = spawn(process.execPath, ['backend/server.js'], {
@@ -154,16 +158,31 @@ try {
   });
   assert(registration.status === 403, `Registration returned HTTP ${registration.status}, expected 403.`);
 
-  // Recovery status is public and never exposes account existence.
+  // Password recovery must not reveal whether an account exists, even when the mail provider fails.
   const recoveryStatus = await api('/api/auth/recovery-status');
   assert(recoveryStatus.status === 200, `Recovery status returned HTTP ${recoveryStatus.status}.`);
-  assert((await json(recoveryStatus)).emailEnabled === false, 'Recovery email must remain disabled without a configured sender.');
-  const forgot = await api('/api/auth/forgot-password', {
+  assert((await json(recoveryStatus)).emailEnabled === true, 'Recovery email test provider should be enabled.');
+  const unknownForgot = await api('/api/auth/forgot-password', {
+    method: 'POST',
+    json: { email: `missing-${randomUUID()}@example.invalid` }
+  });
+  const knownForgot = await api('/api/auth/forgot-password', {
     method: 'POST',
     json: { email: ownerEmail }
   });
-  assert(forgot.status === 503, `Forgot-password returned HTTP ${forgot.status}, expected 503 without a mail sender.`);
-  assert((await json(forgot)).error === 'password_reset_email_not_configured', 'Forgot-password did not report the missing email sender.');
+  assert(unknownForgot.status === 200 && knownForgot.status === 200, 'Known and unknown accounts must receive the same HTTP status.');
+  const unknownForgotBody = await json(unknownForgot);
+  const knownForgotBody = await json(knownForgot);
+  assert.deepEqual(knownForgotBody, unknownForgotBody, 'Known and unknown accounts must receive the same response body when delivery fails.');
+  assert.equal(knownForgotBody.message, 'If the account exists, a reset email will be sent.', 'Password recovery must use a generic response.');
+  // The test-only Resend stub always returns HTTP 500; failed delivery must remove the unusable token.
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const pending = await database.query('SELECT COUNT(*)::int AS count FROM password_reset_tokens');
+    if (Number(pending.rows[0].count) === 0) break;
+    await sleep(50);
+  }
+  const pendingResetTokens = await database.query('SELECT COUNT(*)::int AS count FROM password_reset_tokens');
+  assert.equal(Number(pendingResetTokens.rows[0].count), 0, 'A failed email delivery must remove the reset token.');
   const invalidReset = await api('/api/auth/reset-password', {
     method: 'POST',
     json: { token: 'invalid', password: randomBytes(24).toString('base64url') }
