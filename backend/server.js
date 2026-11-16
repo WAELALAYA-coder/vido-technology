@@ -340,7 +340,20 @@ app.delete('/api/admin/users/:id',auth,adminUser,ownerOnly,async(req,res)=>{ if(
 
 app.get('/api/state',auth,async(req,res)=>{if(!requireDb(res))return; const r=await pool.query('SELECT state FROM app_state WHERE user_id=$1',[req.user.sub]);res.json(r.rowCount?r.rows[0].state:null);});
 app.put('/api/state',auth,async(req,res)=>{if(!requireDb(res))return; const state=req.body?.state; if(!state)return res.status(400).json({error:'state required'}); await pool.query(`INSERT INTO app_state(user_id,state) VALUES($1,$2) ON CONFLICT(user_id) DO UPDATE SET state=EXCLUDED.state,updated_at=NOW()`,[req.user.sub,state]);res.json({ok:true});});
-app.post('/api/events',auth,async(req,res)=>{if(!requireDb(res))return; const e=req.body||{}; await pool.query('INSERT INTO learning_events(user_id,question_id,skill,correct,answer_time_ms,hints_used) VALUES($1,$2,$3,$4,$5,$6)',[req.user.sub,e.questionId,e.skill,!!e.correct,Number(e.answerTimeMs)||0,Number(e.hintsUsed)||0]);res.json({ok:true});});
+app.post('/api/events',auth,async(req,res)=>{
+  if(!requireDb(res))return;
+  const e=req.body&&typeof req.body==='object'&&!Array.isArray(req.body)?req.body:{};
+  const {questionId,skill,correct,answerTimeMs,hintsUsed}=e;
+  if(typeof questionId!=='string'||!/^[A-Za-z0-9_-]{1,32}$/.test(questionId)||
+     typeof skill!=='string'||!skill.trim()||skill.length>120||
+     typeof correct!=='boolean'||
+     !Number.isSafeInteger(answerTimeMs)||answerTimeMs<0||answerTimeMs>2147483647||
+     !Number.isSafeInteger(hintsUsed)||hintsUsed<0||hintsUsed>1000){
+    return res.status(400).json({error:'invalid_learning_event'});
+  }
+  await pool.query('INSERT INTO learning_events(user_id,question_id,skill,correct,answer_time_ms,hints_used) VALUES($1,$2,$3,$4,$5,$6)',[req.user.sub,questionId,skill.trim(),correct,answerTimeMs,hintsUsed]);
+  return res.status(201).json({ok:true});
+});
 app.get('/api/mastery',auth,async(req,res)=>{if(!requireDb(res))return; const r=await pool.query('SELECT skill,score,next_review,interval_days,repetitions FROM mastery WHERE user_id=$1',[req.user.sub]);res.json(r.rows);});
 app.post('/api/tutor',auth,async(req,res)=>{
   if(!AI_URL||!AI_KEY) return res.status(503).json({error:'AI integration is not configured. Set AI_API_URL and AI_API_KEY on the server.'});

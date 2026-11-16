@@ -186,6 +186,36 @@ try {
   assert(me.status === 200, `Cookie-authenticated /me returned HTTP ${me.status}.`);
   assert((await json(me)).user?.email === ownerEmail, 'Cookie-authenticated /me returned the wrong account.');
 
+  // Learning event payloads must be strictly typed and within database-safe bounds.
+  const validLearningEvent = await api('/api/events', {
+    method: 'POST',
+    cookie: first.cookie,
+    csrf: first.csrfToken,
+    json: { questionId: '0301', skill: 'Windows Server & AD', correct: true, answerTimeMs: 1500, hintsUsed: 1 }
+  });
+  assert(validLearningEvent.status === 201, `Valid learning event returned HTTP ${validLearningEvent.status}.`);
+  const invalidLearningEvents = [
+    { questionId: '0301', skill: 'Windows Server & AD', correct: 'false', answerTimeMs: 1500, hintsUsed: 1 },
+    { questionId: '0301', skill: 'Windows Server & AD', correct: true, answerTimeMs: -1, hintsUsed: 1 },
+    { questionId: '0301', skill: 'Windows Server & AD', correct: true, answerTimeMs: 2147483648, hintsUsed: 1 },
+    { questionId: '0301', skill: 'Windows Server & AD', correct: true, answerTimeMs: 1500, hintsUsed: -1 },
+    { questionId: 301, skill: 'Windows Server & AD', correct: true, answerTimeMs: 1500, hintsUsed: 1 },
+    { questionId: '0301', skill: '   ', correct: true, answerTimeMs: 1500, hintsUsed: 1 }
+  ];
+  for (const [index, payload] of invalidLearningEvents.entries()) {
+    const response = await api('/api/events', {
+      method: 'POST',
+      cookie: first.cookie,
+      csrf: first.csrfToken,
+      json: payload
+    });
+    assert(response.status === 400, `Invalid learning event ${index + 1} returned HTTP ${response.status}, expected 400.`);
+    assert((await json(response)).error === 'invalid_learning_event', 'Invalid learning event returned an unexpected error.');
+  }
+  const savedEvents = await database.query('SELECT question_id,skill,correct,answer_time_ms,hints_used FROM learning_events WHERE user_id=(SELECT id FROM users WHERE email=$1)', [ownerEmail]);
+  assert(savedEvents.rowCount === 1, 'Invalid learning events must not create database rows.');
+  assert(savedEvents.rows[0].question_id === '0301' && savedEvents.rows[0].skill === 'Windows Server & AD' && savedEvents.rows[0].correct === true && savedEvents.rows[0].answer_time_ms === 1500 && savedEvents.rows[0].hints_used === 1, 'The valid learning event must be stored without coercing its values.');
+
   // A missing/incorrect CSRF header must block an authenticated mutation.
   const csrfBlocked = await api('/api/auth/logout', {
     method: 'POST',
