@@ -195,25 +195,25 @@ try {
   const secondaryCookies = authCookieSet(secondaryLogin);
   const secondaryState = { xp: 222, notes: ['secondary-user-private'] };
   const secondarySave = await api('/api/state', {
-    method: 'PUT', cookie: secondaryCookies.cookie, json: { state: secondaryState }
+    method: 'PUT', cookie: secondaryCookies.cookie, csrf: secondaryCookies.csrfToken, json: { state: secondaryState }
   });
   assert(secondarySave.status === 200, 'Secondary user state was not saved.');
   const ownerStateBefore = await api('/api/state', { cookie: first.cookie });
   assert(ownerStateBefore.status === 200 && await json(ownerStateBefore) === null, 'Owner could read another account state.');
   const ownerSave = await api('/api/state', {
-    method: 'PUT', cookie: first.cookie, json: { state: { xp: 111, notes: ['owner-private'] } }
+    method: 'PUT', cookie: first.cookie, csrf: first.csrfToken, json: { state: { xp: 111, notes: ['owner-private'] } }
   });
   assert(ownerSave.status === 200, 'Owner state was not saved.');
   const secondaryRead = await api('/api/state', { cookie: secondaryCookies.cookie });
   assert(JSON.stringify(await json(secondaryRead)) === JSON.stringify(secondaryState), 'Secondary user state was changed by another account.');
   for (const invalidState of [null, [], 'not-an-object', 42]) {
     const invalidSave = await api('/api/state', {
-      method: 'PUT', cookie: first.cookie, json: { state: invalidState }
+      method: 'PUT', cookie: first.cookie, csrf: first.csrfToken, json: { state: invalidState }
     });
     assert(invalidSave.status === 400, `Invalid state payload returned HTTP ${invalidSave.status}.`);
   }
   const oversizedSave = await api('/api/state', {
-    method: 'PUT', cookie: first.cookie, json: { state: { notes: ['x'.repeat(260 * 1024)] } }
+    method: 'PUT', cookie: first.cookie, csrf: first.csrfToken, json: { state: { notes: ['x'.repeat(260 * 1024)] } }
   });
   assert(oversizedSave.status === 413, `Oversized state returned HTTP ${oversizedSave.status}.`);
   const ownerStateAfter = await api('/api/state', { cookie: first.cookie });
