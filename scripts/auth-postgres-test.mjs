@@ -225,6 +225,15 @@ try {
   const overview = await api('/api/admin/overview', { cookie: adminCookies.cookie });
   assert(overview.status === 200, `Owner admin overview returned HTTP ${overview.status}.`);
   assert((await json(overview)).role === 'owner', 'Admin overview did not recognize the database owner role.');
+  const oversizedAdminCreate = await api('/api/admin/users', {
+    method: 'POST',
+    cookie: adminCookies.cookie,
+    csrf: adminCookies.csrfToken,
+    json: { email: 'oversized-admin-password@example.invalid', password: 'ä'.repeat(37), role: 'user' }
+  });
+  assert(oversizedAdminCreate.status === 400, 'Owner user creation must reject passwords over the bcrypt UTF-8 byte limit.');
+  const oversizedAdminAccount = await database.query('SELECT id FROM users WHERE email=$1', ['oversized-admin-password@example.invalid']);
+  assert(oversizedAdminAccount.rowCount === 0, 'Rejected oversized admin password must not create an account.');
 
   // A valid one-time reset token changes the password and revokes all old sessions.
   const resetToken = randomBytes(32).toString('base64url');
@@ -233,6 +242,14 @@ try {
     "INSERT INTO password_reset_tokens(user_id,token_hash,expires_at) SELECT id,$2,NOW()+INTERVAL '30 minutes' FROM users WHERE email=$1",
     [ownerEmail, resetTokenHash]
   );
+  const oversizedReset = await api('/api/auth/reset-password', {
+    method: 'POST',
+    json: { token: resetToken, password: 'ä'.repeat(37) }
+  });
+  assert(oversizedReset.status === 400, 'password reset must reject passwords over the bcrypt UTF-8 byte limit.');
+  const retainedResetToken = await database.query('SELECT token_hash FROM password_reset_tokens WHERE token_hash=$1', [resetTokenHash]);
+  assert(retainedResetToken.rowCount === 1, 'invalid oversized password must not consume the reset token.');
+
   const replacementPassword = randomBytes(24).toString('base64url');
   const reset = await api('/api/auth/reset-password', {
     method: 'POST',
