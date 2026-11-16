@@ -341,7 +341,6 @@ app.delete('/api/admin/users/:id',auth,adminUser,ownerOnly,async(req,res)=>{ if(
 
 function requireMatchingStateAccount(req,res){
   const expected=String(req.get('x-vido-account-id')||'').trim().toLowerCase();
-  if(!expected)return true;
   const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const authenticatedId=String(req.user?.sub||'').trim().toLowerCase();
   if(!uuid.test(expected)||expected!==authenticatedId){
