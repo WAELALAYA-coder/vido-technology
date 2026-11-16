@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   SESSION_COOKIE_NAME, CSRF_COOKIE_NAME, SESSION_MAX_AGE_SECONDS,
   buildSessionCookies, clearSessionCookies, createCsrfToken,
@@ -46,3 +47,30 @@ assert.match(cleared[0],/; Max-Age=0/);
 assert.match(cleared[0],/; HttpOnly/);
 assert.match(cleared[1],/; Max-Age=0/);
 console.log('PASS: signed CSRF binding, cookie parsing, secure/session cookie flags, remember-me lifetime and cookie clearing.');
+
+
+const authHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+const resetStart = authHtml.indexOf("const initialUrlParams=new URLSearchParams(window.location.search);");
+const resetEnd = authHtml.indexOf("function accountStatus", resetStart);
+assert.ok(resetStart >= 0 && resetEnd > resetStart, 'reset URL bootstrap must exist');
+const resetBootstrap = authHtml.slice(resetStart, resetEnd);
+assert.ok(resetBootstrap.indexOf("initialUrlParams.get('reset')") >= 0, 'reset token must be read from URL parameters');
+assert.ok(resetBootstrap.indexOf("initialUrlParams.delete('reset')") > resetBootstrap.indexOf("initialUrlParams.get('reset')"), 'reset token must be removed from URL parameters after capture');
+assert.ok(resetBootstrap.indexOf("history.replaceState") > resetBootstrap.indexOf("initialUrlParams.delete('reset')"), 'browser history must be cleaned after capturing the reset token');
+assert.ok(resetBootstrap.indexOf("history.replaceState") < resetBootstrap.indexOf("setAuthMode('reset')"), 'reset token must be removed before the reset form is shown');
+
+const registrationStart = authHtml.indexOf("async function register(){");
+const registrationEnd = authHtml.indexOf("async function login(){", registrationStart);
+assert.ok(registrationStart >= 0 && registrationEnd > registrationStart, 'account registration handler must exist');
+const registrationHandler = authHtml.slice(registrationStart, registrationEnd);
+assert.ok(registrationHandler.includes('من 12 حرفاً على الأقل.'), 'Arabic registration hint must match the 12-character rule');
+assert.ok(registrationHandler.includes('mindestens 12 Zeichen'), 'German registration hint must match the 12-character rule');
+assert.ok(!registrationHandler.includes('8 أحرف على الأقل') && !registrationHandler.includes('mindestens 8 Zeichen'), 'registration hint must not show the outdated 8-character rule');
+
+const authErrorStart = authHtml.indexOf('function describeAuthError');
+const authErrorEnd = authHtml.indexOf('async function gateLogin', authErrorStart);
+const authErrorHandler = authHtml.slice(authErrorStart, authErrorEnd);
+for (const language of ['ar', 'de', 'en']) {
+  assert.ok(authErrorHandler.includes(`too_many_password_reset_attempts:`), `${language} reset rate-limit error mapping must exist`);
+}
+console.log('PASS: reset token URL cleanup, localized password-reset throttling, and consistent account password guidance.');
