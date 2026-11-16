@@ -96,6 +96,15 @@ try {
   await pool.query(fs.readFileSync('backend/schema.sql', 'utf8'));
   await waitForDatabaseAndServer();
 
+  // bcrypt accepts at most 72 UTF-8 bytes; reject longer passwords instead of silently truncating them.
+  const oversizedRegistration = await request('/api/auth/register', {
+    method: 'POST',
+    body: { email: 'oversized-password@vido.test', password: 'ä'.repeat(37), remember: false }
+  });
+  assert.equal(oversizedRegistration.status, 400, 'registration must reject passwords over the bcrypt UTF-8 byte limit');
+  const oversizedAccount = await pool.query('SELECT id FROM users WHERE email=$1', ['oversized-password@vido.test']);
+  assert.equal(oversizedAccount.rowCount, 0, 'rejected oversized password must not create an account');
+
   // Registration must create a cookie session, never return a JavaScript-readable JWT.
   const registration = await request('/api/auth/register', {
     method: 'POST',
