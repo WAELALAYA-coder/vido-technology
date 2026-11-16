@@ -49,6 +49,7 @@ app.get('/apple-touch-icon.png', (_req,res)=>res.sendFile('icons/vido-192.png',{
 app.get('/apple-touch-icon-precomposed.png', (_req,res)=>res.sendFile('icons/vido-192.png',{root:PUBLIC_ROOT,headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=86400'}}));
 app.get('/favicon.ico', (_req,res)=>res.sendFile('icons/vido-192.png',{root:PUBLIC_ROOT,headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=86400'}}));
 app.get('/service-worker.js', (_req,res)=>res.sendFile('service-worker.js',{root:PUBLIC_ROOT,headers:{'Service-Worker-Allowed':'/'}}));
+app.get('/account-state-storage.js', (_req,res)=>res.sendFile('account-state-storage.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
 app.get('/questions-v37.js', (_req,res)=>res.sendFile('questions-v37.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
 app.get('/lessons-v37.js', (_req,res)=>res.sendFile('lessons-v37.js',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
 
