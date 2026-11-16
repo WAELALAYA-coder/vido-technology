@@ -42,7 +42,7 @@ try{
   const engine=byPath.get('/diagram-engine-v38.js');
   const trainer=byPath.get('/diagram-trainer.js');
   const styles=byPath.get('/diagram-trainer.css');
-  assert.match(accountState.headers.get('content-type')||'',/application\\/javascript/i);
+  assert.match(accountState.headers.get('content-type')||'',/application\/javascript/i);
   assert.match(accountState.headers.get('cache-control')||'',/no-cache/i);
   assert((await accountState.text()).includes('selectAccountKey'),'account state helper payload missing');
   assert.match(manifest.headers.get('content-type')||'',/application\/manifest\+json/i);
