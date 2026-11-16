@@ -71,6 +71,10 @@ const authErrorStart = authHtml.indexOf('function describeAuthError');
 const authErrorEnd = authHtml.indexOf('async function gateLogin', authErrorStart);
 const authErrorHandler = authHtml.slice(authErrorStart, authErrorEnd);
 for (const language of ['ar', 'de', 'en']) {
-  assert.ok(authErrorHandler.includes(`too_many_password_reset_attempts:`), `${language} reset rate-limit error mapping must exist`);
+  const mapStart = authErrorHandler.indexOf(`const ${language}={`);
+  const mapEnd = authErrorHandler.indexOf('};', mapStart);
+  assert.ok(mapStart >= 0 && mapEnd > mapStart, `${language} authentication error map must exist`);
+  const languageMap = authErrorHandler.slice(mapStart, mapEnd);
+  assert.ok(languageMap.includes('too_many_password_reset_attempts:'), `${language} reset rate-limit error mapping must exist`);
 }
 console.log('PASS: reset token URL cleanup, localized password-reset throttling, and consistent account password guidance.');
