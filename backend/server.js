@@ -323,7 +323,22 @@ app.post('/api/auth/login', async (req,res)=>{
   res.json({user:{id:r.rows[0].id,email:r.rows[0].email,role:r.rows[0].role,status:r.rows[0].status}});
 });
 
-app.post('/api/activity',auth,async(req,res)=>{if(!requireDb(res))return; const e=req.body||{}; await logActivity({userId:req.user.sub,eventType:String(e.eventType||'view'),route:e.route||null,req,metadata:e.metadata||{}});res.json({ok:true});});
+app.post('/api/activity',auth,async(req,res)=>{
+  if(!requireDb(res))return;
+  const e=req.body&&typeof req.body==='object'&&!Array.isArray(req.body)?req.body:{};
+  const eventType=e.eventType===undefined?'view':e.eventType;
+  const route=e.route===undefined||e.route===null?null:e.route;
+  const metadata=e.metadata===undefined||e.metadata===null?{}:e.metadata;
+  let metadataBytes=0;
+  try{metadataBytes=Buffer.byteLength(JSON.stringify(metadata),'utf8')}catch{return res.status(400).json({error:'invalid_activity_event'})}
+  if(typeof eventType!=='string'||!/^[A-Za-z0-9_.:-]{1,64}$/.test(eventType)||
+     (route!==null&&(typeof route!=='string'||route.length>200))||
+     !metadata||typeof metadata!=='object'||Array.isArray(metadata)||metadataBytes>16384){
+    return res.status(400).json({error:'invalid_activity_event'});
+  }
+  await logActivity({userId:req.user.sub,eventType,route,req,metadata});
+  return res.status(201).json({ok:true});
+});
 
 app.get('/api/admin/overview',auth,adminUser,async(req,res)=>{if(!requireDb(res))return; const [u,a,s,active]=await Promise.all([pool.query("SELECT COUNT(*)::int count FROM users"),pool.query("SELECT COUNT(*)::int count FROM activity_log WHERE created_at>NOW()-INTERVAL '24 hours'"),pool.query("SELECT COUNT(*)::int count FROM security_log WHERE event_type='login_failed' AND created_at>NOW()-INTERVAL '24 hours'"),pool.query("SELECT COUNT(DISTINCT user_id)::int count FROM activity_log WHERE created_at>NOW()-INTERVAL '15 minutes' AND user_id IS NOT NULL")]);res.json({users:u.rows[0].count,activity24h:a.rows[0].count,failedLogins24h:s.rows[0].count,active15m:active.rows[0].count,role:req.admin.role});});
 app.get('/api/admin/users',auth,adminUser,async(req,res)=>{if(!requireDb(res))return; const r=await pool.query("SELECT id,email,role,status,created_at,last_login_at,last_ip::text last_ip,last_user_agent FROM users ORDER BY created_at DESC LIMIT 500");res.json(r.rows);});
