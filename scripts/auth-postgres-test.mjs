@@ -149,6 +149,36 @@ try {
   });
   assert(crossOrigin.status === 403, `Cross-origin login returned HTTP ${crossOrigin.status}, expected 403.`);
 
+  // Public registration remains disabled in the initial deployment.
+  const registration = await api('/api/auth/register', {
+    method: 'POST',
+    json: { email: `new-${randomUUID()}@example.invalid`, password: randomBytes(24).toString('base64url') }
+  });
+  assert(registration.status === 403, `Registration returned HTTP ${registration.status}, expected 403.`);
+
+  // Recovery status is public and never exposes account existence.
+  const recoveryStatus = await api('/api/auth/recovery-status');
+  assert(recoveryStatus.status === 200, `Recovery status returned HTTP ${recoveryStatus.status}.`);
+  assert((await json(recoveryStatus)).emailEnabled === false, 'Recovery email must remain disabled without a configured sender.');
+  const forgot = await api('/api/auth/forgot-password', {
+    method: 'POST',
+    json: { email: ownerEmail }
+  });
+  assert(forgot.status === 503, `Forgot-password returned HTTP ${forgot.status}, expected 503 without a mail sender.`);
+  assert((await json(forgot)).error === 'password_reset_email_not_configured', 'Forgot-password did not report the missing email sender.');
+  const invalidReset = await api('/api/auth/reset-password', {
+    method: 'POST',
+    json: { token: 'invalid', password: randomBytes(24).toString('base64url') }
+  });
+  assert(invalidReset.status === 400, `Invalid reset request returned HTTP ${invalidReset.status}, expected 400.`);
+
+  // Legacy Bearer authentication is no longer accepted.
+  const bearerOnly = await api('/api/auth/me', { authorization: 'Bearer legacy.invalid.token' });
+  assert(bearerOnly.status === 401, `Bearer-only request returned HTTP ${bearerOnly.status}, expected 401.`);
+
+  // Session and CSRF cookies are issued, and the JWT is not returned in JSON.
+  const first = await login();
+
   // Per-account cloud state is isolated and accepts only bounded JSON objects.
   secondaryEmail = `vido-ci-secondary-${randomUUID()}@example.invalid`;
   const secondaryPassword = randomBytes(24).toString('base64url');
@@ -189,35 +219,6 @@ try {
   const ownerStateAfter = await api('/api/state', { cookie: first.cookie });
   assert((await json(ownerStateAfter)).xp === 111, 'Invalid state payload changed the previously stored state.');
 
-  // Public registration remains disabled in the initial deployment.
-  const registration = await api('/api/auth/register', {
-    method: 'POST',
-    json: { email: `new-${randomUUID()}@example.invalid`, password: randomBytes(24).toString('base64url') }
-  });
-  assert(registration.status === 403, `Registration returned HTTP ${registration.status}, expected 403.`);
-
-  // Recovery status is public and never exposes account existence.
-  const recoveryStatus = await api('/api/auth/recovery-status');
-  assert(recoveryStatus.status === 200, `Recovery status returned HTTP ${recoveryStatus.status}.`);
-  assert((await json(recoveryStatus)).emailEnabled === false, 'Recovery email must remain disabled without a configured sender.');
-  const forgot = await api('/api/auth/forgot-password', {
-    method: 'POST',
-    json: { email: ownerEmail }
-  });
-  assert(forgot.status === 503, `Forgot-password returned HTTP ${forgot.status}, expected 503 without a mail sender.`);
-  assert((await json(forgot)).error === 'password_reset_email_not_configured', 'Forgot-password did not report the missing email sender.');
-  const invalidReset = await api('/api/auth/reset-password', {
-    method: 'POST',
-    json: { token: 'invalid', password: randomBytes(24).toString('base64url') }
-  });
-  assert(invalidReset.status === 400, `Invalid reset request returned HTTP ${invalidReset.status}, expected 400.`);
-
-  // Legacy Bearer authentication is no longer accepted.
-  const bearerOnly = await api('/api/auth/me', { authorization: 'Bearer legacy.invalid.token' });
-  assert(bearerOnly.status === 401, `Bearer-only request returned HTTP ${bearerOnly.status}, expected 401.`);
-
-  // Session and CSRF cookies are issued, and the JWT is not returned in JSON.
-  const first = await login();
   assert(/HttpOnly/i.test(first.sessionLine), 'Session cookie is missing HttpOnly.');
   assert(/SameSite=Lax/i.test(first.sessionLine), 'Session cookie is missing SameSite=Lax.');
   assert(/Path=\//i.test(first.sessionLine), 'Session cookie is missing Path=/.');
