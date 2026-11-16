@@ -96,6 +96,15 @@ try {
   await pool.query(fs.readFileSync('backend/schema.sql', 'utf8'));
   await waitForDatabaseAndServer();
 
+  // Malformed email addresses must be rejected before creating accounts.
+  for (const email of ['a@@example.com', '.a@example.com', 'a..b@example.com', 'a@-example.com', 'a@example..com', 'a@example.com'.padEnd(255, 'x')]) {
+    const invalid = await request('/api/auth/register', {
+      method: 'POST',
+      body: { email, password: testPassword }
+    });
+    assert.equal(invalid.status, 400, `Malformed email "${email}" returned HTTP ${invalid.status}.`);
+  }
+
   // Registration must create a cookie session, never return a JavaScript-readable JWT.
   const registration = await request('/api/auth/register', {
     method: 'POST',
