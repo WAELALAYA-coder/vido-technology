@@ -198,7 +198,7 @@ try {
   assert(stateWrite.status === 200, `Account-bound state write returned HTTP ${stateWrite.status}.`);
   const stateRead = await api('/api/state', { cookie: first.cookie, accountId: ownerId });
   assert(stateRead.status === 200, `Account-bound state read returned HTTP ${stateRead.status}.`);
-  assert.deepEqual(await json(stateRead), initialState, 'Account-bound state read returned the wrong data.');
+  assert(JSON.stringify(await json(stateRead)) === JSON.stringify(initialState), 'Account-bound state read returned the wrong data.');
 
   const staleAccountId = randomUUID();
   const staleRead = await api('/api/state', { cookie: first.cookie, accountId: staleAccountId });
@@ -211,7 +211,7 @@ try {
   assert(staleWrite.status === 409, `Mismatched account context PUT returned HTTP ${staleWrite.status}, expected 409.`);
   assert((await json(staleWrite)).error === 'account_session_changed', 'Mismatched PUT returned the wrong error.');
   const stateAfterStaleWrite = await api('/api/state', { cookie: first.cookie, accountId: ownerId });
-  assert.deepEqual(await json(stateAfterStaleWrite), initialState, 'A stale account sync overwrote the owner state.');
+  assert(JSON.stringify(await json(stateAfterStaleWrite)) === JSON.stringify(initialState), 'A stale account sync overwrote the owner state.');
 
   // A missing/incorrect CSRF header must block an authenticated mutation.
   const csrfBlocked = await api('/api/auth/logout', {
