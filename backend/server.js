@@ -246,6 +246,11 @@ app.post('/api/auth/reset-password', async (req,res)=>{
   const token=String(req.body?.token||'');
   const password=String(req.body?.password||'');
   if(!/^[A-Za-z0-9_-]{40,60}$/.test(token)||password.length<12) return res.status(400).json({error:'invalid_reset_request'});
+  // Bound unauthenticated reset attempts before the deliberately expensive password hash.
+  if(!(await loginAllowed(req,'password-reset-complete'))){
+    logSecurity({eventType:'password_reset_rate_limited',req}).catch(()=>{});
+    return res.status(429).json({error:'too_many_password_reset_attempts'});
+  }
   const tokenHash=crypto.createHash('sha256').update(token).digest('hex');
   const passwordHash=await bcrypt.hash(password,12);
   const client=await pool.connect();
@@ -258,6 +263,7 @@ app.post('/api/auth/reset-password', async (req,res)=>{
     if(!updated.rowCount){await client.query('ROLLBACK');return res.status(400).json({error:'account_unavailable'});}
     await client.query('DELETE FROM password_reset_tokens WHERE user_id=$1',[userId]);
     await client.query('COMMIT');
+    await clearLoginFailures(req,'password-reset-complete');
     clearAuthCookies(res);
     await logSecurity({userId,email:updated.rows[0].email,eventType:'password_reset_success',req});
     return res.json({ok:true,email:updated.rows[0].email});
