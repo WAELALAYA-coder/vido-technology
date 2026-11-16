@@ -186,6 +186,46 @@ try {
   assert(me.status === 200, `Cookie-authenticated /me returned HTTP ${me.status}.`);
   assert((await json(me)).user?.email === ownerEmail, 'Cookie-authenticated /me returned the wrong account.');
 
+  // Activity telemetry is deliberately small and accepts only structured client metadata.
+  const validActivity = await api('/api/activity', {
+    method: 'POST',
+    cookie: first.cookie,
+    csrf: first.csrfToken,
+    json: { eventType: 'view', route: 'home', metadata: { language: 'de' } }
+  });
+  assert(validActivity.status === 201, `Valid activity event returned HTTP ${validActivity.status}.`);
+  const activityBeforeInvalid = await database.query(
+    "SELECT COUNT(*)::int AS count FROM activity_log WHERE user_id=(SELECT id FROM users WHERE email=$1) AND event_type='view'",
+    [ownerEmail]
+  );
+  const invalidActivityEvents = [
+    { eventType: {}, route: 'home', metadata: { language: 'de' } },
+    { eventType: 'view', route: { name: 'home' }, metadata: {} },
+    { eventType: 'view', route: 'home', metadata: [] },
+    { eventType: 'view', route: 'home', metadata: { note: 'x'.repeat(17000) } },
+    { eventType: 'x'.repeat(65), route: 'home', metadata: {} }
+  ];
+  for (const [index, payload] of invalidActivityEvents.entries()) {
+    const response = await api('/api/activity', {
+      method: 'POST',
+      cookie: first.cookie,
+      csrf: first.csrfToken,
+      json: payload
+    });
+    assert(response.status === 400, `Invalid activity event ${index + 1} returned HTTP ${response.status}, expected 400.`);
+    assert((await json(response)).error === 'invalid_activity_event', 'Invalid activity event returned an unexpected error.');
+  }
+  const activityAfterInvalid = await database.query(
+    "SELECT COUNT(*)::int AS count FROM activity_log WHERE user_id=(SELECT id FROM users WHERE email=$1) AND event_type='view'",
+    [ownerEmail]
+  );
+  assert(Number(activityAfterInvalid.rows[0].count) === Number(activityBeforeInvalid.rows[0].count), 'Invalid activity events must not create database rows.');
+  const storedActivity = await database.query(
+    "SELECT route,metadata FROM activity_log WHERE user_id=(SELECT id FROM users WHERE email=$1) AND event_type='view' ORDER BY id DESC LIMIT 1",
+    [ownerEmail]
+  );
+  assert(storedActivity.rows[0]?.route === 'home' && storedActivity.rows[0]?.metadata?.language === 'de', 'Valid activity event must be stored accurately.');
+
   // A missing/incorrect CSRF header must block an authenticated mutation.
   const csrfBlocked = await api('/api/auth/logout', {
     method: 'POST',
