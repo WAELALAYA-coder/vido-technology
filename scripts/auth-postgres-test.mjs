@@ -222,6 +222,16 @@ try {
   assert(adminBody.user?.role === 'owner', 'Quick-admin did not use the verified database owner role.');
   assert(!/\b(?:access_?token|jwt|token)\b/i.test(JSON.stringify(adminBody)), 'Quick-admin JSON unexpectedly exposed a token.');
   const adminCookies = authCookieSet(quickAdmin);
+  for (const email of ['a@@example.com', '.a@example.com', 'a..b@example.com', 'a@-example.com', 'a@example..com', 'a@example.com'.padEnd(255, 'x')]) {
+    const invalidUser = await api('/api/admin/users', {
+      method: 'POST',
+      cookie: adminCookies.cookie,
+      csrf: adminCookies.csrfToken,
+      json: { email, password: randomBytes(24).toString('base64url'), role: 'user' }
+    });
+    assert(invalidUser.status === 400, `Owner user creation accepted malformed email "${email}" (HTTP ${invalidUser.status}).`);
+  }
+
   const overview = await api('/api/admin/overview', { cookie: adminCookies.cookie });
   assert(overview.status === 200, `Owner admin overview returned HTTP ${overview.status}.`);
   assert((await json(overview)).role === 'owner', 'Admin overview did not recognize the database owner role.');

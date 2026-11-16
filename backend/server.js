@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
 import { isIP } from 'node:net';
+import { domainToASCII } from 'node:url';
 import { SESSION_COOKIE_NAME, CSRF_COOKIE_NAME, readCookieValue, createCsrfToken, verifyCsrfToken, buildSessionCookies, clearSessionCookies } from './session-security.js';
 
 const { Pool } = pg;
@@ -84,6 +85,17 @@ let lastRateLimitCleanup = 0;
 function clientIp(req){ return String(req.ip || req.socket?.remoteAddress || 'unknown'); }
 
 function normalizeLoginIdentity(value){ return String(value ?? '').trim().toLowerCase().slice(0,254) || 'unknown'; }
+function isValidEmail(value){
+  if(typeof value!=='string'||value.length>254)return false;
+  const at=value.indexOf('@');
+  if(at<1||at!==value.lastIndexOf('@'))return false;
+  const local=value.slice(0,at);
+  const domain=domainToASCII(value.slice(at+1));
+  if(local.length>64||!domain||domain.length>253)return false;
+  if(!/^[A-Za-z0-9.!#$%&'*+/=?^`{|}~-]+$/.test(local)||local.startsWith('.')||local.endsWith('.')||local.includes('..'))return false;
+  const labels=domain.split('.');
+  return labels.length>=2&&labels.every(label=>label.length>=1&&label.length<=63&&/^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/.test(label));
+}
 function rateLimitKeys(req,identity){
   const ip=clientIp(req);
   const ipHash=crypto.createHash('sha256').update(ip).digest('hex');
@@ -188,7 +200,7 @@ app.get('/api/health', async (_req,res)=>{ let db=false; if(pool){ try{ await po
 app.post('/api/auth/register', async (req,res)=>{
   if(!REGISTRATION_ENABLED) return res.status(403).json({error:'registration_disabled'});
   if(!requireDb(res)) return; const email=String(req.body?.email||'').toLowerCase().trim(); const password=String(req.body?.password||'');
-  if(!/^\S+@\S+\.\S+$/.test(email)||password.length<12) return res.status(400).json({error:'email and password (12+ chars) required'});
+  if(!isValidEmail(email)||password.length<12) return res.status(400).json({error:'email and password (12+ chars) required'});
   if(!(await loginAllowed(req,email))){ await logSecurity({email,eventType:'registration_rate_limited',req}); return res.status(429).json({error:'too_many_registration_attempts'}); }
   try { const hash=await bcrypt.hash(password,12); const r=await pool.query('INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id,email,role,status,token_version',[email,hash]); await clearLoginFailures(req,email); await logSecurity({userId:r.rows[0].id,email:r.rows[0].email,eventType:'register',req}); await logActivity({userId:r.rows[0].id,eventType:'register',route:'/account',req}); issueSessionCookies(res,r.rows[0],req.body?.remember===true); res.status(201).json({user:r.rows[0]}); }
   catch(e){ if(e.code==='23505'){ return res.status(409).json({error:'email already registered'});} res.status(500).json({error:'registration failed'}); }
@@ -200,8 +212,8 @@ app.get('/api/auth/recovery-status', (_req,res)=>res.json({emailEnabled:PASSWORD
 app.post('/api/auth/forgot-password', async (req,res)=>{
   if(!requireDb(res)) return;
   if(!PASSWORD_RESET_EMAIL_ENABLED) return res.status(503).json({error:'password_reset_email_not_configured'});
-  const email=String(req.body?.email||'').trim().toLowerCase().slice(0,254);
-  if(!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({error:'valid_email_required'});
+  const email=String(req.body?.email||'').trim().toLowerCase();
+  if(!isValidEmail(email)) return res.status(400).json({error:'valid_email_required'});
   let allowed=false;
   try{ allowed=await loginAllowed(req,'password-reset:'+email); }
   catch{ return res.status(503).json({error:'password_reset_unavailable'}); }
@@ -334,7 +346,7 @@ app.post('/api/admin/users/:id/role',auth,adminUser,ownerOnly,async(req,res)=>{i
 
 app.get('/api/admin/audit',auth,adminUser,async(req,res)=>{ if(!requireDb(res))return; const r=await pool.query("SELECT a.id,a.action,a.target_type,a.target_id,a.metadata,a.created_at,u.email actor_email FROM audit_log a LEFT JOIN users u ON u.id=a.actor_user_id ORDER BY a.created_at DESC LIMIT 300"); res.json(r.rows); });
 app.get('/api/admin/system',auth,adminUser,async(req,res)=>{ if(!requireDb(res))return; const r=await pool.query("SELECT role,COUNT(*)::int count FROM users GROUP BY role ORDER BY role"); res.json({node:process.version,environment:process.env.NODE_ENV||'development',database:true,ai:!!(AI_URL&&AI_KEY),roles:r.rows}); });
-app.post('/api/admin/users',auth,adminUser,ownerOnly,async(req,res)=>{ if(!requireDb(res))return; const email=String(req.body?.email||'').toLowerCase().trim(); const password=String(req.body?.password||''); const role=String(req.body?.role||'user'); const roles=['owner','super_admin','content_manager','video_manager','lab_manager','analyst','user']; if(!email||!/^\S+@\S+\.\S+$/.test(email)||password.length<12||!roles.includes(role)) return res.status(400).json({error:'email,password(12+),and valid role required'}); try{ const hash=await bcrypt.hash(password,12); const r=await pool.query("INSERT INTO users(email,password_hash,role,status) VALUES($1,$2,$3,'active') RETURNING id,email,role,status,created_at",[email,hash,role]); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'create_user','user',r.rows[0].id,{email,role}]); res.status(201).json(r.rows[0]); }catch(e){res.status(409).json({error:e.code==='23505'?'email already registered':'user creation failed'});} });
+app.post('/api/admin/users',auth,adminUser,ownerOnly,async(req,res)=>{ if(!requireDb(res))return; const email=String(req.body?.email||'').toLowerCase().trim(); const password=String(req.body?.password||''); const role=String(req.body?.role||'user'); const roles=['owner','super_admin','content_manager','video_manager','lab_manager','analyst','user']; if(!isValidEmail(email)||password.length<12||!roles.includes(role)) return res.status(400).json({error:'email,password(12+),and valid role required'}); try{ const hash=await bcrypt.hash(password,12); const r=await pool.query("INSERT INTO users(email,password_hash,role,status) VALUES($1,$2,$3,'active') RETURNING id,email,role,status,created_at",[email,hash,role]); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'create_user','user',r.rows[0].id,{email,role}]); res.status(201).json(r.rows[0]); }catch(e){res.status(409).json({error:e.code==='23505'?'email already registered':'user creation failed'});} });
 app.post('/api/admin/users/:id/password',auth,adminUser,ownerOnly,async(req,res)=>{ if(!requireDb(res))return; const password=String(req.body?.password||''); if(password.length<12)return res.status(400).json({error:'password must be 12+ characters'}); const hash=await bcrypt.hash(password,12); const r=await pool.query('UPDATE users SET password_hash=$2,token_version=token_version+1 WHERE id=$1 RETURNING email',[req.params.id,hash]); if(!r.rowCount)return res.status(404).json({error:'user_not_found'}); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'reset_user_password','user',req.params.id,{}]); res.json({ok:true,email:r.rows[0].email}); });
 app.delete('/api/admin/users/:id',auth,adminUser,ownerOnly,async(req,res)=>{ if(!requireDb(res))return; if(req.params.id===req.user.sub)return res.status(400).json({error:'cannot_delete_current_owner'}); const r=await pool.query('DELETE FROM users WHERE id=$1 RETURNING email',[req.params.id]); if(!r.rowCount)return res.status(404).json({error:'user_not_found'}); await pool.query('INSERT INTO audit_log(actor_user_id,action,target_type,target_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'delete_user','user',req.params.id,{email:r.rows[0].email}]); res.json({ok:true}); });
 
