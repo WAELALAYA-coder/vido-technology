@@ -253,6 +253,21 @@ try {
   });
   assert(reusedReset.status === 400, 'The password reset token was reusable.');
 
+  // Repeated invalid reset attempts are throttled before bcrypt runs again.
+  for (let attempt = 0; attempt < 9; attempt++) {
+    const blockedCandidate = await api('/api/auth/reset-password', {
+      method: 'POST',
+      json: { token: randomBytes(32).toString('base64url'), password: randomBytes(24).toString('base64url') }
+    });
+    assert(blockedCandidate.status === 400, `Invalid reset attempt ${attempt + 2} returned HTTP ${blockedCandidate.status}, expected 400.`);
+  }
+  const throttledReset = await api('/api/auth/reset-password', {
+    method: 'POST',
+    json: { token: randomBytes(32).toString('base64url'), password: randomBytes(24).toString('base64url') }
+  });
+  assert(throttledReset.status === 429, `The 11th password-reset attempt returned HTTP ${throttledReset.status}, expected 429.`);
+  assert((await json(throttledReset)).error === 'too_many_password_reset_attempts', 'Password-reset throttling returned an unexpected error.');
+
   ownerCreated = true;
   console.log('PASS: PostgreSQL-backed authentication integration tests');
   console.log('PASS: same-origin enforcement, disabled-by-default registration, cookie-only auth, CSRF validation, session revocation, quick-admin owner role, single-use password reset, and owner API access.');
