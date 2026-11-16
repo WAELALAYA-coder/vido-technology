@@ -25,6 +25,7 @@ let stdout = '';
 let stderr = '';
 let baseUrl = '';
 let ownerCreated = false;
+const ownerGuardIds = [];
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -222,6 +223,46 @@ try {
   assert(adminBody.user?.role === 'owner', 'Quick-admin did not use the verified database owner role.');
   assert(!/\b(?:access_?token|jwt|token)\b/i.test(JSON.stringify(adminBody)), 'Quick-admin JSON unexpectedly exposed a token.');
   const adminCookies = authCookieSet(quickAdmin);
+  // Owner self-protection must compare UUIDs case-insensitively, as PostgreSQL does.
+  const ownerHashResult = await database.query('SELECT password_hash FROM users WHERE email=$1', [ownerEmail]);
+  assert(ownerHashResult.rowCount === 1, 'Owner password hash is missing for isolated self-protection tests.');
+  for (const action of ['status', 'role', 'delete']) {
+    const guardEmail = `owner-guard-${action}-${randomUUID()}@example.invalid`;
+    const guard = await database.query(
+      "INSERT INTO users(email,password_hash,role,status) VALUES($1,$2,'owner','active') RETURNING id",
+      [guardEmail, ownerHashResult.rows[0].password_hash]
+    );
+    ownerGuardIds.push(guard.rows[0].id);
+  }
+  const guardedStatus = await api(`/api/admin/users/${ownerGuardIds[0].toUpperCase()}/status`, {
+    method: 'POST', cookie: adminCookies.cookie, csrf: adminCookies.csrfToken, json: { status: 'suspended' }
+  });
+  assert(guardedStatus.status === 400, `Uppercase UUID bypassed owner self-suspension protection (HTTP ${guardedStatus.status}).`);
+  assert((await database.query('SELECT status FROM users WHERE id=$1', [ownerGuardIds[0]])).rows[0].status === 'active', 'Self-suspension changed owner status.');
+  const guardedRole = await api(`/api/admin/users/${ownerGuardIds[1].toUpperCase()}/role`, {
+    method: 'POST', cookie: adminCookies.cookie, csrf: adminCookies.csrfToken, json: { role: 'user' }
+  });
+  assert(guardedRole.status === 400, `Uppercase UUID bypassed owner self-demotion protection (HTTP ${guardedRole.status}).`);
+  assert((await database.query('SELECT role FROM users WHERE id=$1', [ownerGuardIds[1]])).rows[0].role === 'owner', 'Self-demotion changed owner role.');
+  const guardedDelete = await api(`/api/admin/users/${ownerGuardIds[2].toUpperCase()}`, {
+    method: 'DELETE', cookie: adminCookies.cookie, csrf: adminCookies.csrfToken, json: {}
+  });
+  assert(guardedDelete.status === 400, `Uppercase UUID bypassed owner self-deletion protection (HTTP ${guardedDelete.status}).`);
+  assert((await database.query('SELECT id FROM users WHERE id=$1', [ownerGuardIds[2]])).rowCount === 1, 'Self-deletion removed the owner account.');
+
+  for (const [method, path, body] of [
+    ['POST', '/api/admin/users/not-a-uuid/status', { status: 'suspended' }],
+    ['POST', '/api/admin/users/not-a-uuid/role', { role: 'user' }],
+    ['POST', '/api/admin/users/not-a-uuid/password', { password: 'long-enough-test-password' }],
+    ['DELETE', '/api/admin/users/not-a-uuid', {}]
+  ]) {
+    const invalidId = await api(path, {
+      method, cookie: adminCookies.cookie, csrf: adminCookies.csrfToken, json: body
+    });
+    assert(invalidId.status === 400, `Invalid target user ID on ${method} ${path} returned HTTP ${invalidId.status}.`);
+    assert((await json(invalidId)).error === 'invalid_user_id', `Invalid target user ID on ${path} returned an unexpected error.`);
+  }
+
   const overview = await api('/api/admin/overview', { cookie: adminCookies.cookie });
   assert(overview.status === 200, `Owner admin overview returned HTTP ${overview.status}.`);
   assert((await json(overview)).role === 'owner', 'Admin overview did not recognize the database owner role.');
@@ -269,6 +310,7 @@ try {
       child.kill('SIGTERM');
     });
   }
+  if (ownerGuardIds.length) await database.query('DELETE FROM users WHERE id=ANY($1::uuid[])', [ownerGuardIds]).catch(() => {});
   if (ownerCreated) await database.query('DELETE FROM users WHERE email=$1', [ownerEmail]).catch(() => {});
   await database.end().catch(() => {});
 }
