@@ -209,7 +209,7 @@ app.post('/api/auth/forgot-password', async (req,res)=>{
   if(!requireDb(res)) return;
   if(!PASSWORD_RESET_EMAIL_ENABLED) return res.status(503).json({error:'password_reset_email_not_configured'});
   const email=String(req.body?.email||'').trim().toLowerCase().slice(0,254);
-  if(!/^\\S+@\\S+\\.\\S+$/.test(email)) return res.status(400).json({error:'valid_email_required'});
+  if(!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({error:'valid_email_required'});
   let allowed=false;
   try{ allowed=await loginAllowed(req,'password-reset:'+email); }
   catch{ return res.status(503).json({error:'password_reset_unavailable'}); }
@@ -222,7 +222,7 @@ app.post('/api/auth/forgot-password', async (req,res)=>{
       const tokenHash=crypto.createHash('sha256').update(resetToken).digest('hex');
       await pool.query('DELETE FROM password_reset_tokens WHERE user_id=$1 OR expires_at<NOW()',[user.id]);
       await pool.query("INSERT INTO password_reset_tokens(user_id,token_hash,expires_at) VALUES($1,$2,NOW()+INTERVAL '30 minutes')",[user.id,tokenHash]);
-      const baseUrl=String(process.env.PUBLIC_APP_URL).replace(/\\/+$/,'');
+      const baseUrl=String(process.env.PUBLIC_APP_URL).replace(/\/+$/,'');
       const resetUrl=baseUrl+'/?reset='+encodeURIComponent(resetToken);
       // Deliver asynchronously so provider latency/failure cannot reveal whether the account exists.
       void fetch('https://api.resend.com/emails',{
@@ -233,7 +233,7 @@ app.post('/api/auth/forgot-password', async (req,res)=>{
           from:process.env.RESEND_FROM_EMAIL,
           to:[user.email],
           subject:'VIDO Technology – Passwort zurücksetzen',
-          text:'Du hast das Zurücksetzen deines VIDO-Passworts angefordert. Öffne diesen Link innerhalb von 30 Minuten: '+resetUrl+'\\nFalls du die Anfrage nicht gestellt hast, ignoriere diese E-Mail.',
+          text:'Du hast das Zurücksetzen deines VIDO-Passworts angefordert. Öffne diesen Link innerhalb von 30 Minuten: '+resetUrl+'\nFalls du die Anfrage nicht gestellt hast, ignoriere diese E-Mail.',
           html:'<p>Du hast das Zurücksetzen deines VIDO-Passworts angefordert.</p><p><a href="'+resetUrl+'">Neues Passwort festlegen</a></p><p>Der Link ist 30 Minuten gültig. Falls du die Anfrage nicht gestellt hast, ignoriere diese E-Mail.</p>'
         })
       }).then(async emailResult=>{
