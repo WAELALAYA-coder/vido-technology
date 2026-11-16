@@ -993,7 +993,26 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
   function accountStatus(msg){if($('accountStatus'))$('accountStatus').textContent=msg}
   async function register(){const email=$('accountEmail').value.trim(),password=$('accountPassword').value;if(!/^\S+@\S+\.\S+$/.test(email)||password.length<12)return accountStatus(getLang()==='ar'?'أدخل بريدًا صحيحًا وكلمة مرور من 8 أحرف على الأقل.':getLang()==='en'?'Enter a valid email and a password of at least 12 characters.':'Gültige E-Mail und Passwort mit mindestens 8 Zeichen eingeben.');try{const r=await api('/auth/register',{method:'POST',body:JSON.stringify({email,password})});const d=await r.json();if(!r.ok)return accountStatus(d.error||'Registration failed');delete engineState.token;engineState.role=d.user?.role||null;engineState.email=d.user?.email||email;persist();location.reload();return}catch{accountStatus(getLang()==='ar'?'تعذر الاتصال بالخادم.':getLang()==='en'?'Could not connect to the backend.':'Verbindung zum Backend fehlgeschlagen.')}}
   async function login(){const email=$('accountEmail').value.trim(),password=$('accountPassword').value;if(!email||!password)return accountStatus(getLang()==='ar'?'أدخل البريد الإلكتروني وكلمة المرور.':getLang()==='en'?'Enter email and password.':'E-Mail und Passwort eingeben.');try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});const d=await r.json();if(!r.ok)return accountStatus(d.error||'Login failed');delete engineState.token;engineState.role=d.user?.role||null;engineState.email=d.user?.email||email;persist();location.reload();return}catch{accountStatus(getLang()==='ar'?'تعذر الاتصال بالخادم.':getLang()==='en'?'Could not connect to the backend.':'Verbindung zum Backend fehlgeschlagen.')}}
-  async function sync(){if(!authenticated)return accountStatus(getLang()==='ar'?'سجّل الدخول أولًا.':getLang()==='en'?'Sign in first.':'Bitte zuerst anmelden.');const r=await api('/state');if(r.ok){const remote=await r.json();if(remote){Object.assign(state,remote);save();renderStats();renderQuestion();renderLists();renderProgress()}}await api('/state',{method:'PUT',body:JSON.stringify({state})});accountStatus('Cloud sync completed.')}
+  async function sync(){
+    if(!authenticated)return accountStatus(getLang()==='ar'?'سجّل الدخول أولًا.':getLang()==='en'?'Sign in first.':'Bitte zuerst anmelden.');
+    const accountId=String(engineState.userId||'').trim().toLowerCase();
+    if(!accountId)return accountStatus('Account context unavailable. Please sign in again.');
+    const headers={'x-vido-account-id':accountId};
+    try{
+      const r=await api('/state',{headers});
+      if(!r.ok)throw new Error(r.status===409?'account_session_changed':'state_read_failed');
+      const remote=await r.json();
+      if(String(engineState.userId||'').toLowerCase()!==accountId)throw new Error('account_session_changed');
+      if(remote){Object.assign(state,remote);save();renderStats();renderQuestion();renderLists();renderProgress();}
+      const put=await api('/state',{method:'PUT',headers,body:JSON.stringify({state})});
+      if(!put.ok)throw new Error(put.status===409?'account_session_changed':'state_write_failed');
+      accountStatus('Cloud sync completed.');
+    }catch(error){
+      accountStatus(error.message==='account_session_changed'
+        ?(getLang()==='ar'?'تغيّر الحساب أثناء المزامنة. أعد تسجيل الدخول ثم حاول مجددًا.':getLang()==='en'?'The account changed during sync. Please sign in again and retry.':'Das Konto wurde während der Synchronisierung gewechselt. Bitte erneut anmelden.')
+        :(getLang()==='ar'?'فشلت المزامنة. تحقق من اتصال الخادم.':getLang()==='en'?'Sync failed. Check the server connection.':'Synchronisierung fehlgeschlagen. Bitte Serververbindung prüfen.'));
+    }
+  }
   $('accountRegister')?.addEventListener('click',register);$('accountLogin')?.addEventListener('click',login);
 
   function showAdminButton(show){document.querySelectorAll('.adminOnly').forEach(b=>b.hidden=!show)}
@@ -1084,9 +1103,14 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
     if(btn)btn.disabled=true;
     status('Synchronisierung läuft …');
     try{
-      const get=await api('/state');
+      const accountId=String(st.userId||'').trim().toLowerCase();
+      if(!accountId)throw new Error('account_session_changed');
+      const headers={'x-vido-account-id':accountId};
+      const get=await api('/state',{headers});
+      if(get.status===409)throw new Error('account_session_changed');
       if(!get.ok) throw new Error('GET /state '+get.status);
       const remote=await get.json();
+      if(String(getState().userId||'').toLowerCase()!==accountId)throw new Error('account_session_changed');
       if(remote && window.vidoCore){
         Object.assign(window.vidoCore.state,remote);
         try{window.vidoCore.save()}catch{}
@@ -1095,12 +1119,16 @@ if($('cliIn'))$('cliIn').onkeydown=handleSimCliKey;
         try{window.vidoCore.renderLists()}catch{}
         try{window.vidoCore.renderProgress()}catch{}
       }
-      const put=await api('/state',{method:'PUT',body:JSON.stringify({state:window.vidoCore?window.vidoCore.state:{}})});
+      if(String(getState().userId||'').toLowerCase()!==accountId)throw new Error('account_session_changed');
+      const put=await api('/state',{method:'PUT',headers,body:JSON.stringify({state:window.vidoCore?window.vidoCore.state:{}})});
+      if(put.status===409)throw new Error('account_session_changed');
       if(!put.ok) throw new Error('PUT /state '+put.status);
       status('Cloud sync completed.');
     }catch(e){
       console.error('[VIDO] Sync failed',e);
-      status('Synchronisierung fehlgeschlagen. Backend prüfen.');
+      status(e.message==='account_session_changed'
+        ?(getLang()==='ar'?'تغيّر الحساب أثناء المزامنة. أعد تسجيل الدخول ثم حاول مجددًا.':getLang()==='en'?'The account changed during sync. Please sign in again and retry.':'Das Konto wurde während der Synchronisierung gewechselt. Bitte erneut anmelden.')
+        :'Synchronisierung fehlgeschlagen. Backend prüfen.');
     }finally{
       if(btn)btn.disabled=false;
     }
