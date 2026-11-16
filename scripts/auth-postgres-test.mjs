@@ -182,7 +182,7 @@ try {
     await sleep(50);
   }
   const pendingResetTokens = await database.query('SELECT COUNT(*)::int AS count FROM password_reset_tokens');
-  assert.equal(Number(pendingResetTokens.rows[0].count), 0, 'A failed email delivery must remove the reset token.');
+  assert(Number(pendingResetTokens.rows[0].count) === 0, 'A failed email delivery must remove the reset token.');
   const invalidReset = await api('/api/auth/reset-password', {
     method: 'POST',
     json: { token: 'invalid', password: randomBytes(24).toString('base64url') }
