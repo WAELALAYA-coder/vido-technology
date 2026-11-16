@@ -195,9 +195,17 @@ app.post('/api/auth/register', async (req,res)=>{
 });
 // Password reset email delivery is optional until a verified sender is configured.
 const PASSWORD_RESET_EMAIL_ENABLED = !!(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL && process.env.PUBLIC_APP_URL);
+const PASSWORD_RESET_RESPONSE_MIN_MS = 350;
 app.get('/api/auth/recovery-status', (_req,res)=>res.json({emailEnabled:PASSWORD_RESET_EMAIL_ENABLED}));
 
 app.post('/api/auth/forgot-password', async (req,res)=>{
+  const responseStartedAt=Date.now();
+  const genericResponse={ok:true,message:'If the account exists, a reset email will be sent.'};
+  const respondGeneric=async()=>{
+    const remaining=PASSWORD_RESET_RESPONSE_MIN_MS-(Date.now()-responseStartedAt);
+    if(remaining>0) await new Promise(resolve=>setTimeout(resolve,remaining));
+    return res.json(genericResponse);
+  };
   if(!requireDb(res)) return;
   if(!PASSWORD_RESET_EMAIL_ENABLED) return res.status(503).json({error:'password_reset_email_not_configured'});
   const email=String(req.body?.email||'').trim().toLowerCase().slice(0,254);
@@ -205,18 +213,19 @@ app.post('/api/auth/forgot-password', async (req,res)=>{
   let allowed=false;
   try{ allowed=await loginAllowed(req,'password-reset:'+email); }
   catch{ return res.status(503).json({error:'password_reset_unavailable'}); }
-  if(!allowed) return res.json({ok:true,message:'If the account exists, a reset email will be sent.'});
+  if(!allowed) return respondGeneric();
   try{
     const found=await pool.query("SELECT id,email FROM users WHERE email=$1 AND status='active'",[email]);
     if(found.rowCount){
       const user=found.rows[0];
-      const token=crypto.randomBytes(32).toString('base64url');
-      const tokenHash=crypto.createHash('sha256').update(token).digest('hex');
+      const resetToken=crypto.randomBytes(32).toString('base64url');
+      const tokenHash=crypto.createHash('sha256').update(resetToken).digest('hex');
       await pool.query('DELETE FROM password_reset_tokens WHERE user_id=$1 OR expires_at<NOW()',[user.id]);
       await pool.query("INSERT INTO password_reset_tokens(user_id,token_hash,expires_at) VALUES($1,$2,NOW()+INTERVAL '30 minutes')",[user.id,tokenHash]);
       const baseUrl=String(process.env.PUBLIC_APP_URL).replace(/\/+$/,'');
-      const resetUrl=baseUrl+'/?reset='+encodeURIComponent(token);
-      const emailResult=await fetch('https://api.resend.com/emails',{
+      const resetUrl=baseUrl+'/?reset='+encodeURIComponent(resetToken);
+      // Deliver asynchronously so provider latency/failure cannot reveal whether the account exists.
+      void fetch('https://api.resend.com/emails',{
         method:'POST',
         headers:{'Authorization':'Bearer '+process.env.RESEND_API_KEY,'Content-Type':'application/json'},
         signal:AbortSignal.timeout(15000),
@@ -227,21 +236,19 @@ app.post('/api/auth/forgot-password', async (req,res)=>{
           text:'Du hast das Zurücksetzen deines VIDO-Passworts angefordert. Öffne diesen Link innerhalb von 30 Minuten: '+resetUrl+'\nFalls du die Anfrage nicht gestellt hast, ignoriere diese E-Mail.',
           html:'<p>Du hast das Zurücksetzen deines VIDO-Passworts angefordert.</p><p><a href="'+resetUrl+'">Neues Passwort festlegen</a></p><p>Der Link ist 30 Minuten gültig. Falls du die Anfrage nicht gestellt hast, ignoriere diese E-Mail.</p>'
         })
-      });
-      if(!emailResult.ok){
-        await pool.query('DELETE FROM password_reset_tokens WHERE token_hash=$1',[tokenHash]);
+      }).then(async emailResult=>{
+        if(!emailResult.ok) throw new Error('Email provider rejected the reset message');
+      }).catch(async()=>{
+        await pool.query('DELETE FROM password_reset_tokens WHERE token_hash=$1',[tokenHash]).catch(()=>{});
         console.error('Password reset email delivery failed');
-        return res.status(503).json({error:'password_reset_delivery_failed'});
-      }
+      });
     }
     await clearLoginFailures(req,'password-reset:'+email);
-    return res.json({ok:true,message:'If the account exists, a reset email will be sent.'});
+    return respondGeneric();
   }catch{
     return res.status(503).json({error:'password_reset_unavailable'});
   }
-});
-
-app.post('/api/auth/reset-password', async (req,res)=>{
+});app.post('/api/auth/reset-password', async (req,res)=>{
   if(!requireDb(res)) return;
   const token=String(req.body?.token||'');
   const password=String(req.body?.password||'');
