@@ -80,6 +80,8 @@ if (REQUIRE_STRONG_CREDENTIALS) {
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 10;
 const IP_LOGIN_MAX_ATTEMPTS = 30;
+// Use one dummy BCrypt hash so unknown accounts take the same password-hash path as known accounts.
+const DUMMY_LOGIN_PASSWORD_HASH = bcrypt.hash(crypto.randomBytes(32).toString('base64url'),12);
 let lastRateLimitCleanup = 0;
 function clientIp(req){ return String(req.ip || req.socket?.remoteAddress || 'unknown'); }
 
@@ -315,8 +317,11 @@ app.post('/api/auth/login', async (req,res)=>{
   const cleanEmail=String(email||'').toLowerCase().trim();
   if(!(await loginAllowed(req,cleanEmail))){ await logSecurity({email:cleanEmail,eventType:'login_rate_limited',req}); return res.status(429).json({error:'too_many_login_attempts'}); }
   const r=await pool.query('SELECT id,email,password_hash,role,status,token_version FROM users WHERE email=$1',[cleanEmail]);
-  if(!r.rowCount||!(await bcrypt.compare(String(password||''),r.rows[0].password_hash))) {  await logSecurity({email:cleanEmail,eventType:'login_failed',req}); return res.status(401).json({error:'invalid credentials'}); }
-  if(r.rows[0].status!=='active'){ await logSecurity({userId:r.rows[0].id,email:cleanEmail,eventType:'login_blocked',req}); return res.status(403).json({error:'account_suspended'}); }
+  const user=r.rows[0]||null;
+  const hashToCompare=user?user.password_hash:await DUMMY_LOGIN_PASSWORD_HASH;
+  const passwordMatches=await bcrypt.compare(String(password||''),hashToCompare);
+  if(!user||!passwordMatches) { await logSecurity({email:cleanEmail,eventType:'login_failed',req}); return res.status(401).json({error:'invalid credentials'}); }
+  if(user.status!=='active'){ await logSecurity({userId:user.id,email:cleanEmail,eventType:'login_blocked',req}); return res.status(403).json({error:'account_suspended'}); }
   await clearLoginFailures(req,cleanEmail);
   await pool.query('UPDATE users SET last_login_at=NOW(),last_ip=$2,last_user_agent=$3 WHERE id=$1',[r.rows[0].id,clientIp(req),ua(req)]); await logSecurity({userId:r.rows[0].id,email:cleanEmail,eventType:'login_success',req}); await logActivity({userId:r.rows[0].id,eventType:'login',route:'/account',req});
   issueSessionCookies(res,r.rows[0],req.body?.remember===true);
