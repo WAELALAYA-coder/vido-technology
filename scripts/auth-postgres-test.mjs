@@ -3,6 +3,7 @@ import { createServer } from 'node:net';
 import { readFile } from 'node:fs/promises';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import pg from 'pg';
+import bcrypt from 'bcryptjs';
 
 const { Pool } = pg;
 const databaseUrl = process.env.VIDO_TEST_DATABASE_URL || '';
@@ -25,6 +26,7 @@ let stdout = '';
 let stderr = '';
 let baseUrl = '';
 let ownerCreated = false;
+let secondaryEmail = '';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -176,6 +178,47 @@ try {
 
   // Session and CSRF cookies are issued, and the JWT is not returned in JSON.
   const first = await login();
+
+  // Per-account cloud state is isolated and accepts only bounded JSON objects.
+  secondaryEmail = `vido-ci-secondary-${randomUUID()}@example.invalid`;
+  const secondaryPassword = randomBytes(24).toString('base64url');
+  const secondaryHash = await bcrypt.hash(secondaryPassword, 12);
+  await database.query(
+    "INSERT INTO users(email,password_hash,role,status) VALUES($1,$2,'user','active')",
+    [secondaryEmail, secondaryHash]
+  );
+  const secondaryLogin = await api('/api/auth/login', {
+    method: 'POST',
+    json: { email: secondaryEmail, password: secondaryPassword }
+  });
+  assert(secondaryLogin.status === 200, `Secondary user login returned HTTP ${secondaryLogin.status}.`);
+  const secondaryCookies = authCookieSet(secondaryLogin);
+  const secondaryState = { xp: 222, notes: ['secondary-user-private'] };
+  const secondarySave = await api('/api/state', {
+    method: 'PUT', cookie: secondaryCookies.cookie, csrf: secondaryCookies.csrfToken, json: { state: secondaryState }
+  });
+  assert(secondarySave.status === 200, 'Secondary user state was not saved.');
+  const ownerStateBefore = await api('/api/state', { cookie: first.cookie });
+  assert(ownerStateBefore.status === 200 && await json(ownerStateBefore) === null, 'Owner could read another account state.');
+  const ownerSave = await api('/api/state', {
+    method: 'PUT', cookie: first.cookie, csrf: first.csrfToken, json: { state: { xp: 111, notes: ['owner-private'] } }
+  });
+  assert(ownerSave.status === 200, 'Owner state was not saved.');
+  const secondaryRead = await api('/api/state', { cookie: secondaryCookies.cookie });
+  assert(JSON.stringify(await json(secondaryRead)) === JSON.stringify(secondaryState), 'Secondary user state was changed by another account.');
+  for (const invalidState of [null, [], 'not-an-object', 42]) {
+    const invalidSave = await api('/api/state', {
+      method: 'PUT', cookie: first.cookie, csrf: first.csrfToken, json: { state: invalidState }
+    });
+    assert(invalidSave.status === 400, `Invalid state payload returned HTTP ${invalidSave.status}.`);
+  }
+  const oversizedSave = await api('/api/state', {
+    method: 'PUT', cookie: first.cookie, csrf: first.csrfToken, json: { state: { notes: ['x'.repeat(260 * 1024)] } }
+  });
+  assert(oversizedSave.status === 413, `Oversized state returned HTTP ${oversizedSave.status}.`);
+  const ownerStateAfter = await api('/api/state', { cookie: first.cookie });
+  assert((await json(ownerStateAfter)).xp === 111, 'Invalid state payload changed the previously stored state.');
+
   assert(/HttpOnly/i.test(first.sessionLine), 'Session cookie is missing HttpOnly.');
   assert(/SameSite=Lax/i.test(first.sessionLine), 'Session cookie is missing SameSite=Lax.');
   assert(/Path=\//i.test(first.sessionLine), 'Session cookie is missing Path=/.');
@@ -269,6 +312,7 @@ try {
       child.kill('SIGTERM');
     });
   }
+  if (secondaryEmail) await database.query('DELETE FROM users WHERE email=$1', [secondaryEmail]).catch(() => {});
   if (ownerCreated) await database.query('DELETE FROM users WHERE email=$1', [ownerEmail]).catch(() => {});
   await database.end().catch(() => {});
 }
