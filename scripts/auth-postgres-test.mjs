@@ -312,6 +312,7 @@ try {
       child.kill('SIGTERM');
     });
   }
+  if (secondaryEmail) await database.query('DELETE FROM users WHERE email=$1', [secondaryEmail]).catch(() => {});
   if (ownerCreated) await database.query('DELETE FROM users WHERE email=$1', [ownerEmail]).catch(() => {});
   await database.end().catch(() => {});
 }
