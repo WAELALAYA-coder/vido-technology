@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
 import { isIP } from 'node:net';
+import { domainToASCII } from 'node:url';
 import { SESSION_COOKIE_NAME, CSRF_COOKIE_NAME, readCookieValue, createCsrfToken, verifyCsrfToken, buildSessionCookies, clearSessionCookies } from './session-security.js';
 
 const { Pool } = pg;
@@ -84,6 +85,17 @@ let lastRateLimitCleanup = 0;
 function clientIp(req){ return String(req.ip || req.socket?.remoteAddress || 'unknown'); }
 
 function normalizeLoginIdentity(value){ return String(value ?? '').trim().toLowerCase().slice(0,254) || 'unknown'; }
+function isValidEmail(value){
+  if(typeof value!=='string'||value.length>254)return false;
+  const at=value.indexOf('@');
+  if(at<1||at!==value.lastIndexOf('@'))return false;
+  const local=value.slice(0,at);
+  const domain=domainToASCII(value.slice(at+1));
+  if(local.length>64||!domain||domain.length>253)return false;
+  if(!/^[A-Za-z0-9.!#$%&'*+/=?^`{|}~-]+$/.test(local)||local.startsWith('.')||local.endsWith('.')||local.includes('..'))return false;
+  const labels=domain.split('.');
+  return labels.length>=2&&labels.every(label=>label.length>=1&&label.length<=63&&/^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/.test(label));
+}
 function rateLimitKeys(req,identity){
   const ip=clientIp(req);
   const ipHash=crypto.createHash('sha256').update(ip).digest('hex');
