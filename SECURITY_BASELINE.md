@@ -2,14 +2,13 @@
 
 Review date: 15 November 2026
 Build: VIDO Technology V39 (V35 application foundation + V37 learning library + V38 Diagram Academy + V39 cookie-based sessions)
-Current deployment: Local Windows 11 host with Docker Compose
+Reference environment: local Docker Compose setup; no public production deployment
 Public release status: Not deployed. Public self-registration is disabled.
 
 ## Implemented controls
 
 - Express serves the public frontend routes: `/`, `/index.html`, `/manifest.webmanifest`, `/service-worker.js`, `/questions-v37.js`, `/lessons-v37.js`, `/diagram-curriculum-v38.js`, `/diagram-engine-v38.js`, `/diagram-trainer.js`, and `/diagram-trainer.css`. The six learning-asset routes expose only browser content and use explicit content types with no-cache headers. Backend source, SQL schema, package files, Compose configuration, Git metadata, and environment files are not served.
 - The V39 local Docker deployment publishes the app on `127.0.0.1:3001` and PostgreSQL on `127.0.0.1:5433`; both are loopback-only and use plain HTTP locally.
-- The unused legacy V33 app and PostgreSQL containers have been stopped, not removed. Their Docker volumes and original project files are preserved for rollback. The legacy TCP 3000 listener is no longer active.
 - Public self-registration is disabled by default. The API returns HTTP 403 while disabled. New accounts can be created by the owner through the authenticated administration API.
 - Failed-login counters are stored in PostgreSQL. The table contains SHA-256 bucket identifiers rather than raw email addresses or IP values.
 - Rate-limit checks and counter reservations run in a single PostgreSQL transaction protected by transaction-scoped advisory locks. Concurrent attempts cannot race through the same limit.
