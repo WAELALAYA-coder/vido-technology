@@ -23,7 +23,7 @@ The complete application uses **Node.js 22, Express 5 and PostgreSQL 16**. Docke
 1. Install and start Docker Desktop.
 2. Clone this repository and open its folder:
 
-   `git clone --branch maintenance/v36-ci-and-docs https://github.com/WAELALAYA-coder/vido-technology.git`
+   `git clone https://github.com/WAELALAYA-coder/vido-technology.git`
 
    `cd vido-technology`
 
