@@ -130,27 +130,21 @@ For local execution, set `VIDO_TEST_DATABASE_URL` to a disposable PostgreSQL dat
 This integration test does not replace a manual HTTPS browser test. Safari/iOS and other real-device checks remain outstanding.
 
 
-## Active local Windows workstation setup — V39
+## Local Windows workstation notes
 
-The maintained local project directory on the Windows workstation is:
-
-`C:\Users\waela\Documents\VIDO-Technology-V39`
-
-The active local URLs are:
+The following values describe a local development example. They are not production endpoints and may differ from your workstation:
 
 - VIDO frontend: `http://127.0.0.1:3001`
 - Backend health: `http://127.0.0.1:3001/api/health`
+- Optional local PostgreSQL port: `127.0.0.1:5433`
 
-The V39 app and PostgreSQL host ports are bound to loopback only. PostgreSQL is mapped to `127.0.0.1:5433`; it is not published to the LAN or public internet. Do not change these bindings to `0.0.0.0` for convenience.
+Keep local application and database ports bound to loopback. Do not change host bindings to `0.0.0.0` or expose PostgreSQL to the LAN or public internet. If the repository's Compose configuration uses different ports, follow that configuration.
 
-Use `start-vido.bat` in this folder to start V39 and `stop-vido.bat` to stop it. Stopping Compose does not delete the named database or Node modules volumes. The app container has an HTTP healthcheck; both V39 containers should report `healthy` after startup.
+Run the provided `start-vido.bat` and `stop-vido.bat` scripts from the project directory when they are present. Stopping Compose does not delete named volumes. Do not use `docker compose down -v` unless you intentionally want to delete the local database and other named-volume data.
 
-A Windows Scheduled Task named `VIDO V39 Daily Backup` runs at 20:00 when the user session and Docker Desktop are available. It saves the PostgreSQL custom-format dump and a source ZIP under `C:\Users\waela\Documents\VIDO_Backups`, verifies both, and retains the latest 14 daily V39 backups. The task never pushes to GitHub. Keep the local `.env` file and credentials private; they are intentionally excluded from automatic backups.
+Keep backup archives outside the repository. Exclude `.env`, credentials, API keys and personal data; verify backup integrity and perform restore drills against a separate disposable database. Maintain an encrypted off-device copy before relying on backups for recovery. Configure scheduled backup jobs locally and keep machine-specific paths, task names and backup filenames out of public documentation.
 
-The retired V33 app and database containers are stopped but not deleted. Their volumes are preserved for rollback. The old V33 backup task is disabled; it targeted the retired source and its script included an automatic push to `main`.
-
-The V39 AI Tutor remains disabled until a valid provider URL, API key and model are configured. This local deployment is not a public production release.
-
+A local development setup is not a public production release. Configure optional AI provider credentials only as server-side environment variables; never place API keys in frontend code or commit them to Git.
 
 ## Account registration and password recovery
 
