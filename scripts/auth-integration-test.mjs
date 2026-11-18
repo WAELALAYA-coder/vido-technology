@@ -62,10 +62,11 @@ function setCookies(response) {
     ].join('; ')
   };
 }
-async function request(path, { method = 'GET', cookies = null, csrf = null, body = undefined } = {}) {
+async function request(path, { method = 'GET', cookies = null, csrf = null, accountId = null, body = undefined } = {}) {
   const headers = { origin: base };
   if (cookies) headers.cookie = cookies;
   if (csrf) headers['x-csrf-token'] = csrf;
+  if (accountId) headers['x-vido-account-id'] = accountId;
   if (body !== undefined) headers['content-type'] = 'application/json';
   return fetch(base + path, {
     method,
@@ -138,10 +139,14 @@ try {
     method: 'PUT',
     cookies: registeredCookies.cookieHeader,
     csrf: registeredCookies.csrfToken,
+    accountId: registeredBody.user.id,
     body: { state: { integration: 'cookie-csrf-passed', completed: true } }
   });
-  assert.equal(saveState.status, 200, 'valid cookie+CSRF must save user state');
-  const readState = await request('/api/state', { cookies: registeredCookies.cookieHeader });
+  assert.equal(saveState.status, 200, 'valid cookie+CSRF+account context must save user state');
+  const readState = await request('/api/state', {
+    cookies: registeredCookies.cookieHeader,
+    accountId: registeredBody.user.id
+  });
   assert.equal(readState.status, 200);
   assert.deepEqual(await readState.json(), { integration: 'cookie-csrf-passed', completed: true });
 
