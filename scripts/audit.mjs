@@ -142,12 +142,21 @@ assert(tutorRoute.includes('await tutorRequestAllowed(req.user.sub)'),'AI tutor 
 assert(tutorRoute.includes('AbortSignal.timeout(30_000)'),'AI provider requests must have a 30-second timeout');
 assert(tutorRoute.includes('question.length>8000')&&tutorRoute.includes('answer.length>8000'),'AI tutor must bound question and answer lengths');
 assert(tutorRoute.includes("!['de','en','ar'].includes(language)"),'AI tutor must restrict response language to supported locales');
+assert(backend.includes("app.get('/account-state-storage.js'"),'account state helper route missing from Express');
 assert(backend.includes("app.get('/questions-v37.js'"),'question data route missing from Express');
 assert(backend.includes("app.get('/lessons-v37.js'"),'lesson data route missing from Express');
 assert(backend.includes("'Content-Type':'application/javascript; charset=utf-8'"),'learning data routes must declare JavaScript content type');
 
+const accountStateStorage=fs.readFileSync('account-state-storage.js','utf8');
+assert(accountStateStorage.includes('vidoV10FinalStateMigratedV1'),'account-local state one-time migration marker missing');
+assert(accountStateStorage.includes('selectAccountKey'),'account-specific local storage selector missing');
+assert(html.includes('<script src="account-state-storage.js"></script>'),'account state isolation helper is not loaded before the application');
+assert(html.includes('activateAccountState:activateAccountState'),'main engine does not expose account state switching');
+assert(html.includes('engineState.userId=nextId'),'session simulator state is not bound to the authenticated account');
+assert(html.includes("window.addEventListener('focus',validateFocusedSession)"),'stale tabs do not revalidate the active account on focus');
 const sw=fs.readFileSync('service-worker.js','utf8');
-assert(sw.includes('vido-ui-20261115-v39.2-auth-recovery'),'service worker cache version is stale');
+assert(sw.includes('vido-ui-20261116-v40-account-state-isolation'),'service worker cache version is stale');
+assert(sw.includes('./account-state-storage.js'),'account state helper is not cached');
 const manifest=JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));
 for(const [src,size] of [['icons/vido-192.png','192x192'],['icons/vido-512.png','512x512']]){
   assert(manifest.icons.some(icon=>icon.src===src&&icon.sizes===size&&icon.type==='image/png'),'missing installable PWA icon: '+src);

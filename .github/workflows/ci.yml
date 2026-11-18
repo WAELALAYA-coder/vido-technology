@@ -49,6 +49,8 @@ jobs:
 
       - name: Check JavaScript syntax
         run: |
+          node --check account-state-storage.js
+          node --check scripts/account-state-storage-test.mjs
           node --check backend/server.js
           node --check backend/session-security.js
           node --check questions-v37.js
@@ -62,6 +64,9 @@ jobs:
           node --check scripts/audit.mjs
           node --check scripts/smoke-assets.mjs
           node --check scripts/auth-integration-test.mjs
+
+      - name: Test account-local state isolation
+        run: node scripts/account-state-storage-test.mjs
 
       - name: Run application audit
         run: npm test

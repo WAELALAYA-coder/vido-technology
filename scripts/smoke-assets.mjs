@@ -26,11 +26,12 @@ try{
   }
   assert(ready,'Express did not start the learning asset routes: '+(lastError?.message||'timeout'));
 
-  const paths=['/','/manifest.webmanifest','/icons/vido-app-icon.svg','/icons/vido-192.png','/icons/vido-512.png','/questions-v37.js','/lessons-v37.js','/diagram-curriculum-v38.js','/diagram-engine-v38.js','/diagram-trainer.js','/diagram-trainer.css'];
+  const paths=['/','/account-state-storage.js','/manifest.webmanifest','/icons/vido-app-icon.svg','/icons/vido-192.png','/icons/vido-512.png','/questions-v37.js','/lessons-v37.js','/diagram-curriculum-v38.js','/diagram-engine-v38.js','/diagram-trainer.js','/diagram-trainer.css'];
   const responses=await Promise.all(paths.map(get));
   const byPath=new Map(paths.map((path,index)=>[path,responses[index]]));
   for(let i=0;i<responses.length;i++)assert.equal(responses[i].status,200,'public asset must be served: '+paths[i]);
   const home=byPath.get('/');
+  const accountState=byPath.get('/account-state-storage.js');
   const manifest=byPath.get('/manifest.webmanifest');
   const iconSvg=byPath.get('/icons/vido-app-icon.svg');
   const icon192=byPath.get('/icons/vido-192.png');
@@ -41,6 +42,9 @@ try{
   const engine=byPath.get('/diagram-engine-v38.js');
   const trainer=byPath.get('/diagram-trainer.js');
   const styles=byPath.get('/diagram-trainer.css');
+  assert.match(accountState.headers.get('content-type')||'',/application\/javascript/i);
+  assert.match(accountState.headers.get('cache-control')||'',/no-cache/i);
+  assert((await accountState.text()).includes('selectAccountKey'),'account state helper payload missing');
   assert.match(manifest.headers.get('content-type')||'',/application\/manifest\+json/i);
   assert.match(iconSvg.headers.get('content-type')||'',/image\/svg\+xml/i);
   assert.match(icon192.headers.get('content-type')||'',/image\/png/i);
