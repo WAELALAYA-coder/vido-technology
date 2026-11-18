@@ -51,11 +51,15 @@ The audits check 440 questions across 44 skills, fourteen lesson modules in Germ
 GitHub Actions validates pushes to `main` and pull requests targeting `main`. The workflow:
 
 1. Installs the exact dependency versions from `package-lock.json` with `npm ci`.
-2. Checks JavaScript syntax for the backend, learning assets and audit scripts.
-3. Runs `npm test` (diagram audit and application/content audit).
-4. Smoke-tests the six public learning assets and confirms private backend/configuration paths return HTTP 404.
-5. Checks production dependency advisories at high severity and above.
-6. Builds the production Docker image.
+2. Checks JavaScript syntax for the backend, learning assets and test/audit scripts.
+3. Runs `npm test`, including session-security checks, the diagram audit and the application/content audit.
+4. Runs the PostgreSQL-backed authentication integration suite with `npm run test:auth-postgres` against the disposable CI PostgreSQL service.
+5. Smoke-tests the six public learning assets and confirms private backend/configuration paths return HTTP 404.
+6. Runs the cookie-session integration suite with `npm run test:auth-integration` against the disposable CI PostgreSQL service.
+7. Checks production dependency advisories at high severity and above.
+8. Builds the production Docker image.
+
+Both PostgreSQL integration suites use only the temporary database created by GitHub Actions. They must never be pointed at a personal or production database.
 
 The workflow grants only `contents: read`, disables checkout credential persistence, and pins third-party actions to immutable full commit SHAs. It uses `actions/checkout` v7.0.1 and `actions/setup-node` v7.0.0 (Node.js 24 for the action runtime); the application test/runtime target remains Node.js 22 to match the production image. The former Node.js 20 action-runtime deprecation warning is resolved.
 
