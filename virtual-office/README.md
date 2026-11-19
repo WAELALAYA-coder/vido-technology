@@ -1,24 +1,26 @@
-# VIDO Technology – Virtual Office (Phase 1)
+# VIDO Technology – Virtual Office (Phase 2)
 
-A standalone, browser-based 3D office experience integrated into the existing VIDO Technology application.
+A browser-based 3D office experience integrated into the existing VIDO Technology application. The office is served as a separate route and can be previewed independently before any production merge.
 
 ## Current scope
 
-- Real-time Three.js 3D scene with a modern office layout.
-- Reception, open workspace, meeting room and server room.
-- Room navigation, orbit camera, keyboard movement and touch movement controls.
-- German, English and Arabic interface labels.
+- Three.js 3D office with reception, open workspace, meeting room and server room.
+- Room navigation, orbit camera, keyboard movement and touch controls.
+- German, English and Arabic interface labels, including RTL layout for Arabic.
 - Responsive layout and reduced-motion support.
-- Optional authenticated shared-office presence: members appear as anonymous 3D avatars, with a five-second heartbeat and a 30-second expiry.
-- Presence is held in server memory only; no user names, email addresses, positions or presence records are written to PostgreSQL.
+- Optional authenticated shared-office presence using the existing HttpOnly session and CSRF protections.
+- Anonymous remote-member avatars with articulated limbs, smooth position interpolation and a lightweight walking cycle.
+- Presence heartbeat is single-flight: duplicate join actions are ignored and overlapping heartbeat requests are prevented.
+- Deterministic avatar-motion helpers have independent Node.js tests.
+- Presence is held in server memory only. User names, email addresses, positions and presence history are not written to PostgreSQL.
 
 ## Important limitations
 
-This is an early prototype. Shared presence requires an existing signed-in VIDO account and uses the existing HttpOnly session and CSRF protections. Presence is best-effort and limited to a single server process; it is not a durable or multi-instance realtime service. It currently polls every five seconds rather than using WebSockets. Voice/video calls, durable presence, multi-instance synchronization and cloud room editing are not implemented. No database schema or Docker volume is changed.
+This remains a prototype. Shared presence is limited to one server process and expires after 30 seconds. It polls every five seconds; it is not yet a durable or multi-instance WebSocket service. Voice/video calls, persisted presence, cloud room editing, and administrator-controlled room configuration are not implemented. No database schema or Docker volume is changed.
 
 ## Runtime
 
-The page is served by the existing Express application at `/virtual-office/`. Three.js 0.180.0 and its OrbitControls module are loaded from jsDelivr via an import map. An internet connection is required for those modules.
+The page is served by Express at `/virtual-office/`. Three.js 0.180.0 and OrbitControls are loaded from jsDelivr using an import map. The separately served `presence-motion.js` module is included in the service-worker cache. An internet connection is required for Three.js and its OrbitControls module.
 
 ## Controls
 
@@ -28,9 +30,16 @@ The page is served by the existing Express application at `/virtual-office/`. Th
 - Room buttons: jump to a room.
 - Mobile: use the on-screen directional pad.
 
+## Validation
+
+- `node --check` validates the scene, motion module and motion tests.
+- `node scripts/virtual-office-motion-test.mjs` tests interpolation, movement detection, gait bounds and invalid-input handling.
+- `node scripts/smoke-assets.mjs` checks the public office routes, JavaScript content types and protected API behavior.
+- GitHub Actions runs application audits, PostgreSQL authentication tests, smoke tests, dependency audit and a production Docker build.
+
 ## Next phases
 
-1. Verify the 3D scene in desktop and mobile browsers.
-2. Replace the prototype's polling presence with a shared WebSocket or managed realtime service for multi-instance deployments.
-3. Add proximity voice/video only after consent, permissions and deployment architecture are defined.
+1. Add browser-level desktop/mobile interaction tests and verify collision/room navigation behavior.
+2. Replace in-memory polling with an authenticated multi-instance realtime transport.
+3. Add proximity communication only after consent, permissions and deployment architecture are defined.
 4. Add administrator-controlled room configuration and persistent assets.
