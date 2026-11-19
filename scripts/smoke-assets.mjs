@@ -18,7 +18,7 @@ try{
   let ready=false,lastError;
   for(let attempt=0;attempt<60;attempt++){
     try{
-      const response=await get('/questions-v37.js');
+      const response=await get('/virtual-office/');
       if(response.status===200){ready=true;break;}
       lastError=new Error('asset route returned HTTP '+response.status);
     }catch(error){lastError=error;}
@@ -26,11 +26,11 @@ try{
   }
   assert(ready,'Express did not start the learning asset routes: '+(lastError?.message||'timeout'));
 
-  const paths=['/','/manifest.webmanifest','/icons/vido-app-icon.svg','/icons/vido-192.png','/icons/vido-512.png','/questions-v37.js','/lessons-v37.js','/diagram-curriculum-v38.js','/diagram-engine-v38.js','/diagram-trainer.js','/diagram-trainer.css'];
+  const paths=['/','/virtual-office/','/virtual-office/office.css','/virtual-office/office.js','/manifest.webmanifest','/icons/vido-app-icon.svg','/icons/vido-192.png','/icons/vido-512.png','/questions-v37.js','/lessons-v37.js','/diagram-curriculum-v38.js','/diagram-engine-v38.js','/diagram-trainer.js','/diagram-trainer.css'];
   const responses=await Promise.all(paths.map(get));
   const byPath=new Map(paths.map((path,index)=>[path,responses[index]]));
   for(let i=0;i<responses.length;i++)assert.equal(responses[i].status,200,'public asset must be served: '+paths[i]);
-  const home=byPath.get('/');
+  const home=byPath.get('/');\n  const office=byPath.get('/virtual-office/');\n  const officeCss=byPath.get('/virtual-office/office.css');\n  const officeJs=byPath.get('/virtual-office/office.js');
   const manifest=byPath.get('/manifest.webmanifest');
   const iconSvg=byPath.get('/icons/vido-app-icon.svg');
   const icon192=byPath.get('/icons/vido-192.png');
@@ -55,7 +55,7 @@ try{
   }
   assert.match(styles.headers.get('content-type')||'',/text\/css/i);
   assert.match(styles.headers.get('cache-control')||'',/no-cache/i);
-  assert((await home.text()).includes('diagram-trainer.js'),'home page must load diagram trainer');
+  assert((await home.text()).includes('diagram-trainer.js'),'home page must load diagram trainer');\n  assert((await home.text()).includes('href="/virtual-office/"'),'home page must link to the 3D virtual office');\n  assert.match(office.headers.get('content-type')||'',/text\\/html/i);\n  assert.match(officeCss.headers.get('content-type')||'',/text\\/css/i);\n  assert.match(officeJs.headers.get('content-type')||'',/javascript/i);\n  assert((await office.text()).includes('VIDO Technology · Virtual Office'),'virtual office page title missing');\n  assert((await officeCss.text()).includes('.room-panel'),'virtual office stylesheet missing');\n  const officeSource=await officeJs.text();\n  assert(officeSource.includes('OrbitControls')&&officeSource.includes('serverRack'),'3D office scene modules missing');
   assert((await questions.text()).includes('window.VIDO_EXTRA_QUESTIONS'),'question dataset payload missing');
   assert((await lessons.text()).includes('window.VIDO_LESSONS'),'lesson data payload missing');
   assert((await curriculum.text()).includes('window.VIDO_DIAGRAM_CONTENT'),'diagram curriculum payload missing');
@@ -117,7 +117,7 @@ try{
     const response=await get(privatePath);
     assert.equal(response.status,404,`private path must not be served: ${privatePath}`);
   }
-  console.log('PASS: public learning assets, private paths, cookie-only auth, CSRF token validation, legacy Bearer rejection and same-origin mutation guards.');
+  console.log('PASS: public learning assets, 3D virtual office routes, private paths, cookie-only auth, CSRF token validation, legacy Bearer rejection and same-origin mutation guards.');
 } finally {
   if(child.exitCode===null&&child.signalCode===null){
     child.kill('SIGTERM');
