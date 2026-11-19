@@ -63,6 +63,7 @@ jobs:
           node --check scripts/smoke-assets.mjs
           node --check scripts/auth-integration-test.mjs
           node --check virtual-office/office.js
+          node --check service-worker.js
 
       - name: Run application audit
         run: npm test
