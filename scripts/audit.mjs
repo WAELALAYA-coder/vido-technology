@@ -147,7 +147,17 @@ assert(backend.includes("app.get('/lessons-v37.js'"),'lesson data route missing 
 assert(backend.includes("'Content-Type':'application/javascript; charset=utf-8'"),'learning data routes must declare JavaScript content type');
 
 const sw=fs.readFileSync('service-worker.js','utf8');
-assert(sw.includes('vido-ui-20261119-v40-virtual-office'),'service worker cache version is stale');
+assert(sw.includes('vido-ui-20261119-v41-avatar-motion'),'service worker cache version is stale');
+const officeSource=fs.readFileSync('virtual-office/office.js','utf8');
+const motionSource=fs.readFileSync('virtual-office/presence-motion.js','utf8');
+assert(backend.includes("app.get('/virtual-office/presence-motion.js'"),'avatar movement module route missing');
+assert(sw.includes('./virtual-office/presence-motion.js'),'avatar movement module is not cached');
+assert(officeSource.includes("from './presence-motion.js'"),'office scene must use the separately tested motion module');
+assert(officeSource.includes('function animateAvatars(dt)'),'shared avatars must use frame-based animation');
+assert(officeSource.includes('avatar.position.lerp(target,alpha)'),'shared avatars must interpolate remote positions');
+assert(officeSource.includes('if(presenceJoined)return;'),'repeated join actions must not create duplicate heartbeat loops');
+assert(officeSource.includes('if(!presenceJoined||heartbeatBusy)return;'),'presence polling must prevent overlapping heartbeats');
+assert(!officeSource.includes('presenceTimer=setInterval'),'a second parallel polling timer must not be created');
 const manifest=JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));
 for(const [src,size] of [['icons/vido-192.png','192x192'],['icons/vido-512.png','512x512']]){
   assert(manifest.icons.some(icon=>icon.src===src&&icon.sizes===size&&icon.type==='image/png'),'missing installable PWA icon: '+src);
