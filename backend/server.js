@@ -187,6 +187,39 @@ async function auth(req,res,next){
 }
 function requireDb(res){ if(!pool){res.status(503).json({error:'DATABASE_URL is not configured'}); return false;} return true; }
 
+const virtualOfficePresence = new Map();
+const VIRTUAL_OFFICE_ROOMS = new Set(['reception','workspace','meeting','server']);
+const PRESENCE_TTL_MS = 30_000;
+function pruneVirtualOfficePresence(now=Date.now()){
+  for(const [userId,entry] of virtualOfficePresence){
+    if(now-entry.updatedAt>PRESENCE_TTL_MS)virtualOfficePresence.delete(userId);
+  }
+}
+app.get('/api/virtual-office/presence',auth,(req,res)=>{
+  const now=Date.now();
+  pruneVirtualOfficePresence(now);
+  const participants=[...virtualOfficePresence.values()]
+    .filter(entry=>entry.userId!==req.user.sub)
+    .map((entry,index)=>({id:entry.publicId,name:'VIDO Member '+(index+1),room:entry.room,x:entry.x,z:entry.z,updatedAt:entry.updatedAt}));
+  res.set('Cache-Control','no-store');
+  res.json({participants});
+});
+app.post('/api/virtual-office/presence',auth,(req,res)=>{
+  const now=Date.now();
+  pruneVirtualOfficePresence(now);
+  const room=String(req.body?.room||'');
+  const x=Number(req.body?.x),z=Number(req.body?.z);
+  if(!VIRTUAL_OFFICE_ROOMS.has(room)||!Number.isFinite(x)||!Number.isFinite(z)||x < -15||x > 15||z < -12||z > 12){
+    return res.status(400).json({error:'invalid_virtual_office_presence'});
+  }
+  const previous=virtualOfficePresence.get(req.user.sub);
+  if(previous&&now-previous.updatedAt<1000)return res.status(429).json({error:'presence_update_too_frequent'});
+  if(!previous&&virtualOfficePresence.size>=100)return res.status(503).json({error:'virtual_office_full'});
+  const entry={userId:req.user.sub,publicId:previous?.publicId||crypto.randomUUID(),room,x,z,updatedAt:now};
+  virtualOfficePresence.set(req.user.sub,entry);
+  res.set('Cache-Control','no-store');
+  res.json({ok:true,id:entry.publicId,room,x,z,expiresInMs:PRESENCE_TTL_MS});
+});
 app.get('/api/health', async (_req,res)=>{ let db=false; if(pool){ try{ await pool.query('SELECT 1'); db=true; }catch{} } res.status(db?200:503).json({ok:db,backend:true,database:db,ai:!!(AI_URL&&AI_KEY)}); });
 app.post('/api/auth/register', async (req,res)=>{
   if(!REGISTRATION_ENABLED) return res.status(403).json({error:'registration_disabled'});
