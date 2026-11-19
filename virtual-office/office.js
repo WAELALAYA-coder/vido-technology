@@ -3,11 +3,14 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const $ = (id) => document.getElementById(id);
 const translations = {
-  de:{prototype:'3D-Vorschau',back:'Zur Lernplattform',welcomeTitle:'Willkommen im virtuellen Büro',welcomeText:'Erkunde unseren digitalen Arbeitsplatz. Bewege dich frei und entdecke die Räume.',enter:'Büro betreten',controls:'Steuerung: WASD oder Pfeiltasten · Maus zum Umschauen · ESC zum Freigeben',location:'DEIN STANDORT',reception:'Empfang',workspace:'Arbeitsbereich',meeting:'Meetingraum',server:'Serverraum',roomReception:'Der zentrale Empfang von VIDO Technology.',roomWorkspace:'Ein offener Arbeitsplatz für konzentriertes Lernen und Zusammenarbeit.',roomMeeting:'Ein moderner Raum für Besprechungen und Präsentationen.',roomServer:'Die technische Infrastruktur des virtuellen Campus.',hint:'Klicke auf „Büro betreten“, um dich umzusehen.',loading:'3D-Büro wird geladen …'},
-  en:{prototype:'3D preview',back:'Learning platform',welcomeTitle:'Welcome to the virtual office',welcomeText:'Explore our digital workplace. Move around freely and discover the rooms.',enter:'Enter office',controls:'Controls: WASD or arrow keys · Drag mouse to look around · ESC to release',location:'YOUR LOCATION',reception:'Reception',workspace:'Workspace',meeting:'Meeting room',server:'Server room',roomReception:'The central reception of VIDO Technology.',roomWorkspace:'An open workspace for focused learning and collaboration.',roomMeeting:'A modern room for meetings and presentations.',roomServer:'The technical infrastructure of the virtual campus.',hint:'Click “Enter office” to start exploring.',loading:'Loading 3D office …'},
-  ar:{prototype:'معاينة ثلاثية الأبعاد',back:'منصة التعلم',welcomeTitle:'أهلاً بك في المكتب الافتراضي',welcomeText:'اكتشف مساحة العمل الرقمية. تحرك بحرية وتعرّف على الغرف.',enter:'دخول المكتب',controls:'التحكم: WASD أو الأسهم · اسحب بالماوس للنظر · ESC للتحرير',location:'موقعك الحالي',reception:'الاستقبال',workspace:'مساحة العمل',meeting:'غرفة الاجتماعات',server:'غرفة الخوادم',roomReception:'الاستقبال الرئيسي لشركة VIDO Technology.',roomWorkspace:'مساحة عمل مفتوحة للتعلم والتركيز والتعاون.',roomMeeting:'غرفة حديثة للاجتماعات والعروض التقديمية.',roomServer:'البنية التحتية التقنية للحرم الافتراضي.',hint:'اضغط على دخول المكتب لبدء الاستكشاف.',loading:'جارٍ تحميل المكتب ثلاثي الأبعاد …'}
+  de:{prototype:'3D-Vorschau',back:'Zur Lernplattform',welcomeTitle:'Willkommen im virtuellen Büro',welcomeText:'Erkunde unseren digitalen Arbeitsplatz. Bewege dich frei und entdecke die Räume.',enter:'Büro betreten',controls:'Steuerung: WASD oder Pfeiltasten · Maus zum Umschauen · ESC zum Freigeben',location:'DEIN STANDORT',reception:'Empfang',workspace:'Arbeitsbereich',meeting:'Meetingraum',server:'Serverraum',roomReception:'Der zentrale Empfang von VIDO Technology.',roomWorkspace:'Ein offener Arbeitsplatz für konzentriertes Lernen und Zusammenarbeit.',roomMeeting:'Ein moderner Raum für Besprechungen und Präsentationen.',roomServer:'Die technische Infrastruktur des virtuellen Campus.',hint:'Klicke auf „Büro betreten“, um dich umzusehen.',join:'Gemeinsames Büro betreten',presenceGuest:'Anmelden, um andere Mitglieder zu sehen.',presenceLogin:'Bitte zuerst auf der Lernplattform anmelden.',presenceOnline:'Mit dem gemeinsamen Büro verbunden.',presenceCount:'Mitglieder online: ',presenceError:'Verbindung derzeit nicht möglich.',loading:'3D-Büro wird geladen …'},
+  en:{prototype:'3D preview',back:'Learning platform',welcomeTitle:'Welcome to the virtual office',welcomeText:'Explore our digital workplace. Move around freely and discover the rooms.',enter:'Enter office',controls:'Controls: WASD or arrow keys · Drag mouse to look around · ESC to release',location:'YOUR LOCATION',reception:'Reception',workspace:'Workspace',meeting:'Meeting room',server:'Server room',roomReception:'The central reception of VIDO Technology.',roomWorkspace:'An open workspace for focused learning and collaboration.',roomMeeting:'A modern room for meetings and presentations.',roomServer:'The technical infrastructure of the virtual campus.',hint:'Click “Enter office” to start exploring.',join:'Join shared office',presenceGuest:'Sign in to see other members.',presenceLogin:'Please sign in on the learning platform first.',presenceOnline:'Connected to the shared office.',presenceCount:'Members online: ',presenceError:'Connection is currently unavailable.',loading:'Loading 3D office …'},
+  ar:{prototype:'معاينة ثلاثية الأبعاد',back:'منصة التعلم',welcomeTitle:'أهلاً بك في المكتب الافتراضي',welcomeText:'اكتشف مساحة العمل الرقمية. تحرك بحرية وتعرّف على الغرف.',enter:'دخول المكتب',controls:'التحكم: WASD أو الأسهم · اسحب بالماوس للنظر · ESC للتحرير',location:'موقعك الحالي',reception:'الاستقبال',workspace:'مساحة العمل',meeting:'غرفة الاجتماعات',server:'غرفة الخوادم',roomReception:'الاستقبال الرئيسي لشركة VIDO Technology.',roomWorkspace:'مساحة عمل مفتوحة للتعلم والتركيز والتعاون.',roomMeeting:'غرفة حديثة للاجتماعات والعروض التقديمية.',roomServer:'البنية التحتية التقنية للحرم الافتراضي.',hint:'اضغط على دخول المكتب لبدء الاستكشاف.',join:'دخول المكتب المشترك',presenceGuest:'سجّل الدخول لرؤية الأعضاء الآخرين.',presenceLogin:'يرجى تسجيل الدخول إلى منصة التعلم أولاً.',presenceOnline:'أنت متصل بالمكتب المشترك.',presenceCount:'الأعضاء المتصلون: ',presenceError:'الاتصال غير متاح حالياً.',loading:'جارٍ تحميل المكتب ثلاثي الأبعاد …'}
 };
-let language='de', currentRoom='reception', entered=false;
+let language='de', currentRoom='reception', entered=false, presenceJoined=false, presenceTimer=null, heartbeatTimer=null;
+const remoteAvatars=new Map();
+const csrfCookie=()=>{const item=document.cookie.split(';').map(v=>v.trim()).find(v=>v.startsWith('vido_csrf='));return item?decodeURIComponent(item.slice('vido_csrf='.length)):'';};
+async function api(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(options.method&&options.method!=='GET'){headers['x-csrf-token']=csrfCookie();}const response=await fetch(path,{credentials:'same-origin',cache:'no-store',...options,headers});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'request_failed');return body;}
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#b8c8d3');
 scene.fog = new THREE.Fog('#b8c8d3', 24, 65);
@@ -74,6 +77,58 @@ $('enter').addEventListener('click',()=>{entered=true;$('welcome').classList.add
 const keys=new Set();window.addEventListener('keydown',e=>{if(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)){keys.add(e.code);e.preventDefault()}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>keys.clear());
 document.querySelectorAll('[data-move]').forEach(b=>{const code={forward:'KeyW',back:'KeyS',left:'KeyA',right:'KeyD'}[b.dataset.move];b.addEventListener('pointerdown',e=>{e.preventDefault();keys.add(code)});['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,()=>keys.delete(code)))});
 function move(dt){if(!entered)return;const forward=new THREE.Vector3();camera.getWorldDirection(forward);forward.y=0;forward.normalize();const right=new THREE.Vector3().crossVectors(forward,new THREE.Vector3(0,1,0)).normalize();const v=new THREE.Vector3();if(keys.has('KeyW')||keys.has('ArrowUp'))v.add(forward);if(keys.has('KeyS')||keys.has('ArrowDown'))v.sub(forward);if(keys.has('KeyD')||keys.has('ArrowRight'))v.add(right);if(keys.has('KeyA')||keys.has('ArrowLeft'))v.sub(right);if(v.lengthSq()){v.normalize().multiplyScalar(dt*5);camera.position.add(v);controls.target.add(v);camera.position.x=THREE.MathUtils.clamp(camera.position.x,-15,15);camera.position.z=THREE.MathUtils.clamp(camera.position.z,-12,12);controls.target.x=THREE.MathUtils.clamp(controls.target.x,-15,15);controls.target.z=THREE.MathUtils.clamp(controls.target.z,-12,12)}}
+
+function createAvatar(label){
+  const group=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.CapsuleGeometry(.28,.72,4,8),mat('#2586b6',.55));
+  body.position.y=.85;body.castShadow=true;group.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.2,12,10),mat('#e1b995'));head.position.y=1.48;head.castShadow=true;group.add(head);
+  const legMat=mat('#24384c');
+  for(const x of [-.12,.12]){const leg=new THREE.Mesh(new THREE.CylinderGeometry(.07,.08,.48,8),legMat);leg.position.set(x,.25,0);leg.castShadow=true;group.add(leg);}
+  const c=document.createElement('canvas');c.width=512;c.height=128;const ctx=c.getContext('2d');ctx.fillStyle='#061522';ctx.fillRect(0,0,512,128);ctx.fillStyle='#eaf7ff';ctx.font='bold 46px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,256,66);
+  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
+  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false}));sprite.position.y=2.05;sprite.scale.set(2.1,.52,1);group.add(sprite);
+  scene.add(group);return group;
+}
+function renderPresence(participants){
+  const visible=new Set();
+  for(const p of participants){
+    if(!p||typeof p.id!=='string'||!Number.isFinite(p.x)||!Number.isFinite(p.z))continue;
+    visible.add(p.id);let avatar=remoteAvatars.get(p.id);
+    if(!avatar){avatar=createAvatar(p.name||'VIDO Member');remoteAvatars.set(p.id,avatar);}
+    avatar.position.set(THREE.MathUtils.clamp(p.x,-15,15),0,THREE.MathUtils.clamp(p.z,-12,12));
+  }
+  for(const [id,avatar] of remoteAvatars){if(!visible.has(id)){scene.remove(avatar);avatar.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}});remoteAvatars.delete(id);}}
+  $('presenceCount').textContent=translations[language].presenceCount+(participants.length+1);
+}
+async function heartbeat(){
+  if(!presenceJoined)return;
+  try{
+    await api('/api/virtual-office/presence',{method:'POST',body:JSON.stringify({room:currentRoom,x:camera.position.x,z:camera.position.z})});
+    const data=await api('/api/virtual-office/presence');
+    renderPresence(data.participants||[]);
+    $('presenceStatus').textContent=translations[language].presenceOnline;
+  }catch(err){
+    if(err.message==='unauthorized'||err.message==='csrf_validation_failed'){stopPresence();$('presenceStatus').textContent=translations[language].presenceLogin;}
+    else $('presenceStatus').textContent=translations[language].presenceError;
+  }
+}
+function stopPresence(){
+  presenceJoined=false;if(presenceTimer)clearInterval(presenceTimer);if(heartbeatTimer)clearInterval(heartbeatTimer);presenceTimer=null;heartbeatTimer=null;
+  for(const avatar of remoteAvatars.values()){scene.remove(avatar);avatar.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();});}remoteAvatars.clear();
+  $('presenceCount').textContent='';
+}
+$('joinPresence').addEventListener('click',async()=>{
+  const button=$('joinPresence');button.disabled=true;
+  try{
+    await api('/api/auth/me');
+    presenceJoined=true;$('presenceStatus').textContent=translations[language].presenceOnline;
+    await heartbeat();heartbeatTimer=setInterval(heartbeat,5000);presenceTimer=setInterval(async()=>{if(presenceJoined){try{const d=await api('/api/virtual-office/presence');renderPresence(d.participants||[]);}catch{}}},5000);
+  }catch(err){$('presenceStatus').textContent=translations[language].presenceLogin;}
+  finally{button.disabled=false;}
+});
+window.addEventListener('pagehide',stopPresence);
+
 const clock=new THREE.Clock();
 function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.05);move(dt);controls.update();renderer.render(scene,camera)}
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.8))});
