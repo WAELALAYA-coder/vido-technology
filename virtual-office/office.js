@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { smoothingAlpha, isPositionMoving, walkingPose } from './presence-motion.js';
 
 const $ = (id) => document.getElementById(id);
 const translations = {
@@ -7,7 +8,7 @@ const translations = {
   en:{prototype:'3D preview',back:'Learning platform',welcomeTitle:'Welcome to the virtual office',welcomeText:'Explore our digital workplace. Move around freely and discover the rooms.',enter:'Enter office',controls:'Controls: WASD or arrow keys · Drag mouse to look around · ESC to release',location:'YOUR LOCATION',reception:'Reception',workspace:'Workspace',meeting:'Meeting room',server:'Server room',roomReception:'The central reception of VIDO Technology.',roomWorkspace:'An open workspace for focused learning and collaboration.',roomMeeting:'A modern room for meetings and presentations.',roomServer:'The technical infrastructure of the virtual campus.',hint:'Click “Enter office” to start exploring.',join:'Join shared office',presenceGuest:'Sign in to see other members.',presenceLogin:'Please sign in on the learning platform first.',presenceOnline:'Connected to the shared office.',presenceCount:'Members online: ',presenceError:'Connection is currently unavailable.',loading:'Loading 3D office …'},
   ar:{prototype:'معاينة ثلاثية الأبعاد',back:'منصة التعلم',welcomeTitle:'أهلاً بك في المكتب الافتراضي',welcomeText:'اكتشف مساحة العمل الرقمية. تحرك بحرية وتعرّف على الغرف.',enter:'دخول المكتب',controls:'التحكم: WASD أو الأسهم · اسحب بالماوس للنظر · ESC للتحرير',location:'موقعك الحالي',reception:'الاستقبال',workspace:'مساحة العمل',meeting:'غرفة الاجتماعات',server:'غرفة الخوادم',roomReception:'الاستقبال الرئيسي لشركة VIDO Technology.',roomWorkspace:'مساحة عمل مفتوحة للتعلم والتركيز والتعاون.',roomMeeting:'غرفة حديثة للاجتماعات والعروض التقديمية.',roomServer:'البنية التحتية التقنية للحرم الافتراضي.',hint:'اضغط على دخول المكتب لبدء الاستكشاف.',join:'دخول المكتب المشترك',presenceGuest:'سجّل الدخول لرؤية الأعضاء الآخرين.',presenceLogin:'يرجى تسجيل الدخول إلى منصة التعلم أولاً.',presenceOnline:'أنت متصل بالمكتب المشترك.',presenceCount:'الأعضاء المتصلون: ',presenceError:'الاتصال غير متاح حالياً.',loading:'جارٍ تحميل المكتب ثلاثي الأبعاد …'}
 };
-let language='de', currentRoom='reception', entered=false, presenceJoined=false, presenceTimer=null, heartbeatTimer=null;
+let language='de', currentRoom='reception', entered=false, presenceJoined=false, heartbeatTimer=null, heartbeatBusy=false;
 const remoteAvatars=new Map();
 const csrfCookie=()=>{const item=document.cookie.split(';').map(v=>v.trim()).find(v=>v.startsWith('vido_csrf='));return item?decodeURIComponent(item.slice('vido_csrf='.length)):'';};
 async function api(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(options.method&&options.method!=='GET'){headers['x-csrf-token']=csrfCookie();}const response=await fetch(path,{credentials:'same-origin',cache:'no-store',...options,headers});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'request_failed');return body;}
@@ -78,58 +79,149 @@ const keys=new Set();window.addEventListener('keydown',e=>{if(['KeyW','KeyA','Ke
 document.querySelectorAll('[data-move]').forEach(b=>{const code={forward:'KeyW',back:'KeyS',left:'KeyA',right:'KeyD'}[b.dataset.move];b.addEventListener('pointerdown',e=>{e.preventDefault();keys.add(code)});['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,()=>keys.delete(code)))});
 function move(dt){if(!entered)return;const forward=new THREE.Vector3();camera.getWorldDirection(forward);forward.y=0;forward.normalize();const right=new THREE.Vector3().crossVectors(forward,new THREE.Vector3(0,1,0)).normalize();const v=new THREE.Vector3();if(keys.has('KeyW')||keys.has('ArrowUp'))v.add(forward);if(keys.has('KeyS')||keys.has('ArrowDown'))v.sub(forward);if(keys.has('KeyD')||keys.has('ArrowRight'))v.add(right);if(keys.has('KeyA')||keys.has('ArrowLeft'))v.sub(right);if(v.lengthSq()){v.normalize().multiplyScalar(dt*5);camera.position.add(v);controls.target.add(v);camera.position.x=THREE.MathUtils.clamp(camera.position.x,-15,15);camera.position.z=THREE.MathUtils.clamp(camera.position.z,-12,12);controls.target.x=THREE.MathUtils.clamp(controls.target.x,-15,15);controls.target.z=THREE.MathUtils.clamp(controls.target.z,-12,12)}}
 
+function addLimb(parent,length,material,radius) {
+  const pivot=new THREE.Group();
+  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(radius*.82,radius,length,10),material);
+  mesh.position.y=-length/2;
+  mesh.castShadow=true;
+  mesh.receiveShadow=true;
+  pivot.add(mesh);
+  parent.add(pivot);
+  return pivot;
+}
 function createAvatar(label){
   const group=new THREE.Group();
-  const body=new THREE.Mesh(new THREE.CapsuleGeometry(.28,.72,4,8),mat('#2586b6',.55));
-  body.position.y=.85;body.castShadow=true;group.add(body);
-  const head=new THREE.Mesh(new THREE.SphereGeometry(.2,12,10),mat('#e1b995'));head.position.y=1.48;head.castShadow=true;group.add(head);
-  const legMat=mat('#24384c');
-  for(const x of [-.12,.12]){const leg=new THREE.Mesh(new THREE.CylinderGeometry(.07,.08,.48,8),legMat);leg.position.set(x,.25,0);leg.castShadow=true;group.add(leg);}
-  const c=document.createElement('canvas');c.width=512;c.height=128;const ctx=c.getContext('2d');ctx.fillStyle='#061522';ctx.fillRect(0,0,512,128);ctx.fillStyle='#eaf7ff';ctx.font='bold 46px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,256,66);
+  const jacket=mat('#247ea8',.62);
+  const trousers=mat('#25384b',.78);
+  const skin=mat('#d8ad8c',.78);
+  const shoes=mat('#101b27',.55);
+  const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.27,.58,5,10),jacket);
+  torso.position.y=1.03;torso.castShadow=true;torso.receiveShadow=true;group.add(torso);
+  const collar=new THREE.Mesh(new THREE.TorusGeometry(.12,.025,6,16),mat('#dcecf5',.55));
+  collar.position.set(0,1.32,.01);collar.rotation.x=Math.PI/2;group.add(collar);
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(.075,.085,.13,10),skin);
+  neck.position.y=1.43;group.add(neck);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.19,16,12),skin);
+  head.position.y=1.65;head.scale.set(1,.98,.92);head.castShadow=true;group.add(head);
+  const hair=new THREE.Mesh(new THREE.SphereGeometry(.195,14,10,0,Math.PI*2,0,Math.PI*.55),mat('#26313a',.9));
+  hair.position.set(0,1.69,-.005);hair.castShadow=true;group.add(hair);
+  const leftLeg=addLimb(group,.58,trousers,.085);
+  const rightLeg=addLimb(group,.58,trousers,.085);
+  leftLeg.position.set(-.13,.65,0);rightLeg.position.set(.13,.65,0);
+  for(const leg of [leftLeg,rightLeg]){
+    const foot=new THREE.Mesh(new THREE.BoxGeometry(.16,.11,.29),shoes);
+    foot.position.set(0,-.57,.07);foot.castShadow=true;leg.add(foot);
+  }
+  const leftArm=addLimb(group,.52,jacket,.075);
+  const rightArm=addLimb(group,.52,jacket,.075);
+  leftArm.position.set(-.31,1.27,0);rightArm.position.set(.31,1.27,0);
+  for(const arm of [leftArm,rightArm]){
+    const hand=new THREE.Mesh(new THREE.SphereGeometry(.075,10,8),skin);
+    hand.position.y=-.55;arm.add(hand);
+  }
+  const c=document.createElement('canvas');c.width=512;c.height=128;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#061522';ctx.fillRect(0,0,512,128);
+  ctx.strokeStyle='#55c8f3';ctx.lineWidth=6;ctx.strokeRect(3,3,506,122);
+  ctx.fillStyle='#eaf7ff';ctx.font='bold 42px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(String(label||'VIDO Member').slice(0,34),256,66);
   const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
-  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false}));sprite.position.y=2.05;sprite.scale.set(2.1,.52,1);group.add(sprite);
+  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false}));
+  sprite.position.y=2.13;sprite.scale.set(2.1,.52,1);group.add(sprite);
+  group.userData={
+    targetPosition:new THREE.Vector3(),
+    leftLeg,rightLeg,leftArm,rightArm,torso,
+    gaitOffset:Math.random()*Math.PI*2
+  };
   scene.add(group);return group;
 }
+function disposeAvatar(avatar){
+  scene.remove(avatar);
+  avatar.traverse(object=>{
+    if(object.geometry)object.geometry.dispose();
+    if(object.material){
+      const materials=Array.isArray(object.material)?object.material:[object.material];
+      for(const material of materials){
+        if(material.map)material.map.dispose();
+        material.dispose();
+      }
+    }
+  });
+}
 function renderPresence(participants){
+  const safeParticipants=Array.isArray(participants)?participants.slice(0,100):[];
   const visible=new Set();
-  for(const p of participants){
+  for(const p of safeParticipants){
     if(!p||typeof p.id!=='string'||!Number.isFinite(p.x)||!Number.isFinite(p.z))continue;
-    visible.add(p.id);let avatar=remoteAvatars.get(p.id);
+    visible.add(p.id);
+    let avatar=remoteAvatars.get(p.id);
     if(!avatar){avatar=createAvatar(p.name||'VIDO Member');remoteAvatars.set(p.id,avatar);}
-    avatar.position.set(THREE.MathUtils.clamp(p.x,-15,15),0,THREE.MathUtils.clamp(p.z,-12,12));
+    avatar.userData.targetPosition.set(
+      THREE.MathUtils.clamp(p.x,-15,15),
+      0,
+      THREE.MathUtils.clamp(p.z,-12,12)
+    );
   }
-  for(const [id,avatar] of remoteAvatars){if(!visible.has(id)){scene.remove(avatar);avatar.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}});remoteAvatars.delete(id);}}
-  $('presenceCount').textContent=translations[language].presenceCount+(participants.length+1);
+  for(const [id,avatar] of remoteAvatars){
+    if(!visible.has(id)){disposeAvatar(avatar);remoteAvatars.delete(id);}
+  }
+  $('presenceCount').textContent=translations[language].presenceCount+(visible.size+1);
+}
+function animateAvatars(dt){
+  const alpha=smoothingAlpha(dt,6);
+  const elapsed=performance.now()/1000;
+  for(const avatar of remoteAvatars.values()){
+    const data=avatar.userData;
+    const target=data.targetPosition;
+    const moving=isPositionMoving(avatar.position,target,.045);
+    if(moving){
+      const dx=target.x-avatar.position.x;
+      const dz=target.z-avatar.position.z;
+      const desiredYaw=Math.atan2(dx,dz);
+      const yawDelta=Math.atan2(Math.sin(desiredYaw-avatar.rotation.y),Math.cos(desiredYaw-avatar.rotation.y));
+      avatar.rotation.y+=yawDelta*alpha;
+    }
+    avatar.position.lerp(target,alpha);
+    const pose=walkingPose(elapsed+data.gaitOffset,moving);
+    data.leftLeg.rotation.x=pose.legSwing;
+    data.rightLeg.rotation.x=-pose.legSwing;
+    data.leftArm.rotation.x=-pose.armSwing;
+    data.rightArm.rotation.x=pose.armSwing;
+    data.torso.position.y=1.03+pose.bodyBob;
+  }
 }
 async function heartbeat(){
-  if(!presenceJoined)return;
+  if(!presenceJoined||heartbeatBusy)return;
+  heartbeatBusy=true;
   try{
     await api('/api/virtual-office/presence',{method:'POST',body:JSON.stringify({room:currentRoom,x:camera.position.x,z:camera.position.z})});
     const data=await api('/api/virtual-office/presence');
     renderPresence(data.participants||[]);
-    $('presenceStatus').textContent=translations[language].presenceOnline;
+    if(presenceJoined)$('presenceStatus').textContent=translations[language].presenceOnline;
   }catch(err){
     if(err.message==='unauthorized'||err.message==='csrf_validation_failed'){stopPresence();$('presenceStatus').textContent=translations[language].presenceLogin;}
-    else $('presenceStatus').textContent=translations[language].presenceError;
-  }
+    else if(presenceJoined)$('presenceStatus').textContent=translations[language].presenceError;
+  }finally{heartbeatBusy=false;}
 }
 function stopPresence(){
-  presenceJoined=false;if(presenceTimer)clearInterval(presenceTimer);if(heartbeatTimer)clearInterval(heartbeatTimer);presenceTimer=null;heartbeatTimer=null;
-  for(const avatar of remoteAvatars.values()){scene.remove(avatar);avatar.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();});}remoteAvatars.clear();
+  presenceJoined=false;if(heartbeatTimer)clearInterval(heartbeatTimer);heartbeatTimer=null;
+  for(const avatar of remoteAvatars.values())disposeAvatar(avatar);remoteAvatars.clear();
   $('presenceCount').textContent='';
 }
 $('joinPresence').addEventListener('click',async()=>{
+  if(presenceJoined)return;
   const button=$('joinPresence');button.disabled=true;
   try{
     await api('/api/auth/me');
     presenceJoined=true;$('presenceStatus').textContent=translations[language].presenceOnline;
-    await heartbeat();heartbeatTimer=setInterval(heartbeat,5000);presenceTimer=setInterval(async()=>{if(presenceJoined){try{const d=await api('/api/virtual-office/presence');renderPresence(d.participants||[]);}catch{}}},5000);
+    await heartbeat();
+    if(presenceJoined&&!heartbeatTimer)heartbeatTimer=setInterval(heartbeat,5000);
   }catch(err){$('presenceStatus').textContent=translations[language].presenceLogin;}
   finally{button.disabled=false;}
 });
 window.addEventListener('pagehide',stopPresence);
 
 const clock=new THREE.Clock();
-function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.05);move(dt);controls.update();renderer.render(scene,camera)}
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.05);move(dt);animateAvatars(dt);controls.update();renderer.render(scene,camera)}
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.8))});
 try{setLanguage('de');setRoom('reception');animate();$('loading').classList.add('done');setTimeout(()=>$('loading').remove(),500)}catch(err){console.error(err);$('loading').classList.add('done');$('error').hidden=false;$('error').textContent='3D office could not start: '+err.message}
