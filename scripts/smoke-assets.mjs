@@ -58,8 +58,9 @@ try{
   }
   assert.match(styles.headers.get('content-type')||'',/text\/css/i);
   assert.match(styles.headers.get('cache-control')||'',/no-cache/i);
-  assert((await home.text()).includes('diagram-trainer.js'),'home page must load diagram trainer');
-  assert((await home.text()).includes('href="/virtual-office/"'),'home page must link to the 3D virtual office');
+  const homeText=await home.text();
+  assert(homeText.includes('diagram-trainer.js'),'home page must load diagram trainer');
+  assert(homeText.includes('href="/virtual-office/"'),'home page must link to the 3D virtual office');
   assert.match(office.headers.get('content-type')||'',/text\/html/i);
   assert.match(officeCss.headers.get('content-type')||'',/text\/css/i);
   assert.match(officeJs.headers.get('content-type')||'',/javascript/i);
