@@ -95,6 +95,10 @@ try{
 
   const noCookie=await get('/api/auth/me');
   assert.equal(noCookie.status,401,'API auth must reject requests without the HttpOnly session cookie');
+  const noCookiePresence=await get('/api/virtual-office/presence');
+  assert.equal(noCookiePresence.status,401,'virtual office presence must require an authenticated session');
+  const noCookieHeartbeat=await fetch(base+'/api/virtual-office/presence',{method:'POST',headers:{'content-type':'application/json',origin:base},body:JSON.stringify({room:'reception',x:0,z:0})});
+  assert.equal(noCookieHeartbeat.status,401,'virtual office heartbeat must reject unauthenticated requests');
   const legacyBearer=await fetch(base+'/api/auth/me',{headers:{authorization:'Bearer legacy-token'}});
   assert.equal(legacyBearer.status,401,'API auth must not accept legacy Bearer tokens');
 
