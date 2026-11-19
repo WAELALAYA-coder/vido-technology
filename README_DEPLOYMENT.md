@@ -17,7 +17,7 @@ GitHub is the source-code repository. GitHub Pages can serve static files only; 
 
 ## Local development and verification
 
-The committed `docker-compose.yml` maps the application to `127.0.0.1:3000` and PostgreSQL to `127.0.0.1:5432`. This is the repository default. The Windows development machine may use a separate, local-only LAN adjustment for phone access; keep such machine-specific networking changes out of Git. When LAN access is enabled, restrict inbound TCP 3000 to the trusted local subnet with Windows Firewall. Do not expose PostgreSQL to the LAN or the public internet.
+The committed `docker-compose.yml` maps the application container's port `3000` to host address `127.0.0.1:3001`, and PostgreSQL container port `5432` to host address `127.0.0.1:5433`. Both host bindings are loopback-only by default, so the application is available only on the same computer. Keep these bindings restricted to loopback and do not expose PostgreSQL to the LAN or the public internet.
 
 Keep real environment values in the local `.env` file only. Use `.env.example` as a template. It contains placeholders, not working credentials.
 
@@ -30,13 +30,18 @@ Important variables:
 - `REGISTRATION_ENABLED=false`
 - Optional AI variables: `AI_API_URL`, `AI_API_KEY`, `AI_MODEL`
 
+Create the external named volumes declared by `docker-compose.yml` (these commands are safe to repeat and preserve existing volume data):
+
+    docker volume create vido_technology_v39_pgdata
+    docker volume create vido_technology_v39_node_modules
+
 Start the local services:
 
     docker compose --env-file .env up -d
 
-Check the API:
+Open the application at `http://127.0.0.1:3001` and check the API:
 
-    Invoke-RestMethod http://127.0.0.1:3000/api/health
+    Invoke-RestMethod http://127.0.0.1:3001/api/health
 
 Install the locked Node dependencies and run the local checks:
 
