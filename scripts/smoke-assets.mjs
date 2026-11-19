@@ -30,7 +30,10 @@ try{
   const responses=await Promise.all(paths.map(get));
   const byPath=new Map(paths.map((path,index)=>[path,responses[index]]));
   for(let i=0;i<responses.length;i++)assert.equal(responses[i].status,200,'public asset must be served: '+paths[i]);
-  const home=byPath.get('/');\n  const office=byPath.get('/virtual-office/');\n  const officeCss=byPath.get('/virtual-office/office.css');\n  const officeJs=byPath.get('/virtual-office/office.js');
+  const home=byPath.get('/');
+  const office=byPath.get('/virtual-office/');
+  const officeCss=byPath.get('/virtual-office/office.css');
+  const officeJs=byPath.get('/virtual-office/office.js');
   const manifest=byPath.get('/manifest.webmanifest');
   const iconSvg=byPath.get('/icons/vido-app-icon.svg');
   const icon192=byPath.get('/icons/vido-192.png');
@@ -55,7 +58,15 @@ try{
   }
   assert.match(styles.headers.get('content-type')||'',/text\/css/i);
   assert.match(styles.headers.get('cache-control')||'',/no-cache/i);
-  assert((await home.text()).includes('diagram-trainer.js'),'home page must load diagram trainer');\n  assert((await home.text()).includes('href="/virtual-office/"'),'home page must link to the 3D virtual office');\n  assert.match(office.headers.get('content-type')||'',/text\\/html/i);\n  assert.match(officeCss.headers.get('content-type')||'',/text\\/css/i);\n  assert.match(officeJs.headers.get('content-type')||'',/javascript/i);\n  assert((await office.text()).includes('VIDO Technology · Virtual Office'),'virtual office page title missing');\n  assert((await officeCss.text()).includes('.room-panel'),'virtual office stylesheet missing');\n  const officeSource=await officeJs.text();\n  assert(officeSource.includes('OrbitControls')&&officeSource.includes('serverRack'),'3D office scene modules missing');
+  assert((await home.text()).includes('diagram-trainer.js'),'home page must load diagram trainer');
+  assert((await home.text()).includes('href="/virtual-office/"'),'home page must link to the 3D virtual office');
+  assert.match(office.headers.get('content-type')||'',/text\/html/i);
+  assert.match(officeCss.headers.get('content-type')||'',/text\/css/i);
+  assert.match(officeJs.headers.get('content-type')||'',/javascript/i);
+  assert((await office.text()).includes('VIDO Technology · Virtual Office'),'virtual office page title missing');
+  assert((await officeCss.text()).includes('.room-panel'),'virtual office stylesheet missing');
+  const officeSource=await officeJs.text();
+  assert(officeSource.includes('OrbitControls')&&officeSource.includes('serverRack'),'3D office scene modules missing');
   assert((await questions.text()).includes('window.VIDO_EXTRA_QUESTIONS'),'question dataset payload missing');
   assert((await lessons.text()).includes('window.VIDO_LESSONS'),'lesson data payload missing');
   assert((await curriculum.text()).includes('window.VIDO_DIAGRAM_CONTENT'),'diagram curriculum payload missing');
