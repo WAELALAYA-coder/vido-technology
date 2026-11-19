@@ -42,6 +42,7 @@ app.get('/index.html', (_req,res)=>res.sendFile('index.html',{root:PUBLIC_ROOT})
 app.get('/virtual-office/', (_req,res)=>res.sendFile('index.html',{root:PUBLIC_ROOT+'/virtual-office',headers:{'Cache-Control':'no-cache'}}));
 app.get('/virtual-office/office.css', (_req,res)=>res.sendFile('office.css',{root:PUBLIC_ROOT+'/virtual-office',headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-cache'}}));
 app.get('/virtual-office/office.js', (_req,res)=>res.sendFile('office.js',{root:PUBLIC_ROOT+'/virtual-office',headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
+app.get('/virtual-office/presence-motion.js', (_req,res)=>res.sendFile('presence-motion.js',{root:PUBLIC_ROOT+'/virtual-office',headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}}));
 app.get('/manifest.webmanifest', (_req,res)=>res.sendFile('manifest.webmanifest',{root:PUBLIC_ROOT,headers:{'Content-Type':'application/manifest+json'}}));
 app.get('/icons/vido-app-icon.svg', (_req,res)=>res.sendFile('icons/vido-app-icon.svg',{root:PUBLIC_ROOT,headers:{'Content-Type':'image/svg+xml; charset=utf-8','Cache-Control':'public, max-age=86400'}}));
 app.get('/icons/vido-192.png', (_req,res)=>res.sendFile('icons/vido-192.png',{root:PUBLIC_ROOT,headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=86400'}}));
