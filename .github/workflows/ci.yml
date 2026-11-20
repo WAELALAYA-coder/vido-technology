@@ -62,6 +62,10 @@ jobs:
           node --check scripts/audit.mjs
           node --check scripts/smoke-assets.mjs
           node --check scripts/auth-integration-test.mjs
+          node --check virtual-office/office.js
+          node --check virtual-office/presence-motion.js
+          node --check scripts/virtual-office-motion-test.mjs
+          node --check service-worker.js
 
       - name: Run application audit
         run: npm test

@@ -98,9 +98,9 @@ for(const pair of [
   assert(backend.includes("'"+pair[0]+"'"),'missing asset mapping: '+pair[0]);
 }
 const serviceWorker=fs.readFileSync('service-worker.js','utf8');
-assert(serviceWorker.includes('vido-ui-20261115-v39.2-auth-recovery'),'service worker cache version missing');
+assert(serviceWorker.includes('vido-ui-20261119-v41-avatar-motion'),'service worker cache version missing');
 for(const asset of ['icons/vido-app-icon.svg','icons/vido-192.png','icons/vido-512.png'])assert(serviceWorker.includes('./'+asset),'service worker does not precache '+asset);
-for(const asset of ['diagram-curriculum-v38.js','diagram-engine-v38.js','diagram-trainer.js','diagram-trainer.css']){
+for(const asset of ['diagram-curriculum-v38.js','diagram-engine-v38.js','diagram-trainer.js','diagram-trainer.css','virtual-office/','virtual-office/office.css','virtual-office/office.js','virtual-office/presence-motion.js']){
   assert(serviceWorker.includes('./'+asset),'service worker does not precache '+asset);
 }
 console.log('PASS: 11 trilingual modules / 8 valid templates / 20 trilingual questions / 9 official sources / negative validator tests / browser wiring.');

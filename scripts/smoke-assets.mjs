@@ -18,7 +18,7 @@ try{
   let ready=false,lastError;
   for(let attempt=0;attempt<60;attempt++){
     try{
-      const response=await get('/questions-v37.js');
+      const response=await get('/virtual-office/');
       if(response.status===200){ready=true;break;}
       lastError=new Error('asset route returned HTTP '+response.status);
     }catch(error){lastError=error;}
@@ -26,11 +26,15 @@ try{
   }
   assert(ready,'Express did not start the learning asset routes: '+(lastError?.message||'timeout'));
 
-  const paths=['/','/manifest.webmanifest','/icons/vido-app-icon.svg','/icons/vido-192.png','/icons/vido-512.png','/questions-v37.js','/lessons-v37.js','/diagram-curriculum-v38.js','/diagram-engine-v38.js','/diagram-trainer.js','/diagram-trainer.css'];
+  const paths=['/','/virtual-office/','/virtual-office/office.css','/virtual-office/office.js','/virtual-office/presence-motion.js','/manifest.webmanifest','/icons/vido-app-icon.svg','/icons/vido-192.png','/icons/vido-512.png','/questions-v37.js','/lessons-v37.js','/diagram-curriculum-v38.js','/diagram-engine-v38.js','/diagram-trainer.js','/diagram-trainer.css'];
   const responses=await Promise.all(paths.map(get));
   const byPath=new Map(paths.map((path,index)=>[path,responses[index]]));
   for(let i=0;i<responses.length;i++)assert.equal(responses[i].status,200,'public asset must be served: '+paths[i]);
   const home=byPath.get('/');
+  const office=byPath.get('/virtual-office/');
+  const officeCss=byPath.get('/virtual-office/office.css');
+  const officeJs=byPath.get('/virtual-office/office.js');
+  const presenceMotion=byPath.get('/virtual-office/presence-motion.js');
   const manifest=byPath.get('/manifest.webmanifest');
   const iconSvg=byPath.get('/icons/vido-app-icon.svg');
   const icon192=byPath.get('/icons/vido-192.png');
@@ -49,13 +53,24 @@ try{
   assert((await iconSvg.text()).includes('<svg'),'SVG install icon payload missing');
   assert((await icon192.arrayBuffer()).byteLength>1000,'192px icon image appears empty');
   assert((await icon512.arrayBuffer()).byteLength>1000,'512px icon image appears empty');
-  for(const response of [questions,lessons,curriculum,engine,trainer]){
+  for(const response of [questions,lessons,curriculum,engine,trainer,presenceMotion]){
     assert.match(response.headers.get('content-type')||'',/application\/javascript/i);
     assert.match(response.headers.get('cache-control')||'',/no-cache/i);
   }
   assert.match(styles.headers.get('content-type')||'',/text\/css/i);
   assert.match(styles.headers.get('cache-control')||'',/no-cache/i);
-  assert((await home.text()).includes('diagram-trainer.js'),'home page must load diagram trainer');
+  const homeText=await home.text();
+  assert(homeText.includes('diagram-trainer.js'),'home page must load diagram trainer');
+  assert(homeText.includes('href="/virtual-office/"'),'home page must link to the 3D virtual office');
+  assert.match(office.headers.get('content-type')||'',/text\/html/i);
+  assert.match(officeCss.headers.get('content-type')||'',/text\/css/i);
+  assert.match(officeJs.headers.get('content-type')||'',/javascript/i);
+  assert((await office.text()).includes('VIDO Technology · Virtual Office'),'virtual office page title missing');
+  assert((await officeCss.text()).includes('.room-panel'),'virtual office stylesheet missing');
+  const officeSource=await officeJs.text();
+  assert(officeSource.includes('OrbitControls')&&officeSource.includes('serverRack'),'3D office scene modules missing');
+  const motionSource=await presenceMotion.text();
+  assert(motionSource.includes('export function smoothingAlpha')&&motionSource.includes('export function walkingPose'),'avatar movement module missing or incomplete');
   assert((await questions.text()).includes('window.VIDO_EXTRA_QUESTIONS'),'question dataset payload missing');
   assert((await lessons.text()).includes('window.VIDO_LESSONS'),'lesson data payload missing');
   assert((await curriculum.text()).includes('window.VIDO_DIAGRAM_CONTENT'),'diagram curriculum payload missing');
@@ -84,6 +99,10 @@ try{
 
   const noCookie=await get('/api/auth/me');
   assert.equal(noCookie.status,401,'API auth must reject requests without the HttpOnly session cookie');
+  const noCookiePresence=await get('/api/virtual-office/presence');
+  assert.equal(noCookiePresence.status,401,'virtual office presence must require an authenticated session');
+  const noCookieHeartbeat=await fetch(base+'/api/virtual-office/presence',{method:'POST',headers:{'content-type':'application/json',origin:base},body:JSON.stringify({room:'reception',x:0,z:0})});
+  assert.equal(noCookieHeartbeat.status,401,'virtual office heartbeat must reject unauthenticated requests');
   const legacyBearer=await fetch(base+'/api/auth/me',{headers:{authorization:'Bearer legacy-token'}});
   assert.equal(legacyBearer.status,401,'API auth must not accept legacy Bearer tokens');
 
@@ -117,7 +136,7 @@ try{
     const response=await get(privatePath);
     assert.equal(response.status,404,`private path must not be served: ${privatePath}`);
   }
-  console.log('PASS: public learning assets, private paths, cookie-only auth, CSRF token validation, legacy Bearer rejection and same-origin mutation guards.');
+  console.log('PASS: public learning assets, 3D virtual office and avatar motion routes, private paths, cookie-only auth, CSRF token validation, legacy Bearer rejection and same-origin mutation guards.');
 } finally {
   if(child.exitCode===null&&child.signalCode===null){
     child.kill('SIGTERM');

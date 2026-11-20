@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="VIDO Technology – immersive 3D virtual office">
+  <title>VIDO Technology · Virtual Office</title>
+  <link rel="stylesheet" href="/virtual-office/office.css">
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
+  </script>
+  <script type="module" src="/virtual-office/office.js"></script>
+</head>
+<body>
+  <main id="office" aria-label="VIDO Technology Virtual Office">
+    <canvas id="world" aria-label="Interactive 3D office scene"></canvas>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Back to VIDO Technology"><span>VIDO</span> TECHNOLOGY <small>VIRTUAL OFFICE</small></a>
+      <div class="top-actions">
+        <span class="live"><i></i><b data-i18n="prototype">3D preview</b></span>
+        <select id="language" aria-label="Language">
+          <option value="de">DE</option><option value="en">EN</option><option value="ar">AR</option>
+        </select>
+        <a class="exit" href="/" data-i18n="back">Zur Lernplattform</a>
+      </div>
+    </header>
+    <section class="welcome" id="welcome">
+      <div class="eyebrow">VIDO TECHNOLOGY · DIGITAL CAMPUS</div>
+      <h1 data-i18n="welcomeTitle">Willkommen im virtuellen Büro</h1>
+      <p data-i18n="welcomeText">Erkunde unseren digitalen Arbeitsplatz. Bewege dich frei und entdecke die Räume.</p>
+      <button id="enter" class="primary" data-i18n="enter">Büro betreten</button>
+      <small data-i18n="controls">Steuerung: WASD oder Pfeiltasten · Maus zum Umschauen · ESC zum Freigeben</small>
+    </section>
+    <aside class="room-panel">
+      <div class="panel-label" data-i18n="location">DEIN STANDORT</div>
+      <strong id="roomName">Empfang</strong>
+      <p id="roomDescription" data-i18n="roomReception">Der zentrale Empfang von VIDO Technology.</p>
+      <div class="room-list">
+        <button data-room="reception" class="room active">01 <span data-i18n="reception">Empfang</span></button>
+        <button data-room="workspace" class="room">02 <span data-i18n="workspace">Arbeitsbereich</span></button>
+        <button data-room="meeting" class="room">03 <span data-i18n="meeting">Meetingraum</span></button>
+        <button data-room="server" class="room">04 <span data-i18n="server">Serverraum</span></button>
+      </div>
+      <div class="presence"><button id="joinPresence" class="join-presence" type="button" data-i18n="join">Join shared office</button><small id="presenceStatus" aria-live="polite" data-i18n="presenceGuest">Sign in to see other members.</small><div id="presenceCount" class="presence-count"></div></div>
+    </aside>
+    <div class="hint" id="hint" data-i18n="hint">Klicke auf „Büro betreten“, um dich umzusehen.</div>
+    <div class="crosshair" aria-hidden="true">+</div>
+    <div class="mobile-controls" aria-label="Movement controls">
+      <button data-move="forward">▲</button>
+      <div><button data-move="left">◀</button><button data-move="back">▼</button><button data-move="right">▶</button></div>
+    </div>
+    <div class="loading" id="loading"><div class="spinner"></div><span data-i18n="loading">3D-Büro wird geladen …</span></div>
+    <div class="error" id="error" hidden></div>
+  </main>
+</body>
+</html>
