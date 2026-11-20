@@ -43,3 +43,11 @@ The page is served by Express at `/virtual-office/`. Three.js 0.180.0 and OrbitC
 2. Replace in-memory polling with an authenticated multi-instance realtime transport.
 3. Add proximity communication only after consent, permissions and deployment architecture are defined.
 4. Add administrator-controlled room configuration and persistent assets.
+
+## Presence visibility and privacy
+
+- Shared presence starts only after a signed-in user selects **Join shared office**.
+- While sharing, other authenticated users connected to the same application process can see an anonymous member label, the selected room, the avatar's in-world X/Z coordinates, and the last update time. The presence response does not include the account ID or email address.
+- The browser sends a heartbeat approximately every five seconds. Presence is held in process memory and expires after 30 seconds without a heartbeat. Leaving the page stops the local heartbeat; other participants may still see the avatar until the expiry window ends.
+- Presence is not written to PostgreSQL or another persistent store. Restarting the application process clears the in-memory presence list.
+- Because presence is process-local, users connected to different application instances do not see each other in this prototype.
