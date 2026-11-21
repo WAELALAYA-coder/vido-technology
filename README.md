@@ -23,7 +23,7 @@ The complete application uses **Node.js 22, Express 5 and PostgreSQL 16**. Docke
 1. Install and start Docker Desktop.
 2. Clone this repository and open its folder:
 
-   `git clone --branch maintenance/v36-ci-and-docs https://github.com/WAELALAYA-coder/vido-technology.git`
+   `git clone https://github.com/WAELALAYA-coder/vido-technology.git`
 
    `cd vido-technology`
 
@@ -34,13 +34,19 @@ The complete application uses **Node.js 22, Express 5 and PostgreSQL 16**. Docke
 
 4. Open `.env` and replace every `REPLACE_...` value. Set your own owner email, a unique owner password of at least 12 characters, a different admin password, a long random JWT secret (at least 32 characters), and a unique database password. Keep the AI variables empty when you do not use the optional AI Tutor.
 
-5. Start the local application:
+5. Create the two external Docker volumes required by `docker-compose.yml` (safe to repeat; existing volume data is preserved):
+
+   `docker volume create vido_technology_v39_pgdata`
+
+   `docker volume create vido_technology_v39_node_modules`
+
+6. Start the local application:
 
    `docker compose --env-file .env up -d --build`
 
-6. Open **http://127.0.0.1:3000** in your browser. Check the backend/database health with:
+7. Open **http://127.0.0.1:3001** in your browser. Check the backend/database health with:
 
-   `Invoke-RestMethod http://127.0.0.1:3000/api/health`
+   `Invoke-RestMethod http://127.0.0.1:3001/api/health`
 
 The first owner account is created from `OWNER_EMAIL` and `OWNER_PASSWORD` when the database starts. The optional quick-admin login uses `ADMIN_USERNAME` and `ADMIN_PASSWORD`. Public self-registration is disabled by default.
 
