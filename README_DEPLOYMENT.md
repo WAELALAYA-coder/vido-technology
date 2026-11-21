@@ -17,7 +17,7 @@ GitHub is the source-code repository. GitHub Pages can serve static files only; 
 
 ## Local development and verification
 
-The committed `docker-compose.yml` maps the application to `127.0.0.1:3000` and PostgreSQL to `127.0.0.1:5432`. This is the repository default. The Windows development machine may use a separate, local-only LAN adjustment for phone access; keep such machine-specific networking changes out of Git. When LAN access is enabled, restrict inbound TCP 3000 to the trusted local subnet with Windows Firewall. Do not expose PostgreSQL to the LAN or the public internet.
+The committed `docker-compose.yml` binds the application to host address `127.0.0.1:3001` and PostgreSQL to `127.0.0.1:5433`. Inside the containers, the application listens on port `3000` and PostgreSQL on port `5432`; the host-side ports are `3001` and `5433`. Both host bindings are loopback-only and are not reachable from other devices by default. If a private LAN development setup is deliberately configured, restrict application access to the trusted local subnet and keep PostgreSQL private. Do not expose PostgreSQL to the LAN or the public internet.
 
 Keep real environment values in the local `.env` file only. Use `.env.example` as a template. It contains placeholders, not working credentials.
 
@@ -36,7 +36,7 @@ Start the local services:
 
 Check the API:
 
-    Invoke-RestMethod http://127.0.0.1:3000/api/health
+    Invoke-RestMethod http://127.0.0.1:3001/api/health
 
 Install the locked Node dependencies and run the local checks:
 
@@ -130,26 +130,13 @@ For local execution, set `VIDO_TEST_DATABASE_URL` to a disposable PostgreSQL dat
 This integration test does not replace a manual HTTPS browser test. Safari/iOS and other real-device checks remain outstanding.
 
 
-## Active local Windows workstation setup — V39
+## Local Windows runtime notes
 
-The maintained local project directory on the Windows workstation is:
+The default `docker-compose.yml` profile binds the VIDO frontend to `127.0.0.1:3001` and PostgreSQL to `127.0.0.1:5433`. The corresponding application health endpoint is `http://127.0.0.1:3001/api/health`. Both host bindings are loopback-only; other devices cannot reach them by default. Do not expose PostgreSQL to a LAN or the public internet.
 
-`C:\Users\waela\Documents\VIDO-Technology-V39`
+Local startup scripts, workstation directories, backup locations, scheduled-task names and retired local container details are machine-specific operational information. Keep those details in private administrator notes rather than this public repository guide. Store backups securely, test restoration, and never commit `.env` files, credentials or backup archives. Stopping Compose does not delete the external database and Node modules volumes; do not remove those volumes unless you intentionally want to discard their data.
 
-The active local URLs are:
-
-- VIDO frontend: `http://127.0.0.1:3001`
-- Backend health: `http://127.0.0.1:3001/api/health`
-
-The V39 app and PostgreSQL host ports are bound to loopback only. PostgreSQL is mapped to `127.0.0.1:5433`; it is not published to the LAN or public internet. Do not change these bindings to `0.0.0.0` for convenience.
-
-Use `start-vido.bat` in this folder to start V39 and `stop-vido.bat` to stop it. Stopping Compose does not delete the named database or Node modules volumes. The app container has an HTTP healthcheck; both V39 containers should report `healthy` after startup.
-
-A Windows Scheduled Task named `VIDO V39 Daily Backup` runs at 20:00 when the user session and Docker Desktop are available. It saves the PostgreSQL custom-format dump and a source ZIP under `C:\Users\waela\Documents\VIDO_Backups`, verifies both, and retains the latest 14 daily V39 backups. The task never pushes to GitHub. Keep the local `.env` file and credentials private; they are intentionally excluded from automatic backups.
-
-The retired V33 app and database containers are stopped but not deleted. Their volumes are preserved for rollback. The old V33 backup task is disabled; it targeted the retired source and its script included an automatic push to `main`.
-
-The V39 AI Tutor remains disabled until a valid provider URL, API key and model are configured. This local deployment is not a public production release.
+The optional AI Tutor requires a provider URL, API key and model to be configured in the server environment. A local development instance is not a public production release.
 
 
 ## Account registration and password recovery
