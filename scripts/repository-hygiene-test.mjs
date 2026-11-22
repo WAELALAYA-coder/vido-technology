@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 const tracked = execFileSync('git', ['ls-files', '-z'], {
   encoding: 'utf8',
   stdio: ['ignore', 'pipe', 'pipe']
-}).split('\0').filter(Boolean).map(path => path.replaceAll('\\\\', '/'));
+}).split('\0').filter(Boolean);
 
 const allowedEnvironmentTemplates = new Set([
   '.env.example',
