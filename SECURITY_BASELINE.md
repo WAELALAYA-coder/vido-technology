@@ -61,7 +61,7 @@ This is a hardened local deployment, not a public production service.
 3. Content Security Policy is not enabled because the current frontend includes inline scripts and styles. A strong CSP requires refactoring these assets and testing the full UI.
 4. Browser sessions use an HttpOnly, SameSite=Lax session cookie; the cookie is Secure in production. The JWT is no longer returned to JavaScript or stored in sessionStorage/localStorage. Legacy browser bearer-token copies are cleared when the new UI loads.
 5. MFA, email verification, and self-service password recovery are not configured. Registration remains closed.
-6. Backups currently reside on the Windows device. The scheduled task and private GitHub source synchronization do not provide off-site PostgreSQL backups. Production needs encrypted off-site backups and regular restore drills.
+6. Current backups are local and do not provide off-site PostgreSQL recovery. Production needs encrypted off-site backups and regular restore drills.
 7. The AI tutor is disabled in the running container because the runtime has no provider URL or API key configured.
 8. The local database connection is plain inside the private Docker network. An externally hosted database must use provider TLS and private networking.
 9. Production image digests are pinned in the prepared Dockerfile and Compose template. Update them through controlled security reviews.
@@ -151,7 +151,7 @@ This section records a historical local validation. It is not a guarantee of the
 - The application audit and PostgreSQL-backed authentication integration tests passed against an isolated disposable test database.
 - `npm audit --omit=dev --audit-level=high` reported no high-severity production dependency advisories at the time of the check.
 - Local application and database services were bound to loopback; the database was not exposed to the LAN or public internet.
-- A local backup/restore drill was completed using a separate temporary database. The archive integrity and database restore were verified. At the time of this historical check, backups were stored on the workstation; maintain an encrypted off-device copy and repeat restore drills before relying on them for disaster recovery.
+- A local backup/restore drill was completed using a separate temporary database. The archive integrity and database restore were verified. This historical check did not establish off-site backup coverage; maintain an encrypted off-device copy and repeat restore drills before relying on them for disaster recovery.
 - No production deployment was performed as part of this local validation.
 
 Workstation-specific paths, local account counts, backup filenames, scheduled-task names, firewall state, container identifiers and directory-cleanup details are intentionally omitted from this public repository. Keep detailed machine-specific operational records in a private location. Re-run the checks against the actual target environment before every production release.
