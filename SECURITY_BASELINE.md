@@ -2,14 +2,13 @@
 
 Review date: 15 November 2026
 Build: VIDO Technology V39 (V35 application foundation + V37 learning library + V38 Diagram Academy + V39 cookie-based sessions)
-Current deployment: Local Windows 11 host with Docker Compose
+Reference environment: local Docker Compose setup; no public production deployment
 Public release status: Not deployed. Public self-registration is disabled.
 
 ## Implemented controls
 
 - Express serves the public frontend routes: `/`, `/index.html`, `/manifest.webmanifest`, `/service-worker.js`, `/questions-v37.js`, `/lessons-v37.js`, `/diagram-curriculum-v38.js`, `/diagram-engine-v38.js`, `/diagram-trainer.js`, and `/diagram-trainer.css`. The six learning-asset routes expose only browser content and use explicit content types with no-cache headers. Backend source, SQL schema, package files, Compose configuration, Git metadata, and environment files are not served.
 - The V39 local Docker deployment publishes the app on `127.0.0.1:3001` and PostgreSQL on `127.0.0.1:5433`; both are loopback-only and use plain HTTP locally.
-- The unused legacy V33 app and PostgreSQL containers have been stopped, not removed. Their Docker volumes and original project files are preserved for rollback. The legacy TCP 3000 listener is no longer active.
 - Public self-registration is disabled by default. The API returns HTTP 403 while disabled. New accounts can be created by the owner through the authenticated administration API.
 - Failed-login counters are stored in PostgreSQL. The table contains SHA-256 bucket identifiers rather than raw email addresses or IP values.
 - Rate-limit checks and counter reservations run in a single PostgreSQL transaction protected by transaction-scoped advisory locks. Concurrent attempts cannot race through the same limit.
@@ -62,7 +61,7 @@ This is a hardened local deployment, not a public production service.
 3. Content Security Policy is not enabled because the current frontend includes inline scripts and styles. A strong CSP requires refactoring these assets and testing the full UI.
 4. Browser sessions use an HttpOnly, SameSite=Lax session cookie; the cookie is Secure in production. The JWT is no longer returned to JavaScript or stored in sessionStorage/localStorage. Legacy browser bearer-token copies are cleared when the new UI loads.
 5. MFA, email verification, and self-service password recovery are not configured. Registration remains closed.
-6. Backups currently reside on the Windows device. The scheduled task and private GitHub source synchronization do not provide off-site PostgreSQL backups. Production needs encrypted off-site backups and regular restore drills.
+6. Current backups are local and do not provide off-site PostgreSQL recovery. Production needs encrypted off-site backups and regular restore drills.
 7. The AI tutor is disabled in the running container because the runtime has no provider URL or API key configured.
 8. The local database connection is plain inside the private Docker network. An externally hosted database must use provider TLS and private networking.
 9. Production image digests are pinned in the prepared Dockerfile and Compose template. Update them through controlled security reviews.
@@ -143,18 +142,16 @@ Important: GitHub Pages can host only a static frontend. It cannot run this Expr
 - These tests exercise Express and PostgreSQL together, but they do not verify the reverse-proxy TLS configuration or browser cookie behavior on a real domain.
 
 
-## V39 host audit results — 15 November 2026
+## Local host validation summary — 15 November 2026
 
-- V39 app container: running on `127.0.0.1:3001`. PostgreSQL container: healthy on `127.0.0.1:5433`. Both host bindings are loopback-only.
-- Live health endpoint returned `{"ok":true,"backend":true,"database":true,"ai":false}`; home page and all six learning assets returned HTTP 200.
-- Backend source, SQL schema, package manifest, Compose file, `.env`, and `.git/config` returned HTTP 404 from the V39 web server.
-- Registration remained disabled and returned HTTP 403.
-- Live Owner and Quick Admin login, cookie session validation, owner API access, logout, and cookie clearing all passed.
-- `npm test` passed: session-security tests, 11 trilingual diagram modules, eight templates, 20 diagram quizzes, and the content audit (440 questions, 44 skills, 14 lessons in DE/EN/AR, 237 unique HTML IDs).
-- PostgreSQL authentication integration tests passed for registration, login, HttpOnly cookies, CSRF, user-state persistence, remember-me, all-device logout, and quick-admin role enforcement. The isolated test database was dropped after testing.
-- `npm audit --omit=dev --audit-level=high` reported zero vulnerabilities. Production Compose validation and `git diff --check` passed.
-- The V39 app container has a Docker HTTP healthcheck (30-second interval, 5-second timeout, three retries, 20-second start period); the app and PostgreSQL containers both report `healthy`.
-- Verified V39 backups are stored locally under `C:\\Users\\waela\\Documents\\VIDO_Backups`. The manual backup `V39_MANUAL_20261115_110407` contains a PostgreSQL custom-format dump, source archive, and working-tree changes; its dump was restored into a separate temporary database and verified (`users=1`, `owners=1`). A daily backup script was added and the scheduled task `VIDO V39 Daily Backup` is enabled for 20:00; the scheduled task completed successfully with result `0` in repeated manual runs, including verified daily archives `V39_DAILY_20261115_113941` and `V39_DAILY_20261115_114345`. The script excludes `.env`, does not push to Git, verifies the dump and source ZIP, and keeps the latest 14 daily backups. Backups remain on this device; there is no off-site copy.
-- The old scheduled task `VIDO V33 Daily Backup` was disabled because it targets the retired V33 project and its script attempts to push `main` automatically. The V39 scheduled task replaces it and performs local backups only.
-- Windows Defender Firewall is enabled for Domain, Private, and Public profiles. Default inbound traffic is blocked and outbound traffic is allowed. The active WLAN profile is Public. The unused V33 app and database containers are stopped; their persistent volumes remain intact. V39 host bindings remain loopback-only.
-- The active V39 project was moved to `C:\\Users\\waela\\Documents\\VIDO-Technology-V39`; it runs from that location and reuses the existing named V39 volumes. The duplicate contents under `C:\\Windows\\System32\\vido-technology` were removed after verifying the new bind mount; an empty directory remains because Windows reports it is temporarily in use, but it contains no project files or `.env`. A desktop shortcut named `VIDO Technology V39` opens the start script. The working tree contains local changes to `docker-compose.yml`, `scripts/audit.mjs`, `scripts/backup-v39.ps1`, `start-vido.bat`, `stop-vido.bat`, `README_DEPLOYMENT.md`, `CHANGELOG_V39.txt`, and this security baseline. No commit, push, merge, or production deployment was performed.
+This section records a historical local validation. It is not a guarantee of the current state of any hosted or production environment.
+
+- The application health endpoint and public learning assets were checked successfully. Internal source files, database schema and environment files were not served as public assets.
+- Public registration remained disabled during the check. Owner and quick-admin login, cookie-session validation, owner API access, logout and cookie clearing were exercised.
+- The application audit and PostgreSQL-backed authentication integration tests passed against an isolated disposable test database.
+- `npm audit --omit=dev --audit-level=high` reported no high-severity production dependency advisories at the time of the check.
+- Local application and database services were bound to loopback; the database was not exposed to the LAN or public internet.
+- A local backup/restore drill was completed using a separate temporary database. The archive integrity and database restore were verified. This historical check did not establish off-site backup coverage; maintain an encrypted off-device copy and repeat restore drills before relying on them for disaster recovery.
+- No production deployment was performed as part of this local validation.
+
+Workstation-specific paths, local account counts, backup filenames, scheduled-task names, firewall state, container identifiers and directory-cleanup details are intentionally omitted from this public repository. Keep detailed machine-specific operational records in a private location. Re-run the checks against the actual target environment before every production release.
